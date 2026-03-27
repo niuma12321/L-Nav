@@ -17,7 +17,7 @@ bucket = "./dist"
 # 若需创建新的 KV: wrangler kv:namespace create YNAV_WORKER_KV
 [[kv_namespaces]]
 binding = "YNAV_WORKER_KV"
-id = "65af0541820e42438959ed8fc8688f0c"
+id = "43e6854cf0354bf5970054b899dde7d9"
 # preview_id = ""  # 本地预览时使用的 KV ID (可选)
 
 # 环境变量 (也可以在 Cloudflare Dashboard 中设置)
