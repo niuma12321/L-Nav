@@ -1,14 +1,7 @@
 import React, { StrictMode, Suspense, lazy, useEffect, useState, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 import { DialogProvider } from './components/ui/DialogProvider';
-import { ErrorBoundary } from './components/ui/ErrorBoundary';
-import { PerformanceMonitor } from './components/ui/PerformanceMonitor';
-import { LoadingFallback } from './components/ui/LoadingFallback';
-import { AnalyticsProvider } from './hooks/useAnalytics';
-import { ThemeProvider } from './hooks/useTheme';
-import { PWAInstallPrompt } from './components/ui/PWAInstallPrompt';
 import './index.css';
-import './styles/tailwind.css';
 
 // ==============================================
 // 🎯 环境检测与配置
@@ -28,9 +21,210 @@ if (ENV.isProduction) {
 }
 
 // ==============================================
+// 🎨 错误边界组件
+// ==============================================
+class ErrorBoundary extends React.Component<
+  { 
+    children: React.ReactNode; 
+    fallback?: (error: Error, resetError: () => void) => React.ReactNode;
+  },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('应用错误:', error, errorInfo);
+  }
+
+  resetError = () => {
+    this.setState({ hasError: false, error: null });
+  };
+
+  render() {
+    if (this.state.hasError) {
+      if (this.props.fallback) {
+        return this.props.fallback(this.state.error!, this.resetError);
+      }
+      
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-orange-50 p-4">
+          <div className="text-center p-8 max-w-md bg-white rounded-2xl shadow-xl">
+            <div className="text-6xl mb-4">⚠️</div>
+            <h1 className="text-2xl font-bold text-gray-800 mb-2">应用出错了</h1>
+            <p className="text-gray-600 mb-2">抱歉，应用遇到了问题，请尝试刷新页面。</p>
+            <p className="text-sm text-gray-500 mb-4">错误信息: {this.state.error?.message}</p>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={this.resetError}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                重试
+              </button>
+              <button
+                onClick={() => window.location.reload()}
+                className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                刷新页面
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+// ==============================================
+// 🎨 加载组件
+// ==============================================
+const LoadingFallback: React.FC<{ 
+  message?: string; 
+  showProgress?: boolean; 
+  spinnerColor?: string; 
+  showLogo?: boolean;
+}> = ({ 
+  message = "加载中...", 
+  showProgress = false, 
+  spinnerColor = "blue",
+  showLogo = false
+}) => {
+  const [progress, setProgress] = useState(0);
+  
+  useEffect(() => {
+    if (showProgress) {
+      const interval = setInterval(() => {
+        setProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(interval);
+            return 90;
+          }
+          return prev + 10;
+        });
+      }, 200);
+      
+      return () => clearInterval(interval);
+    }
+  }, [showProgress]);
+  
+  const spinnerColors = {
+    blue: 'text-blue-600',
+    purple: 'text-purple-600',
+    green: 'text-green-600',
+    red: 'text-red-600',
+  };
+  
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-white">
+      <div className="text-center p-8">
+        {showLogo && (
+          <div className="mb-6">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full text-white text-2xl font-bold mb-2">
+              A
+            </div>
+            <h1 className="text-2xl font-bold text-gray-800">应用启动中</h1>
+          </div>
+        )}
+        
+        <div className="mb-4">
+          <div className={`inline-block w-12 h-12 border-4 border-t-transparent rounded-full animate-spin ${spinnerColors[spinnerColor as keyof typeof spinnerColors] || spinnerColors.blue}`} />
+        </div>
+        
+        <p className="text-gray-600 mb-3">{message}</p>
+        
+        {showProgress && (
+          <div className="w-48 mx-auto">
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div 
+                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-1">{progress}%</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ==============================================
+// 🎨 主题提供者
+// ==============================================
+const ThemeProvider: React.FC<{
+  children: React.ReactNode;
+  defaultTheme?: 'light' | 'dark' | 'system';
+  storageKey?: string;
+}> = ({ 
+  children, 
+  defaultTheme = 'system',
+  storageKey = 'app-theme'
+}) => {
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    const stored = localStorage.getItem(storageKey) as 'light' | 'dark' | null;
+    
+    if (stored === 'light' || stored === 'dark') {
+      return stored;
+    }
+    
+    if (defaultTheme === 'system') {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    
+    return defaultTheme;
+  });
+  
+  useEffect(() => {
+    const root = window.document.documentElement;
+    root.classList.remove('light', 'dark');
+    root.classList.add(theme);
+    localStorage.setItem(storageKey, theme);
+  }, [theme, storageKey]);
+  
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = () => {
+      if (defaultTheme === 'system') {
+        setTheme(mediaQuery.matches ? 'dark' : 'light');
+      }
+    };
+    
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, [defaultTheme]);
+  
+  const value = {
+    theme,
+    setTheme,
+    toggleTheme: () => setTheme(prev => prev === 'dark' ? 'light' : 'dark'),
+  };
+  
+  return (
+    <ThemeContext.Provider value={value}>
+      {children}
+    </ThemeContext.Provider>
+  );
+};
+
+const ThemeContext = React.createContext({
+  theme: 'light' as 'light' | 'dark',
+  setTheme: (theme: 'light' | 'dark') => {},
+  toggleTheme: () => {},
+});
+
+export const useTheme = () => React.useContext(ThemeContext);
+
+// ==============================================
 // 🎨 懒加载主应用组件
 // ==============================================
-// 使用懒加载提升首屏性能
 const LazyApp = lazy(() => 
   import('./App').then(module => ({ 
     default: module.default 
@@ -38,9 +232,22 @@ const LazyApp = lazy(() =>
   .catch(error => {
     console.error('应用加载失败:', error);
     // 返回一个错误回退组件
-    return import('./components/ui/AppErrorFallback').then(module => ({
-      default: () => module.AppErrorFallback({ error })
-    }));
+    return Promise.resolve({
+      default: () => (
+        <div className="min-h-screen flex items-center justify-center p-4">
+          <div className="text-center">
+            <h1 className="text-xl font-bold text-red-600 mb-2">应用加载失败</h1>
+            <p className="text-gray-600 mb-4">请检查网络连接后刷新页面</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            >
+              重新加载
+            </button>
+          </div>
+        </div>
+      )
+    });
   })
 );
 
@@ -54,22 +261,7 @@ async function registerServiceWorker() {
   if ('serviceWorker' in navigator && ENV.isProduction) {
     try {
       const registration = await navigator.serviceWorker.register('/sw.js');
-      
       console.log('✅ Service Worker 注册成功:', registration.scope);
-      
-      // 监听 Service Worker 更新
-      registration.addEventListener('updatefound', () => {
-        const newWorker = registration.installing;
-        if (newWorker) {
-          newWorker.addEventListener('statechange', () => {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              console.log('🔄 新版本可用，请刷新页面');
-              // 这里可以显示更新提示
-            }
-          });
-        }
-      });
-      
       return registration;
     } catch (error) {
       console.warn('⚠️ Service Worker 注册失败:', error);
@@ -77,30 +269,6 @@ async function registerServiceWorker() {
     }
   }
   return null;
-}
-
-/**
- * 性能监控初始化
- */
-function initializePerformanceMonitoring() {
-  if (ENV.isDevelopment) {
-    // 开发环境性能监控
-    const observer = new PerformanceObserver((list) => {
-      for (const entry of list.getEntries()) {
-        console.log(`📊 性能指标 [${entry.name}]:`, {
-          duration: Math.round(entry.duration),
-          startTime: Math.round(entry.startTime),
-          entryType: entry.entryType,
-        });
-      }
-    });
-    
-    try {
-      observer.observe({ entryTypes: ['paint', 'measure', 'resource', 'navigation'] });
-    } catch (e) {
-      console.warn('性能监控不可用:', e);
-    }
-  }
 }
 
 /**
@@ -134,46 +302,29 @@ const AppWrapper: React.FC = () => {
         // 1. 注册 Service Worker
         swRef.current = await registerServiceWorker();
         
-        // 2. 初始化性能监控
-        initializePerformanceMonitoring();
-        
-        // 3. 设置页面可见性监听
+        // 2. 设置页面可见性监听
         const cleanupVisibility = setupPageVisibility();
         
-        // 4. 预加载关键资源
+        // 3. 预加载关键资源
         if (ENV.isProduction) {
           const preloadPromises = [
             // 预加载关键字体
-            document.fonts.ready,
-            // 预加载关键图片
-            ...document.querySelectorAll<HTMLLinkElement>('link[rel="preload"]')
-              .map(link => new Promise(resolve => {
-                link.addEventListener('load', resolve);
-                link.addEventListener('error', resolve);
-              }))
+            document.fonts.ready.then(() => {}).catch(() => {}),
           ];
           
           await Promise.allSettled(preloadPromises);
         }
         
-        // 5. 标记初始化完成
+        // 4. 标记初始化完成
         setIsInitialized(true);
         
-        // 6. 记录性能数据
+        // 5. 记录性能数据
         if (ENV.isProduction) {
           performance.mark('app-initialized');
           performance.measure('app-initialization', 'app-entry-start', 'app-initialized');
           
           const measure = performance.getEntriesByName('app-initialization')[0];
           console.log(`🚀 应用初始化耗时: ${Math.round(measure?.duration || 0)}ms`);
-          
-          // 发送性能数据到分析平台
-          if (window.analytics) {
-            window.analytics.track('app_performance', {
-              init_duration: Math.round(measure?.duration || 0),
-              timestamp: Date.now(),
-            });
-          }
         }
         
         return cleanupVisibility;
@@ -199,14 +350,7 @@ const AppWrapper: React.FC = () => {
         console.log('🔧 开发工具:', {
           env: ENV,
           performance: performance.getEntriesByType('navigation')[0],
-          memory: (performance as any).memory,
         });
-      }
-      
-      // Ctrl + Alt + R: 重新加载
-      if (e.ctrlKey && e.altKey && e.key === 'r') {
-        e.preventDefault();
-        location.reload();
       }
     };
 
@@ -281,34 +425,24 @@ const AppWrapper: React.FC = () => {
         </div>
       )}
     >
-      <AnalyticsProvider 
-        trackingId={import.meta.env.VITE_GA_TRACKING_ID}
-        enabled={ENV.isProduction}
-      >
-        <ThemeProvider
-          defaultTheme="system"
-          storageKey="app-theme"
+      <ThemeProvider defaultTheme="system" storageKey="app-theme">
+        <DialogProvider
+          toastPosition="top-right"
+          maxToasts={5}
         >
-          <DialogProvider
-            toastPosition="top-right"
-            maxToasts={5}
+          <Suspense
+            fallback={
+              <LoadingFallback
+                message="加载应用中..."
+                showLogo
+                spinnerColor="purple"
+              />
+            }
           >
-            <Suspense
-              fallback={
-                <LoadingFallback
-                  message="加载应用中..."
-                  showLogo
-                  spinnerColor="purple"
-                />
-              }
-            >
-              {ENV.isDevelopment && <PerformanceMonitor />}
-              {ENV.isProduction && <PWAInstallPrompt />}
-              <LazyApp />
-            </Suspense>
-          </DialogProvider>
-        </ThemeProvider>
-      </AnalyticsProvider>
+            <LazyApp />
+          </Suspense>
+        </DialogProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 };
@@ -366,13 +500,7 @@ function startApplication() {
       console.log(`🎨 应用渲染耗时: ${Math.round(renderMeasure?.duration || 0)}ms`);
     }
     
-    // 清理性能标记
-    setTimeout(() => {
-      performance.clearMarks();
-      performance.clearMeasures();
-    }, 10000);
-    
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ React 渲染失败:', error);
     
     // 优雅降级
@@ -407,20 +535,6 @@ function startApplication() {
           >
             刷新页面
           </button>
-          <button 
-            onclick="console.log('Error:', ${JSON.stringify(error?.toString())})"
-            style="
-              background: transparent;
-              color: white;
-              border: 2px solid white;
-              padding: 12px 24px;
-              border-radius: 8px;
-              font-weight: bold;
-              cursor: pointer;
-            "
-          >
-            查看错误
-          </button>
         </div>
       </div>
     `;
@@ -433,17 +547,6 @@ function startApplication() {
 declare global {
   interface Window {
     __PERF_MARKS?: string[];
-    analytics?: {
-      track: (event: string, data?: Record<string, any>) => void;
-    };
-  }
-  
-  interface Performance {
-    memory?: {
-      usedJSHeapSize: number;
-      totalJSHeapSize: number;
-      jsHeapSizeLimit: number;
-    };
   }
 }
 
@@ -459,27 +562,15 @@ const isCompatibleBrowser = (() => {
       'fetch',
       'Map',
       'Set',
-      'URLSearchParams',
-      'Object.assign',
-      'Array.from',
     ];
     
     for (const api of requiredAPIs) {
       if (!(api in window)) {
-        throw new Error(`缺少 API: ${api}`);
+        console.warn(`缺少 API: ${api}`);
+        return false;
       }
     }
     
-    // 检查 ES6 特性
-    const testCode = `
-      class Test {}
-      const arrow = () => {};
-      const { a, ...rest } = { a: 1, b: 2 };
-      const arr = [1, 2, 3];
-      const hasTwo = arr.includes(2);
-    `;
-    
-    new Function(testCode)();
     return true;
   } catch (error) {
     console.warn('⚠️ 浏览器不兼容:', error);
@@ -497,34 +588,37 @@ if (isCompatibleBrowser) {
   }
 } else {
   // 显示浏览器不兼容提示
-  document.getElementById('root')!.innerHTML = `
-    <div style="
-      padding: 40px;
-      font-family: system-ui;
-      max-width: 600px;
-      margin: 0 auto;
-      line-height: 1.6;
-    ">
-      <h1 style="color: #dc2626; margin-bottom: 20px;">⚠️ 浏览器不兼容</h1>
-      <p style="margin-bottom: 20px;">
-        您的浏览器版本过低，无法正常运行此应用。
-        请升级到最新版本的现代浏览器，如：
-      </p>
-      <ul style="margin-bottom: 30px;">
-        <li>Chrome 80+</li>
-        <li>Firefox 75+</li>
-        <li>Safari 13+</li>
-        <li>Edge 80+</li>
-      </ul>
-      <p>
-        升级后，请
-        <a href="#" onclick="location.reload()" style="color: #2563eb;">
-          刷新页面
-        </a>
-        重试。
-      </p>
-    </div>
-  `;
+  const root = document.getElementById('root');
+  if (root) {
+    root.innerHTML = `
+      <div style="
+        padding: 40px;
+        font-family: system-ui;
+        max-width: 600px;
+        margin: 0 auto;
+        line-height: 1.6;
+      ">
+        <h1 style="color: #dc2626; margin-bottom: 20px;">⚠️ 浏览器不兼容</h1>
+        <p style="margin-bottom: 20px;">
+          您的浏览器版本过低，无法正常运行此应用。
+          请升级到最新版本的现代浏览器，如：
+        </p>
+        <ul style="margin-bottom: 30px;">
+          <li>Chrome 80+</li>
+          <li>Firefox 75+</li>
+          <li>Safari 13+</li>
+          <li>Edge 80+</li>
+        </ul>
+        <p>
+          升级后，请
+          <a href="#" onclick="location.reload()" style="color: #2563eb;">
+            刷新页面
+          </a>
+          重试。
+        </p>
+      </div>
+    `;
+  }
 }
 
 // 导出供测试使用
