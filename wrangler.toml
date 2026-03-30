@@ -10,14 +10,15 @@ compatibility_date = "2025-03-01"
 compatibility_flags = ["nodejs_compat"]
 
 # ---------- 自定义域名配置 ----------
-# ⚠️ 注意：Cloudflare Workers 的 custom_domain 只能使用纯域名，不能使用通配符 * 或路径
-# 请在 Cloudflare Dashboard 中手动绑定自定义域名：
-# 1. 登录 Cloudflare Dashboard
-# 2. 进入 Workers & Pages -> home -> 触发器 -> 添加自定义域
-# 3. 添加域名：678870.xyz 和 www.678870.xyz
-# 
-# 或者使用触发器模式（不推荐用于自定义域）：
-# routes = [{ pattern = "678870.xyz/*", zone_name = "678870.xyz" }]
+# ⚠️ 注意：使用 zone-based 路由模式（不是 custom_domain）
+# 这样可以在 wrangler.toml 中直接配置，无需在 Dashboard 手动设置
+routes = [
+  { pattern = "678870.xyz/*", zone_name = "678870.xyz" },
+  { pattern = "www.678870.xyz/*", zone_name = "678870.xyz" }
+]
+# 或者如果想让 Workers 自动分配子域名，可以不配置 routes
+# 然后在 Dashboard -> Workers & Pages -> home -> 触发器 -> 添加自定义域
+# 手动添加 678870.xyz
 
 # ---------- 性能优化配置 ----------
 minify = true
