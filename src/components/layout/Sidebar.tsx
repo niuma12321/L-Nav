@@ -124,8 +124,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   return (
     <aside
       className={`
-        fixed lg:static inset-y-0 left-0 z-30 ${sidebarWidthClass} transform transition-all duration-300 ease-in-out
-        bg-white/40 dark:bg-slate-950/40 border-r border-slate-200/30 dark:border-white/5 backdrop-blur-2xl flex flex-col
+        fixed lg:static inset-y-0 left-0 z-40 ${sidebarWidthClass} transform transition-all duration-300 ease-in-out
+        bg-white/60 dark:bg-slate-950/60 border-r border-slate-200/50 dark:border-white/5 backdrop-blur-2xl flex flex-col
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}
     >
@@ -230,7 +230,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 key={cat.id}
                 onClick={() => onSelectCategory(cat)}
                 title={isSidebarCollapsed ? cat.name : undefined}
-                className={`relative w-full rounded-xl transition-all duration-200 group ${isSidebarCollapsed
+                className={`relative w-full rounded-xl transition-all duration-200 group touch-feedback ${isSidebarCollapsed
                   ? 'flex items-center justify-center p-2.5'
                   : 'flex items-center gap-3 px-3 py-2'
                   } ${isSelected

@@ -244,9 +244,9 @@ const MainHeader: React.FC<MainHeaderProps> = ({
 
   return (
     <header className="sticky top-0 z-30 border-b border-slate-200/30 dark:border-white/5 bg-white/40 dark:bg-slate-950/40 backdrop-blur-2xl">
-      <div className="h-14 px-4 lg:px-8 flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <button onClick={onOpenSidebar} className="lg:hidden p-2 -ml-2 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
+      <div className="h-14 px-3 sm:px-4 lg:px-8 flex items-center gap-3 sm:gap-4">
+        <div className="flex items-center gap-2 shrink-0">
+          <button onClick={onOpenSidebar} className="lg:hidden p-2 -ml-2 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 touch-feedback">
             <Menu size={20} />
           </button>
         </div>
@@ -407,7 +407,7 @@ const MainHeader: React.FC<MainHeaderProps> = ({
       </div>
 
       {isMobileSearchOpen && (
-        <div className="md:hidden px-4 pb-3">
+        <div className="md:hidden px-3 sm:px-4 pb-3 animate-fade-in-up">
           {searchBar}
         </div>
       )}

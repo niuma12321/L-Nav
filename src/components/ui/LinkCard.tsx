@@ -27,20 +27,20 @@ const LinkCard: React.FC<LinkCardProps> = React.memo(({
 }) => {
   const isDetailedView = siteCardStyle === 'detailed';
 
-  // 样式缓存
+  // 样式缓存 - 增强移动端体验
   const cardClasses = useMemo(() => `
     group relative rounded-2xl transition-all duration-300 ease-out
     bg-white dark:bg-slate-900/40 backdrop-blur-md
-    border overflow-hidden
+    border overflow-hidden touch-feedback
     ${isBatchEditMode
       ? 'cursor-pointer border-slate-200 dark:border-white/10'
-      : 'cursor-pointer shadow-sm shadow-slate-200/50 dark:shadow-none hover:-translate-y-0.5 hover:shadow-xl hover:shadow-accent/15 active:scale-98'
+      : 'cursor-pointer shadow-sm shadow-slate-200/50 dark:shadow-none hover:-translate-y-1 hover:shadow-xl hover:shadow-accent/20 active:scale-98'
     }
     ${isSelected
       ? 'border-rose-500 ring-2 ring-rose-500/30 bg-rose-50 dark:bg-rose-900/15'
-      : 'border-slate-200/60 dark:border-white/8 hover:border-accent/40 dark:hover:border-accent/40'
+      : 'border-slate-200/60 dark:border-white/8 hover:border-accent/50 dark:hover:border-accent/50'
     }
-    ${isDetailedView ? 'p-5' : 'p-3.5'}
+    ${isDetailedView ? 'p-4 sm:p-5' : 'p-3 sm:p-3.5'}
   `, [isBatchEditMode, isSelected, isDetailedView]);
 
   const customToneStyle = useMemo(() => getIconToneStyle(link.iconTone), [link.iconTone]);
@@ -52,9 +52,9 @@ const LinkCard: React.FC<LinkCardProps> = React.memo(({
   const iconContainerClasses = useMemo(() => `
     flex items-center justify-center shrink-0 rounded-xl overflow-hidden
     border border-black/5 dark:border-white/8 shadow-sm
-    transition-transform duration-300 group-hover:scale-105
+    transition-transform duration-300 group-hover:scale-105 group-active:scale-95
     ${colorClass}
-    ${isDetailedView ? 'w-12 h-12' : 'w-9 h-9'}
+    ${isDetailedView ? 'w-12 h-12 sm:w-12 sm:h-12' : 'w-10 h-10 sm:w-9 sm:h-9'}
   `, [colorClass, isDetailedView]);
 
   const titleClasses = useMemo(() => `

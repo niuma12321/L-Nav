@@ -102,9 +102,8 @@ const RATE_LIMIT_MAX_REQUESTS = 100;
 const generateId = () => Math.random().toString(36).substring(2, 15);
 
 const getClientIp = (request: Request): string => {
-    return request.headers.get('cf-connecting-ip') || 
-           request.headers.get('x-forwarded-for') || 
-           'unknown';
+    const clientIP = request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || 'unknown';
+    return clientIP;
 };
 
 const isBackupKeyValid = (backupKey: string) => (
