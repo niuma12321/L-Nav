@@ -1,13 +1,7 @@
 /**
- * Y-Nav Cloudflare Worker 入口 (简化修复版)
- * 支持 D1 + R2 + KV 多存储架构
+ * Y-Nav Backend API - Pure API Mode
+ * 前后端分离架构 - 仅 API 服务
  */
-
-import { getAssetFromKV, NotFoundError } from '@cloudflare/kv-asset-handler';
-// @ts-ignore
-import manifestJSON from '__STATIC_CONTENT_MANIFEST';
-
-const assetManifest = JSON.parse(manifestJSON);
 
 // ============================================
 // 1. 类型定义
@@ -16,13 +10,9 @@ const assetManifest = JSON.parse(manifestJSON);
 interface Env {
     YNAV_WORKER_KV: KVNamespace;
     YNAV_D1_DB?: D1Database;
-    YNAV_R2_BUCKET?: R2Bucket;
     SYNC_PASSWORD_HASH?: string;
     VIEW_PASSWORD_HASH?: string;
-    __STATIC_CONTENT: KVNamespace;
-    RATE_LIMITER_KV?: KVNamespace;
     ENABLE_D1_SYNC?: string;
-    ENABLE_R2_STORAGE?: string;
 }
 
 interface SyncMetadata {
@@ -342,47 +332,7 @@ class ApiHandler {
 }
 
 // ============================================
-// 6. 静态资源处理
-// ============================================
-
-async function handleStaticAssets(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    try {
-        const response = await getAssetFromKV(
-            { request, waitUntil: ctx.waitUntil.bind(ctx) },
-            { ASSET_NAMESPACE: env.__STATIC_CONTENT, ASSET_MANIFEST: assetManifest }
-        );
-
-        const url = new URL(request.url);
-        const isHTML = url.pathname.endsWith('.html') || url.pathname === '/';
-        const isHashedAsset = /\.[0-9a-f]{8,}\./.test(url.pathname);
-
-        const newResponse = new Response(response.body, response);
-        if (isHTML) {
-            newResponse.headers.set('Cache-Control', 'public, max-age=0, must-revalidate');
-        } else if (isHashedAsset) {
-            newResponse.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
-        } else {
-            newResponse.headers.set('Cache-Control', 'public, max-age=3600');
-        }
-
-        newResponse.headers.set('X-Content-Type-Options', 'nosniff');
-        newResponse.headers.set('X-Frame-Options', 'DENY');
-        
-        return newResponse;
-    } catch (e) {
-        if (e instanceof NotFoundError) {
-            const notFoundRequest = new Request(new URL('/index.html', request.url).toString(), request);
-            return getAssetFromKV(
-                { request: notFoundRequest, waitUntil: ctx.waitUntil.bind(ctx) },
-                { ASSET_NAMESPACE: env.__STATIC_CONTENT, ASSET_MANIFEST: assetManifest }
-            );
-        }
-        return new Response('Not Found', { status: 404 });
-    }
-}
-
-// ============================================
-// 7. 主入口
+// 6. 主入口
 // ============================================
 
 export default {
@@ -403,7 +353,7 @@ export default {
             return ApiHandler.handleSync(request, env);
         }
 
-        // 3. 静态资源
-        return handleStaticAssets(request, env, ctx);
+        // 3. 404 for all other routes
+        return jsonResponse({ success: false, error: 'Not found' }, 404);
     }
 };

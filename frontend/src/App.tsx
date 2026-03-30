@@ -414,7 +414,8 @@ function App() {
   }, [privateVaultCipher, notify, resolvePrivacyPassword, useSeparatePrivacyPassword, privacyAutoUnlockEnabled]);
 
   const persistPrivateVault = useCallback(async (nextLinks: LinkItem[], passwordOverride?: string) => {
-    const password = (passwordOverride || privateVaultPassword || resolvePrivacyPassword()).trim();
+    const resolvedPassword = passwordOverride || privateVaultPassword || resolvePrivacyPassword();
+    const password = (resolvedPassword || '').trim();
     if (!password) {
       notify('请先设置隐私分组密码', 'warning');
       return false;

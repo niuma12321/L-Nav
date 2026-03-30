@@ -48,11 +48,12 @@ export function useNotes(): UseNotesReturn {
   /**
    * 创建新便签
    */
-  const addNote = useCallback((content: string = ''): StickyNote => {
+  const addNote = useCallback((content?: string): StickyNote => {
     const now = Date.now();
+    const safeContent = (content || '').trim();
     const newNote: StickyNote = {
       id: `note_${now}`,
-      content: content.trim(),
+      content: safeContent,
       createdAt: now,
       updatedAt: now,
     };
@@ -65,7 +66,7 @@ export function useNotes(): UseNotesReturn {
    * 更新便签内容
    */
   const updateNote = useCallback((id: string, content: string) => {
-    const trimmedContent = content.trim();
+    const trimmedContent = (content || '').trim();
     
     setNotes(prev =>
       prev.map(note =>
