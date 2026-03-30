@@ -30,6 +30,7 @@ import {
   useSidebar,
   useSyncEngine,
   useNotes,
+  useRouter,
   buildSyncData
 } from './hooks';
 
@@ -159,19 +160,26 @@ function App() {
   // === Theme ===
   const { themeMode, darkMode, setThemeAndApply } = useTheme();
 
-  // === Sidebar ===
+  // === Sidebar & Router ===
   const {
     sidebarOpen,
     setSidebarOpen,
     isSidebarCollapsed,
     sidebarWidthClass,
-    selectedCategory,
-    setSelectedCategory,
-    openSidebar,
     toggleSidebarCollapsed,
-    handleCategoryClick,
-    selectAll
   } = useSidebar();
+  
+  // === Router (SPA路由系统) ===
+  const {
+    currentRoute,
+    navigateToHome,
+    navigateToCategory,
+    navigateToNotes,
+    navigateToPrivate,
+    canGoBack,
+    goBack,
+    selectedCategory,
+  } = useRouter();
 
   const privateCategory = useMemo(() => ({
     id: PRIVATE_CATEGORY_ID,
@@ -522,9 +530,9 @@ function App() {
     if (selectedCategory === 'all' || selectedCategory === PRIVATE_CATEGORY_ID) return;
     const selected = categories.find(c => c.id === selectedCategory);
     if (selected?.hidden) {
-      setSelectedCategory('all');
+      navigateToHome();
     }
-  }, [canRevealHidden, selectedCategory, categories, setSelectedCategory]);
+  }, [canRevealHidden, selectedCategory, categories, navigateToHome]);
 
   const pinnedLinks = useMemo(() => {
     const filteredPinnedLinks = visibleLinks.filter(l => l.pinned);
@@ -900,7 +908,7 @@ function App() {
     if (!enabled) {
       sessionStorage.removeItem(PRIVACY_SESSION_UNLOCKED_KEY);
       if (selectedCategory === PRIVATE_CATEGORY_ID) {
-        setSelectedCategory('all');
+        navigateToHome();
       }
       setIsPrivateUnlocked(false);
       setPrivateVaultPassword(null);
@@ -909,7 +917,7 @@ function App() {
       setEditingPrivateLink(null);
       setPrefillPrivateLink(null);
     }
-  }, [selectedCategory, setSelectedCategory]);
+  }, [selectedCategory, navigateToHome]);
 
   const handleTogglePrivacyAutoUnlock = useCallback((enabled: boolean) => {
     setPrivacyAutoUnlockEnabled(enabled);
@@ -926,14 +934,14 @@ function App() {
       notify('隐私分组已关闭，可在设置中开启', 'warning');
       return;
     }
-    setSelectedCategory(PRIVATE_CATEGORY_ID);
+    navigateToPrivate();
     setSidebarOpen(false);
-  }, [notify, privacyGroupEnabled, setSelectedCategory, setSidebarOpen]);
+  }, [notify, privacyGroupEnabled, navigateToPrivate, setSidebarOpen]);
 
   const handleSelectNotes = useCallback(() => {
-    setSelectedCategory('notes');
+    navigateToNotes();
     setSidebarOpen(false);
-  }, [setSelectedCategory, setSidebarOpen]);
+  }, [navigateToNotes, setSidebarOpen]);
 
   // === Bookmarklet URL Handler ===
   useEffect(() => {
@@ -1376,8 +1384,8 @@ function App() {
           repoUrl={GITHUB_REPO_URL}
           readOnly={isReadOnly}
           notesCount={notes.length}
-          onSelectAll={selectAll}
-          onSelectCategory={handleCategoryClick}
+          onSelectAll={navigateToHome}
+          onSelectCategory={(cat) => navigateToCategory(cat.id)}
           onSelectPrivate={handleSelectPrivate}
           onSelectNotes={handleSelectNotes}
           onToggleCollapsed={toggleSidebarCollapsed}
@@ -1458,7 +1466,10 @@ function App() {
             isSortingPinned={isSortingPinned}
             isSortingCategory={isSortingCategory}
             readOnly={isReadOnly}
-            onOpenSidebar={openSidebar}
+            canGoBack={canGoBack}
+            onGoBack={goBack}
+            onGoHome={navigateToHome}
+            onOpenSidebar={() => setSidebarOpen(true)}
             onSetTheme={setThemeAndApply}
             onViewModeChange={handleViewModeChange}
             onSearchModeChange={handleSearchModeChange}

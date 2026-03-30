@@ -10,3 +10,4 @@ export { useConfig } from './useConfig';
 export { useSidebar } from './useSidebar';
 export { useSyncEngine, buildSyncData } from './useSyncEngine';
 export { useNotes } from './useNotes';
+export { useRouter } from './useRouter';

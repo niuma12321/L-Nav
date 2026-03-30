@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Moon, Sun, Menu, Monitor, Settings, GripVertical, Save, X, MoreHorizontal, LayoutGrid, List, CheckCircle } from 'lucide-react';
+import { Search, Moon, Sun, Menu, Monitor, Settings, GripVertical, Save, X, MoreHorizontal, LayoutGrid, List, CheckCircle, ArrowLeft, Home } from 'lucide-react';
 import { ExternalSearchSource, SearchMode } from '../../types';
 
 interface MainHeaderProps {
@@ -19,6 +19,9 @@ interface MainHeaderProps {
   isSortingPinned: boolean;
   isSortingCategory: boolean;
   readOnly?: boolean;
+  canGoBack?: boolean;
+  onGoBack?: () => void;
+  onGoHome?: () => void;
   onOpenSidebar: () => void;
   onSetTheme: (mode: 'light' | 'dark' | 'system') => void;
   onViewModeChange: (mode: 'simple' | 'detailed') => void;
@@ -59,6 +62,9 @@ const MainHeader: React.FC<MainHeaderProps> = ({
   isSortingPinned,
   isSortingCategory,
   readOnly = false,
+  canGoBack = false,
+  onGoBack,
+  onGoHome,
   onOpenSidebar,
   onSetTheme,
   onViewModeChange,
@@ -79,7 +85,7 @@ const MainHeader: React.FC<MainHeaderProps> = ({
   onSaveCategorySorting,
   onCancelCategorySorting,
   onAddLink,
-  onOpenSettings
+  onOpenSettings,
 }) => {
   const showSortControls = canSortPinned || canSortCategory || isSortingPinned || isSortingCategory;
   const sortLabel = canSortPinned ? '排序置顶' : '排序分类';
@@ -246,6 +252,29 @@ const MainHeader: React.FC<MainHeaderProps> = ({
     <header className="sticky top-0 z-30 border-b border-slate-200/30 dark:border-white/5 bg-white/40 dark:bg-slate-950/40 backdrop-blur-2xl">
       <div className="h-14 px-3 sm:px-4 lg:px-8 flex items-center gap-3 sm:gap-4">
         <div className="flex items-center gap-2 shrink-0">
+          {/* Back Button - 返回按钮 */}
+          {canGoBack && onGoBack && (
+            <button
+              onClick={onGoBack}
+              className="hidden md:flex p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-accent hover:bg-slate-100 dark:hover:bg-slate-800 transition-all border border-transparent hover:border-slate-200/50 dark:hover:border-white/5"
+              title="返回上一页"
+            >
+              <ArrowLeft size={18} />
+            </button>
+          )}
+
+          {/* Home Button - 首页Logo */}
+          {onGoHome && (
+            <button
+              onClick={onGoHome}
+              className="flex items-center gap-2 p-2 rounded-xl text-slate-700 dark:text-slate-200 hover:text-accent hover:bg-slate-100 dark:hover:bg-slate-800 transition-all border border-transparent hover:border-slate-200/50 dark:hover:border-white/5"
+              title="返回首页"
+            >
+              <Home size={18} />
+              <span className="hidden sm:inline font-medium text-sm">{navTitleText}</span>
+            </button>
+          )}
+
           <button onClick={onOpenSidebar} className="lg:hidden p-2 -ml-2 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 touch-feedback">
             <Menu size={20} />
           </button>
