@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <!-- 1. 修正 favicon 类型并添加多尺寸支持 -->
+  <link rel="icon" type="image/x-icon" href="https://lucide.dev/favicon.ico" />
+  <link rel="apple-touch-icon" href="https://lucide.dev/favicon.ico" />
+  
+  <!-- 2. 增强 meta 标签：添加主题色、SEO 和移动端优化 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#f8fafc" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#05070f" media="(prefers-color-scheme: dark)" />
+  <meta name="description" content="元启 Y-Nav - 简洁高效的导航页面" />
+  
+  <!-- 3. 优化主题切换脚本：使用现代语法、减少 DOM 操作 -->
+  <script>
+    (function () {
+      try {
+        const stored = localStorage.getItem('theme');
+        const mode = ['light', 'dark', 'system'].includes(stored) ? stored : 'system';
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const isDark = mode === 'dark' || (mode === 'system' && prefersDark);
+        
+        // 统一通过 class 控制主题，避免内联样式
+        document.documentElement.classList.toggle('dark', isDark);
+      } catch (e) {
+        console.warn('Theme initialization failed:', e);
+      }
+    })();
+  </script>
+  
+  <title>my-home</title>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300">
+  <div id="root"></div>
+  
+  <!-- 4. 保持模块化脚本加载 -->
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+</html>
