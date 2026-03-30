@@ -14,11 +14,11 @@ const ENV = {
   BUILD_TIMESTAMP: import.meta.env.VITE_BUILD_TIMESTAMP || new Date().toISOString(),
 };
 
-// 性能测量标记
-if (ENV.isProduction) {
-  window.__PERF_MARKS = window.__PERF_MARKS || [];
-  performance.mark('app-entry-start');
-}
+  // 仅在开发环境记录性能数据
+  if (ENV.isProduction) {
+    window.__PERF_MARKS = window.__PERF_MARKS || [];
+    performance.mark('app-entry-start');
+  }
 
 // ==============================================
 // 🎨 错误边界组件
@@ -45,7 +45,9 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('应用错误:', error, errorInfo);
+    if (import.meta.env.DEV) {
+      console.error('应用错误:', error, errorInfo);
+    }
   }
 
   resetError = (): void => {
@@ -324,18 +326,22 @@ const AppWrapper: React.FC = () => {
         // 4. 标记初始化完成
         setIsInitialized(true);
         
-        // 5. 记录性能数据
-        if (ENV.isProduction) {
-          performance.mark('app-initialized');
-          performance.measure('app-initialization', 'app-entry-start', 'app-initialized');
-          
-          const measure = performance.getEntriesByName('app-initialization')[0];
-          console.log(`🚀 应用初始化耗时: ${Math.round(measure?.duration || 0)}ms`);
-        }
+        // 仅在生产环境记录性能数据
+    if (ENV.isProduction) {
+      performance.mark('app-initialized');
+      performance.measure('app-initialization', 'app-entry-start', 'app-initialized');
+      
+      const measure = performance.getEntriesByName('app-initialization')[0];
+      if (import.meta.env.DEV) {
+        console.log(`🚀 应用初始化耗时: ${Math.round(measure?.duration || 0)}ms`);
+      }
+    }
         
         return cleanupVisibility;
       } catch (error) {
-        console.error('❌ 应用初始化失败:', error);
+        if (import.meta.env.DEV) {
+          console.error('❌ 应用初始化失败:', error);
+        }
         setHasError(true);
         return () => {};
       }
@@ -353,10 +359,12 @@ const AppWrapper: React.FC = () => {
       // Ctrl + Shift + D: 切换开发工具
       if (e.ctrlKey && e.shiftKey && e.key === 'D') {
         e.preventDefault();
+      if (import.meta.env.DEV) {
         console.log('🔧 开发工具:', {
           env: ENV,
           performance: performance.getEntriesByType('navigation')[0],
         });
+      }
       }
     };
 
@@ -367,12 +375,16 @@ const AppWrapper: React.FC = () => {
   // 处理离线/在线状态
   useEffect(() => {
     const handleOnline = () => {
-      console.log('🌐 网络已恢复');
+      if (import.meta.env.DEV) {
+        console.log('🌐 网络已恢复');
+      }
       document.documentElement.classList.remove('offline');
     };
     
     const handleOffline = () => {
-      console.warn('📴 网络已断开');
+      if (import.meta.env.DEV) {
+        console.warn('📴 网络已断开');
+      }
       document.documentElement.classList.add('offline');
     };
 
@@ -460,7 +472,9 @@ function startApplication() {
   const rootElement = document.getElementById('root');
   
   if (!rootElement) {
+  if (import.meta.env.DEV) {
     console.error('❌ 找不到根元素 #root');
+  }
     document.body.innerHTML = `
       <div style="padding: 20px; font-family: system-ui; background: #f0f0f0; min-height: 100vh;">
         <h1 style="color: #dc2626;">启动失败</h1>
@@ -497,17 +511,21 @@ function startApplication() {
     // 渲染应用
     root.render(AppComponent);
     
-    // 记录渲染完成
+    // 仅在生产环境记录渲染完成
     if (ENV.isProduction) {
       performance.mark('app-rendered');
       performance.measure('app-render', 'app-initialized', 'app-rendered');
       
       const renderMeasure = performance.getEntriesByName('app-render')[0];
-      console.log(`🎨 应用渲染耗时: ${Math.round(renderMeasure?.duration || 0)}ms`);
+      if (import.meta.env.DEV) {
+        console.log(`🎨 应用渲染耗时: ${Math.round(renderMeasure?.duration || 0)}ms`);
+      }
     }
     
   } catch (error: any) {
+  if (import.meta.env.DEV) {
     console.error('❌ React 渲染失败:', error);
+  }
     
     // 优雅降级
     rootElement.innerHTML = `
@@ -572,14 +590,18 @@ const isCompatibleBrowser = (() => {
     
     for (const api of requiredAPIs) {
       if (!(api in window)) {
-        console.warn(`缺少 API: ${api}`);
+  if (import.meta.env.DEV) {
+    console.warn(`缺少 API: ${api}`);
+  }
         return false;
       }
     }
     
     return true;
   } catch (error) {
-    console.warn('⚠️ 浏览器不兼容:', error);
+    if (import.meta.env.DEV) {
+      console.warn('⚠️ 浏览器不兼容:', error);
+    }
     return false;
   }
 })();

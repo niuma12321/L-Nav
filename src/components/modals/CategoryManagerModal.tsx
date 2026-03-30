@@ -44,9 +44,11 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = React.memo(({
   onDeleteCategories,
   closeOnBackdrop = true
 }) => {
-  // 添加 useEffect 检查 Settings
+  // 仅在开发环境检查 Settings
   useEffect(() => {
-    console.log('AppSettings:', AppSettings);
+    if (import.meta.env.DEV) {
+      console.log('AppSettings:', AppSettings);
+    }
   }, []);
 
   // 编辑状态

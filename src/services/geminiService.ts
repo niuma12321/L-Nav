@@ -38,14 +38,18 @@ const callOpenAICompatible = async (config: AIConfig, systemPrompt: string, user
 
         if (!response.ok) {
             const err = await response.text();
-            console.error("OpenAI API Error:", err);
+            if (import.meta.env.DEV) {
+                console.error("OpenAI API Error:", err);
+            }
             return "";
         }
 
         const data = await response.json();
         return data.choices?.[0]?.message?.content?.trim() || "";
     } catch (e) {
-        console.error("OpenAI Call Failed", e);
+        if (import.meta.env.DEV) {
+            console.error("OpenAI Call Failed", e);
+        }
         return "";
     }
 };
@@ -85,7 +89,9 @@ export const generateLinkDescription = async (title: string, url: string, config
             return result || "生成描述失败";
         }
     } catch (error) {
-        console.error("AI generation error:", error);
+        if (import.meta.env.DEV) {
+            console.error("AI generation error:", error);
+        }
         return "生成描述失败";
     }
 };
@@ -136,7 +142,9 @@ export const suggestCategory = async (title: string, url: string, categories: { 
             return normalizeCategoryId(result);
         }
     } catch (e) {
-        console.error(e);
+        if (import.meta.env.DEV) {
+            console.error(e);
+        }
         return null;
     }
 }
@@ -167,7 +175,9 @@ export const testAIConnection = async (config: AIConfig): Promise<boolean> => {
             return result.length > 0;
         }
     } catch (e) {
-        console.error("Connection Test Failed", e);
+        if (import.meta.env.DEV) {
+            console.error("Connection Test Failed", e);
+        }
         return false;
     }
 };
@@ -221,7 +231,9 @@ export const fetchAvailableModels = async (config: AIConfig): Promise<string[]> 
             return [];
         }
     } catch (e) {
-        console.error("Fetch Models Failed", e);
+        if (import.meta.env.DEV) {
+            console.error("Fetch Models Failed", e);
+        }
         return [];
     }
 };

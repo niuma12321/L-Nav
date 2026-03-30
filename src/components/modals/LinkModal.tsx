@@ -196,7 +196,9 @@ const LinkModal: React.FC<LinkModalProps> = ({
       if (cat) setCategoryId(cat);
 
     } catch (e) {
-      console.error("AI Assist failed", e);
+      if (import.meta.env.DEV) {
+        console.error("AI Assist failed", e);
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -245,7 +247,9 @@ const LinkModal: React.FC<LinkModalProps> = ({
         // Failed to cache icon - silently ignore
       }
     } catch (e) {
-      console.error("Failed to fetch icon", e);
+      if (import.meta.env.DEV) {
+        console.error("Failed to fetch icon", e);
+      }
       notify("无法获取图标，请检查URL是否正确", 'error');
     } finally {
       setIsFetchingIcon(false);

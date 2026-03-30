@@ -800,7 +800,9 @@ export const dialogUtils = {
     variant: ToastVariant = 'info',
     duration?: number
   ) => {
-    console.warn('请通过 useDialog hook 使用对话框功能');
+    if (import.meta.env.DEV) {
+      console.warn('请通过 useDialog hook 使用对话框功能');
+    }
     return '';
   },
   

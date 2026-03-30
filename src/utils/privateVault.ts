@@ -160,7 +160,9 @@ export const encryptPrivateVault = async (
       toBase64(encrypted)
     ].join('.');
   } catch (err) {
-    console.error('[加密失败]', err);
+    if (import.meta.env.DEV) {
+      console.error('[加密失败]', err);
+    }
     throw new Error((err as Error).message || '加密未知错误');
   }
 };
@@ -218,7 +220,9 @@ export const decryptPrivateVault = async (
 
     return parsed as PrivateVaultPayload;
   } catch (err) {
-    console.error('[解密失败]', err);
+    if (import.meta.env.DEV) {
+      console.error('[解密失败]', err);
+    }
     // 密码错误/数据损坏：返回空数据，不崩溃页面
     return defaultPayload;
   }

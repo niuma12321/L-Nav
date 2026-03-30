@@ -87,9 +87,7 @@ const DEFAULT_SITE_SETTINGS: SiteSettings = {
 
 // ============ 工具函数 ============
 
-/**
- * 安全的 localStorage 操作
- */
+    // 安全 localStorage 操作
 const safeStorage = {
     get: <T>(key: string, defaultValue: T): T => {
         try {
@@ -97,16 +95,20 @@ const safeStorage = {
             if (!item) return defaultValue;
             return JSON.parse(item);
         } catch (error) {
-            console.warn(`[Config] Failed to parse ${key}:`, error);
+            if (import.meta.env.DEV) {
+                console.warn(`[Config] Failed to parse ${key}:`, error);
+            }
             return defaultValue;
         }
     },
-    set: (key: string, value: any): boolean => {
+    set: (key: string, value: unknown): boolean => {
         try {
             localStorage.setItem(key, JSON.stringify(value));
             return true;
         } catch (error) {
-            console.error(`[Config] Failed to save ${key}:`, error);
+            if (import.meta.env.DEV) {
+                console.error(`[Config] Failed to save ${key}:`, error);
+            }
             return false;
         }
     },
@@ -114,7 +116,9 @@ const safeStorage = {
         try {
             localStorage.removeItem(key);
         } catch (error) {
-            console.warn(`[Config] Failed to remove ${key}:`, error);
+            if (import.meta.env.DEV) {
+                console.warn(`[Config] Failed to remove ${key}:`, error);
+            }
         }
     }
 };
@@ -305,8 +309,10 @@ export function useConfig() {
         // 验证配置
         const validation = validateAIConfig(config);
         if (!validation.valid) {
+    if (validation.errors.length > 0 && import.meta.env.DEV) {
             console.error('[Config] AI Config validation failed:', validation.errors);
-            return false;
+    }
+        return false;
         }
 
         // 保存历史（开发环境）
@@ -349,9 +355,9 @@ export function useConfig() {
             const newConfig = { ...prev, ...updates };
             const validation = validateAIConfig(newConfig);
             
-            if (!validation.valid) {
-                console.warn('[Config] AI Config validation warnings:', validation.warnings);
-            }
+    if (validation.warnings.length > 0 && import.meta.env.DEV) {
+            console.warn('[Config] AI Config validation warnings:', validation.warnings);
+    }
 
             const configWithVersion = { ...newConfig, _schemaVersion: CONFIG_SCHEMA_VERSION };
             safeStorage.set(AI_CONFIG_KEY, configWithVersion);
@@ -399,9 +405,9 @@ export function useConfig() {
             const newSettings = { ...prev, ...updates };
             const validation = validateSiteSettings(newSettings);
             
-            if (!validation.valid) {
-                console.warn('[Config] Site Settings validation warnings:', validation.warnings);
-            }
+        if (validation.warnings.length > 0 && import.meta.env.DEV) {
+            console.warn('[Config] Site Settings validation warnings:', validation.warnings);
+        }
 
             const settingsWithVersion = { ...newSettings, _schemaVersion: CONFIG_SCHEMA_VERSION };
             safeStorage.set(SITE_SETTINGS_KEY, settingsWithVersion);
@@ -471,11 +477,13 @@ export function useConfig() {
         const settingsValidation = validateSiteSettings(data.siteSettings);
 
         if (!aiValidation.valid || !settingsValidation.valid) {
-            console.error('[Config] Import validation failed:', {
-                aiErrors: aiValidation.errors,
-                settingsErrors: settingsValidation.errors
-            });
-            return false;
+        if (aiValidation.errors.length > 0 && import.meta.env.DEV) {
+            console.error('[Config] Import validation failed:', { aiErrors: aiValidation.errors });
+        }
+        if (settingsValidation.errors.length > 0 && import.meta.env.DEV) {
+            console.error('[Config] Import validation failed:', { settingsErrors: settingsValidation.errors });
+        }
+        return false;
         }
 
         // 保存配置
@@ -526,7 +534,10 @@ export function useConfig() {
                 favicon.href = siteSettings.favicon;
                 document.head.appendChild(favicon);
             } catch (error) {
-                console.error('[Config] Failed to update favicon:', error);
+            // 仅在开发环境显示错误
+            if (import.meta.env.DEV) {
+              console.error('[Config] Failed to update favicon:', error);
+            }
             }
         }
     }, [siteSettings.title, siteSettings.favicon]);
