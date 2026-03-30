@@ -8,6 +8,7 @@ const ImportModal = lazy(() => import('./components/modals/ImportModal'));
 const SettingsModal = lazy(() => import('./components/modals/SettingsModal'));
 const SearchConfigModal = lazy(() => import('./components/modals/SearchConfigModal'));
 const SyncConflictModal = lazy(() => import('./components/modals/SyncConflictModal'));
+const NotesView = lazy(() => import('./components/notes/NotesView'));
 
 // Eagerly load frequently used components
 import ContextMenu from './components/layout/ContextMenu';
@@ -28,6 +29,7 @@ import {
   useConfig,
   useSidebar,
   useSyncEngine,
+  useNotes,
   buildSyncData
 } from './hooks';
 
@@ -67,6 +69,9 @@ function App() {
     isLoaded
   } = useDataStore();
   const { notify, confirm } = useDialog();
+
+  // === Notes ===
+  const { notes, addNote, updateNote, deleteNote } = useNotes();
 
   // === Private Vault ===
   const [privateVaultCipher, setPrivateVaultCipher] = useState<string | null>(null);
@@ -925,6 +930,11 @@ function App() {
     setSidebarOpen(false);
   }, [notify, privacyGroupEnabled, setSelectedCategory, setSidebarOpen]);
 
+  const handleSelectNotes = useCallback(() => {
+    setSelectedCategory('notes');
+    setSidebarOpen(false);
+  }, [setSelectedCategory, setSidebarOpen]);
+
   // === Bookmarklet URL Handler ===
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -1365,9 +1375,11 @@ function App() {
           privateCount={privateCount}
           repoUrl={GITHUB_REPO_URL}
           readOnly={isReadOnly}
+          notesCount={notes.length}
           onSelectAll={selectAll}
           onSelectCategory={handleCategoryClick}
           onSelectPrivate={handleSelectPrivate}
+          onSelectNotes={handleSelectNotes}
           onToggleCollapsed={toggleSidebarCollapsed}
           onOpenCategoryManager={() => {
             if (!ensureEditable('管理分类')) return;
@@ -1477,38 +1489,49 @@ function App() {
             onOpenSettings={() => setIsSettingsModalOpen(true)}
           />
 
-          <LinkSections
-            linksCount={visibleLinks.length}
-            pinnedLinks={pinnedLinks}
-            displayedLinks={activeDisplayedLinks}
-            selectedCategory={selectedCategory}
-            searchQuery={searchQuery}
-            categories={visibleCategories}
-            siteTitle={siteSettings.title}
-            siteCardStyle={siteSettings.cardStyle}
-            isSortingPinned={isSortingPinned}
-            isSortingMode={isSortingMode}
-            isBatchEditMode={effectiveIsBatchEditMode}
-            selectedLinksCount={effectiveSelectedLinksCount}
-            sensors={sensors}
-            onPinnedDragEnd={handlePinnedDragEnd}
-            onDragEnd={handleDragEnd}
-            onToggleBatchEditMode={effectiveToggleBatchEditMode}
-            onBatchDelete={effectiveBatchDelete}
-            onBatchPin={effectiveBatchPin}
-            onSelectAll={effectiveSelectAll}
-            onBatchMove={effectiveBatchMove}
-            onAddLink={handleAddLinkRequest}
-            selectedLinks={effectiveSelectedLinks}
-            onLinkSelect={handleLinkSelect}
-            onLinkContextMenu={handleLinkContextMenu}
-            onLinkEdit={handleLinkEdit}
-            readOnly={isReadOnly}
-            isPrivateUnlocked={isPrivateUnlocked}
-            onPrivateUnlock={handleUnlockPrivateVault}
-            privateUnlockHint={privateUnlockHint}
-            privateUnlockSubHint={privateUnlockSubHint}
-          />
+          {selectedCategory === 'notes' ? (
+            <Suspense fallback={null}>
+              <NotesView
+                notes={notes}
+                onAddNote={addNote}
+                onUpdateNote={updateNote}
+                onDeleteNote={deleteNote}
+              />
+            </Suspense>
+          ) : (
+            <LinkSections
+              linksCount={visibleLinks.length}
+              pinnedLinks={pinnedLinks}
+              displayedLinks={activeDisplayedLinks}
+              selectedCategory={selectedCategory}
+              searchQuery={searchQuery}
+              categories={visibleCategories}
+              siteTitle={siteSettings.title}
+              siteCardStyle={siteSettings.cardStyle}
+              isSortingPinned={isSortingPinned}
+              isSortingMode={isSortingMode}
+              isBatchEditMode={effectiveIsBatchEditMode}
+              selectedLinksCount={effectiveSelectedLinksCount}
+              sensors={sensors}
+              onPinnedDragEnd={handlePinnedDragEnd}
+              onDragEnd={handleDragEnd}
+              onToggleBatchEditMode={effectiveToggleBatchEditMode}
+              onBatchDelete={effectiveBatchDelete}
+              onBatchPin={effectiveBatchPin}
+              onSelectAll={effectiveSelectAll}
+              onBatchMove={effectiveBatchMove}
+              onAddLink={handleAddLinkRequest}
+              selectedLinks={effectiveSelectedLinks}
+              onLinkSelect={handleLinkSelect}
+              onLinkContextMenu={handleLinkContextMenu}
+              onLinkEdit={handleLinkEdit}
+              readOnly={isReadOnly}
+              isPrivateUnlocked={isPrivateUnlocked}
+              onPrivateUnlock={handleUnlockPrivateVault}
+              privateUnlockHint={privateUnlockHint}
+              privateUnlockSubHint={privateUnlockSubHint}
+            />
+          )}
         </div>
       </main>
 

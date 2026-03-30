@@ -36,11 +36,20 @@ export interface SiteSettings {
   backgroundMotion?: boolean;
 }
 
+export interface StickyNote {
+  id: string;
+  content: string;
+  createdAt: number;
+  updatedAt: number;
+  color?: string;
+}
+
 export interface AppState {
   links: LinkItem[];
   categories: Category[];
   darkMode: boolean;
   settings?: SiteSettings;
+  notes?: StickyNote[];
 }
 
 // ============ AI 配置类型定义 ============

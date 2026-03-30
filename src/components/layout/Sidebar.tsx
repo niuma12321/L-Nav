@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, ChevronLeft } from 'lucide-react';
+import { Settings, ChevronLeft, FileText } from 'lucide-react';
 import { Category } from '../../types';
 import Icon from '../ui/Icon';
 import { PRIVATE_CATEGORY_ID } from '../../utils/constants';
@@ -18,9 +18,11 @@ interface SidebarProps {
   privateCount: number;
   repoUrl: string;
   readOnly?: boolean;
+  notesCount?: number;
   onSelectAll: () => void;
   onSelectCategory: (category: Category) => void;
   onSelectPrivate: () => void;
+  onSelectNotes: () => void;
   onToggleCollapsed: () => void;
   onOpenCategoryManager: () => void;
   onOpenSettings: () => void;
@@ -40,9 +42,11 @@ const Sidebar: React.FC<SidebarProps> = ({
   privateCount,
   repoUrl,
   readOnly = false,
+  notesCount = 0,
   onSelectAll,
   onSelectCategory,
   onSelectPrivate,
+  onSelectNotes,
   onToggleCollapsed,
   onOpenCategoryManager,
   onOpenSettings
@@ -196,6 +200,33 @@ const Sidebar: React.FC<SidebarProps> = ({
               {linkCounts['pinned'] > 0 && (
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${selectedCategory === 'all' ? 'bg-accent/20 text-accent' : 'bg-slate-50 dark:bg-slate-800/50 text-slate-400 border border-slate-200/50 dark:border-slate-700/50'}`}>
                   {linkCounts['pinned']}
+                </span>
+              )}
+            </>
+          )}
+        </button>
+
+        {/* 我的便签 */}
+        <button
+          onClick={onSelectNotes}
+          title="我的便签"
+          className={`relative w-full rounded-xl transition-all duration-200 mb-1 group ${isSidebarCollapsed ? 'flex items-center justify-center p-2.5' : 'flex items-center gap-3 px-3 py-2.5'} ${selectedCategory === 'notes'
+            ? 'bg-gradient-to-r from-emerald-500/20 via-emerald-500/5 to-transparent text-emerald-600 dark:text-emerald-400 shadow-sm border border-emerald-500/20'
+            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-200 border border-transparent'
+            }`}
+        >
+          {!isSidebarCollapsed && selectedCategory === 'notes' && (
+            <span className="absolute left-0.5 top-1/2 -translate-y-1/2 h-6 w-1 rounded-full bg-emerald-500 shadow-[0_0_8px_rgb(var(--emerald-500)/0.4)]"></span>
+          )}
+          <div className={`flex items-center justify-center transition-colors ${isSidebarCollapsed ? 'p-2 rounded-lg' : 'p-1'} ${selectedCategory === 'notes' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'}`}>
+            <FileText size={18} />
+          </div>
+          {!isSidebarCollapsed && (
+            <>
+              <span className="font-medium flex-1 text-left">我的便签</span>
+              {notesCount > 0 && (
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${selectedCategory === 'notes' ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-slate-50 dark:bg-slate-800/50 text-slate-400 border border-slate-200/50 dark:border-slate-700/50'}`}>
+                  {notesCount}
                 </span>
               )}
             </>

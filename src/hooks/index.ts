@@ -9,3 +9,4 @@ export { useSorting } from './useSorting';
 export { useConfig } from './useConfig';
 export { useSidebar } from './useSidebar';
 export { useSyncEngine, buildSyncData } from './useSyncEngine';
+export { useNotes } from './useNotes';
