@@ -1,4 +1,4 @@
-// 统一导出所有自定义 Hooks - 生产可用，无任何冗余依赖
+// Export all hooks from a single entry point
 export { useDataStore } from './useDataStore';
 export { useTheme, type ThemeMode } from './useTheme';
 export { useSearch } from './useSearch';
