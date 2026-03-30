@@ -5,7 +5,7 @@
 # 支持自定义域名 + 优选 IP 实现国内加速
 # ============================================
 
-name = "L-Nav"
+name = "y-nav"
 main = "worker/index.ts"
 compatibility_date = "2024-01-01"
 
@@ -17,7 +17,7 @@ bucket = "./dist"
 # 若需创建新的 KV: wrangler kv:namespace create YNAV_WORKER_KV
 [[kv_namespaces]]
 binding = "YNAV_WORKER_KV"
-id = "43e6854cf0354bf5970054b899dde7d9"
+id = "65af0541820e42438959ed8fc8688f0c"
 # preview_id = ""  # 本地预览时使用的 KV ID (可选)
 
 # 环境变量 (也可以在 Cloudflare Dashboard 中设置)
