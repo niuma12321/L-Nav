@@ -1,7 +1,7 @@
 import React, { useMemo, useCallback } from 'react';
 import { LinkItem } from '../../types';
 import { EyeOff, Settings, Globe } from 'lucide-react';
-import Icon from './Icon';
+import Favicon from './Favicon'; // 引入我们的终极Favicon组件（核心修复）
 import { getIconToneClass, getIconToneStyle } from '../../utils/iconTone';
 
 interface LinkCardProps {
@@ -15,9 +15,6 @@ interface LinkCardProps {
   onEdit: (link: LinkItem) => void;
 }
 
-// ==============================================
-// 🔒 缓存组件，避免无效重渲染（性能极致优化）
-// ==============================================
 const LinkCard: React.FC<LinkCardProps> = React.memo(({
   link,
   siteCardStyle,
@@ -30,9 +27,7 @@ const LinkCard: React.FC<LinkCardProps> = React.memo(({
 }) => {
   const isDetailedView = siteCardStyle === 'detailed';
 
-  // ==============================================
-  // 🎨 样式缓存（useMemo 减少重复计算）
-  // ==============================================
+  // 样式缓存
   const cardClasses = useMemo(() => `
     group relative rounded-2xl transition-all duration-300 ease-out
     bg-white dark:bg-slate-900/40 backdrop-blur-md
@@ -78,9 +73,7 @@ const LinkCard: React.FC<LinkCardProps> = React.memo(({
     }
   `, [isDetailedView]);
 
-  // ==============================================
-  // 🎯 回调函数缓存（性能优化）
-  // ==============================================
+  // 回调缓存
   const handleCardClick = useCallback(() => {
     if (isBatchEditMode) onSelect(link.id);
   }, [isBatchEditMode, onSelect, link.id]);
@@ -92,53 +85,25 @@ const LinkCard: React.FC<LinkCardProps> = React.memo(({
   }, [onEdit, link]);
 
   // ==============================================
-  // 🖼️ 图标渲染（带错误兜底，彻底解决404报错）
+  // ✅ 核心修复：替换为智能Favicon组件，彻底消灭404
   // ==============================================
-  const renderIcon = () => {
-    if (link.icon) {
-      return (
-        <img
-          src={link.icon}
-          alt=""
-          loading="lazy"
-          className={`object-contain ${isDetailedView ? "w-6 h-6" : "w-5 h-5"}`}
-          onError={(e) => {
-            // 图片加载失败，隐藏img，渲染兜底图标
-            e.currentTarget.style.display = 'none';
-            e.currentTarget.nextElementSibling?.removeAttribute('style');
-          }}
-        />
-      );
-    }
-    return null;
-  };
-
-  const renderFallbackIcon = () => (
-    <span
-      className="hidden text-sm font-bold uppercase text-slate-400 dark:text-slate-500"
-      style={link.icon ? {} : { display: 'flex' }}
-    >
-      {link.title.charAt(0) || <Globe size={16} />}
-    </span>
+  const renderIcon = () => (
+    <Favicon 
+      url={link.url} 
+      size={isDetailedView ? 24 : 20}
+      forceFallback={false}
+    />
   );
 
-  // ==============================================
-  // 📝 核心内容渲染
-  // ==============================================
+  // 核心内容
   const renderContent = () => (
     <>
-      {/* 图标区域 */}
       <div className={iconContainerClasses} style={customToneStyle}>
         {renderIcon()}
-        {renderFallbackIcon()}
       </div>
-
-      {/* 标题 */}
       <h3 className={titleClasses} title={link.title}>
         {link.title}
       </h3>
-
-      {/* 详细模式描述 */}
       {isDetailedView && link.description && (
         <p className={descriptionClasses}>{link.description}</p>
       )}
@@ -154,7 +119,6 @@ const LinkCard: React.FC<LinkCardProps> = React.memo(({
       aria-checked={isSelected}
       tabIndex={0}
     >
-      {/* 卡片主体内容 */}
       {isBatchEditMode ? (
         <div className={`flex ${isDetailedView ? 'flex-col' : 'items-center'} min-w-0 gap-3`}>
           {renderContent()}
@@ -171,9 +135,7 @@ const LinkCard: React.FC<LinkCardProps> = React.memo(({
         </a>
       )}
 
-      {/* ==============================================
-        🔍 简易模式 Tooltip（美化+深色适配）
-      ============================================== */}
+      {/* Tooltip */}
       {!isDetailedView && link.description && !isBatchEditMode && (
         <div className="absolute left-1/2 -translate-x-1/2 -top-11 w-max max-w-[220px]
           px-3 py-2 rounded-lg text-xs text-white
@@ -187,9 +149,7 @@ const LinkCard: React.FC<LinkCardProps> = React.memo(({
         </div>
       )}
 
-      {/* ==============================================
-        ⚙️ 悬浮编辑按钮（智能定位+丝滑交互）
-      ============================================== */}
+      {/* 编辑按钮 */}
       {!isBatchEditMode && !readOnly && (
         <div className={`
           absolute transition-all duration-200 opacity-0 group-hover:opacity-100 z-20
@@ -210,9 +170,7 @@ const LinkCard: React.FC<LinkCardProps> = React.memo(({
         </div>
       )}
 
-      {/* ==============================================
-        🕶️ 隐藏状态标识（美化轻量化）
-      ============================================== */}
+      {/* 隐藏标识 */}
       {!isBatchEditMode && link.hidden && (
         <div className="absolute bottom-2 right-2 px-1.5 py-1 rounded-md
           text-[10px] font-medium flex items-center gap-1
@@ -223,9 +181,7 @@ const LinkCard: React.FC<LinkCardProps> = React.memo(({
         </div>
       )}
 
-      {/* ==============================================
-        ✅ 批量选择勾选框（高级动效）
-      ============================================== */}
+      {/* 批量选择框 */}
       {isBatchEditMode && (
         <div className={`
           absolute top-2 right-2 w-5 h-5 rounded-md border-2
