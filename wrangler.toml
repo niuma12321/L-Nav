@@ -1,39 +1,133 @@
 # ============================================
 # Y-Nav Cloudflare Workers 部署配置
-# ============================================
-# 此配置用于将 Y-Nav 部署为 Cloudflare Worker
-# 支持自定义域名 + 优选 IP 实现国内加速
+# 项目地址: https://github.com/niuma12321/L-Nav
 # ============================================
 
+# ---------- 基础配置 ----------
 name = "y-nav"
 main = "worker/index.ts"
-compatibility_date = "2024-01-01"
+compatibility_date = "2025-03-01"  # 使用较新的兼容性日期
+compatibility_flags = ["nodejs_compat"]  # 启用 Node.js 兼容模式
 
-# 静态资源目录 (Workers Sites)
+# ---------- 性能优化配置 ----------
+# 启用智能压缩
+minify = true
+
+# ---------- 静态资源配置 (Workers Sites) ----------
 [site]
 bucket = "./dist"
+# exclude = ["*.map"]  # 可选：排除 source map 等文件
 
-# KV 命名空间绑定 (Workers 专用，与 Pages 的 YNAV_KV 区分)
-# 若需创建新的 KV: wrangler kv:namespace create YNAV_WORKER_KV
+# ---------- KV 命名空间绑定 ----------
+# 创建命令: wrangler kv:namespace create YNAV_WORKER_KV
+# 预览环境: wrangler kv:namespace create YNAV_WORKER_KV --preview
 [[kv_namespaces]]
 binding = "YNAV_WORKER_KV"
 id = "65af0541820e42438959ed8fc8688f0c"
-# preview_id = ""  # 本地预览时使用的 KV ID (可选)
+# preview_id = "your-preview-kv-id-here"  # 本地预览时使用
 
-# 环境变量 (也可以在 Cloudflare Dashboard 中设置)
+# 可选：限流 KV（如果需要请求限流功能）
+# [[kv_namespaces]]
+# binding = "RATE_LIMITER_KV"
+# id = "your-rate-limiter-kv-id-here"
+
+# ---------- 环境变量（非敏感配置）----------
+# 🔒 注意：密码等敏感信息请在 Cloudflare Dashboard 中设置！
 [vars]
-# SYNC_PASSWORD = ""  # 同步密码，建议在 Dashboard 中设置而非此处
+# 应用配置
+APP_NAME = "Y-Nav"
+APP_VERSION = "1.0.0"
 
-# 生产环境配置 (可选)
-# [env.production]
+# 功能开关
+ENABLE_SHORT_LINKS = "true"    # 启用短链接功能
+ENABLE_ANALYTICS = "true"      # 启用访问统计
+ENABLE_BACKUPS = "true"        # 启用自动备份
+
+# 备份配置（天）
+BACKUP_RETENTION_DAYS = "30"
+
+# ---------- 开发环境配置 ----------
+[env.dev]
+name = "y-nav-dev"
+compatibility_date = "2025-03-01"
+
+# 开发环境变量
+[env.dev.vars]
+ENVIRONMENT = "development"
+DEBUG = "true"
+
+# ---------- 预览环境配置 ----------
+[env.preview]
+name = "y-nav-preview"
+compatibility_date = "2025-03-01"
+
+# 预览环境变量
+[env.preview.vars]
+ENVIRONMENT = "preview"
+DEBUG = "true"
+
+# ---------- 生产环境配置 ----------
+[env.production]
+name = "y-nav"
+compatibility_date = "2025-03-01"
+
+# 生产环境路由（取消注释并修改为你的域名）
 # routes = [
-#   { pattern = "your-domain.com/*", zone_name = "your-domain.com" }
+#   { pattern = "nav.your-domain.com/*", zone_name = "your-domain.com", custom_domain = true }
 # ]
 
+# 生产环境变量
+[env.production.vars]
+ENVIRONMENT = "production"
+DEBUG = "false"
+
 # ============================================
-# 部署步骤:
-# 1. npm run build
-# 2. wrangler kv:namespace create YNAV_WORKER_KV
-# 3. 将返回的 id 填入上方 kv_namespaces.id
-# 4. wrangler deploy
+# 🔐 敏感配置（请在 Cloudflare Dashboard 设置）
+# ============================================
+# 以下变量不应提交到版本控制，请在 Cloudflare Dashboard -> Workers & Pages -> 设置 -> 变量 中添加：
+#
+# 1. SYNC_PASSWORD_HASH (必填)
+#    - 说明：同步密码的 SHA-256 哈希值
+#    - 生成方式：在浏览器控制台运行 await crypto.subtle.digest('SHA-256', new TextEncoder().encode('your-password'))
+#
+# 2. VIEW_PASSWORD_HASH (可选)
+#    - 说明：只读密码的 SHA-256 哈希值
+#
+# 3. (可选) 如果使用了限流功能，还需绑定 RATE_LIMITER_KV
+#
+# ============================================
+# 📦 部署步骤
+# ============================================
+#
+# 1. 构建项目
+#    npm run build
+#
+# 2. 创建 KV 命名空间（如果还没有）
+#    wrangler kv:namespace create YNAV_WORKER_KV
+#
+# 3. 将返回的 KV ID 填入上方 kv_namespaces.id
+#
+# 4. 部署到开发环境
+#    wrangler deploy --env dev
+#
+# 5. 部署到生产环境
+#    wrangler deploy --env production
+#
+# 6. 本地预览
+#    wrangler dev
+#
+# ============================================
+# 🎯 常用命令
+# ============================================
+#
+# 查看日志:
+#   wrangler tail
+#   wrangler tail --env production
+#
+# 查看 KV 数据:
+#   wrangler kv:key list --binding=YNAV_WORKER_KV
+#
+# 生成密码哈希（Node.js）:
+#   node -e "crypto.createHash('sha256').update('your-password').digest('hex')"
+#
 # ============================================
