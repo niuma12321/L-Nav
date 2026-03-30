@@ -4,7 +4,7 @@
 # ============================================
 
 # ---------- 基础配置 ----------
-name = "home"  # 🔧 修改为 CI 期望的名称
+name = "home"
 main = "worker/index.ts"
 compatibility_date = "2025-03-01"
 compatibility_flags = ["nodejs_compat"]
@@ -17,19 +17,31 @@ minify = true
 bucket = "./dist"
 
 # ---------- KV 命名空间绑定 ----------
-# 🔧 已更新为正确的 KV ID
 [[kv_namespaces]]
 binding = "YNAV_WORKER_KV"
 id = "43e6854cf0354bf5970054b899dde7d9"
 
+# ---------- D1 数据库绑定 ----------
+[[d1_databases]]
+binding = "YNAV_D1_DB"
+database_name = "ynav-db"
+database_id = "your-d1-database-id-here"  # 需要在Cloudflare Dashboard创建后替换
+
+# ---------- R2 对象存储绑定 ----------
+[[r2_buckets]]
+binding = "YNAV_R2_BUCKET"
+bucket_name = "ynav-storage"
+
 # ---------- 环境变量（非敏感配置）----------
 [vars]
 APP_NAME = "Y-Nav"
-APP_VERSION = "1.0.0"
+APP_VERSION = "2.0.0"
 ENABLE_SHORT_LINKS = "true"
 ENABLE_ANALYTICS = "true"
 ENABLE_BACKUPS = "true"
 BACKUP_RETENTION_DAYS = "30"
+ENABLE_D1_SYNC = "true"
+ENABLE_R2_STORAGE = "true"
 
 # ---------- 开发环境配置 ----------
 [env.dev]
@@ -68,6 +80,9 @@ DEBUG = "false"
 #
 # 2. VIEW_PASSWORD_HASH (可选)
 #    - 说明：只读密码的 SHA-256 哈希值
+#
+# 3. D1_DATABASE_ID (可选)
+#    - 说明：D1数据库ID，覆盖配置文件中的值
 #
 # ============================================
 # 📦 部署步骤

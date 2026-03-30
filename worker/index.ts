@@ -24,10 +24,15 @@ const assetManifest = JSON.parse(manifestJSON);
 
 interface Env {
     YNAV_WORKER_KV: KVNamespace;
-    SYNC_PASSWORD_HASH?: string; // 改为哈希存储
+    YNAV_D1_DB?: D1Database;           // D1结构化数据库
+    YNAV_R2_BUCKET?: R2Bucket;         // R2对象存储
+    SYNC_PASSWORD_HASH?: string;
     VIEW_PASSWORD_HASH?: string;
     __STATIC_CONTENT: KVNamespace;
-    RATE_LIMITER_KV?: KVNamespace; // 可选：用于限流
+    RATE_LIMITER_KV?: KVNamespace;
+    // 功能开关
+    ENABLE_D1_SYNC?: string;
+    ENABLE_R2_STORAGE?: string;
 }
 
 interface SyncMetadata {
@@ -176,11 +181,11 @@ async function getAuthStatus(request: Request, env: Env) {
     let canWrite = !passwordRequired;
     let canView = !viewPasswordRequired;
 
-    if (passwordRequired && syncPassword) {
+    if (passwordRequired && syncPassword && env.SYNC_PASSWORD_HASH) {
         canWrite = await SecurityUtils.verifyPassword(syncPassword, env.SYNC_PASSWORD_HASH);
     }
     
-    if (viewPasswordRequired && viewPassword) {
+    if (viewPasswordRequired && viewPassword && env.VIEW_PASSWORD_HASH) {
         canView = await SecurityUtils.verifyPassword(viewPassword, env.VIEW_PASSWORD_HASH);
     }
 
@@ -254,8 +259,9 @@ class ShortLinkService {
         if (link) {
             link.visits++;
             await env.YNAV_WORKER_KV.put(KV_KEYS.SHORT_LINKS, JSON.stringify(links));
+            return link as ShortLink;
         }
-        return link;
+        return null;
     }
 
     static async getAll(env: Env): Promise<ShortLink[]> {
@@ -275,13 +281,95 @@ class ShortLinkService {
 }
 
 // ============================================
-// 8. API 处理函数 (重构与扩展)
+// 11. 多存储API处理器 (D1 + R2 + KV)
 // ============================================
 
-class ApiHandler {
+import { D1StorageService, R2StorageService, KVCacheService, HybridStorageService, createStorageService } from './services/storage';
+import { runMigrations, migrateFromKV, checkDatabaseHealth } from './database/migrations';
+
+class MultiStorageApiHandler {
+    // 获取用户ID (从请求头或生成)
+    private static getUserId(request: Request): string {
+        // 从自定义头部获取用户ID，或使用设备指纹
+        const customUserId = request.headers.get('X-User-ID');
+        if (customUserId) return customUserId;
+        
+        // 使用设备标识符
+        const deviceId = request.headers.get('X-Device-ID') || 'anonymous';
+        return `user_${deviceId}`;
+    }
+
+    // 检查D1是否启用
+    private static isD1Enabled(env: Env): boolean {
+        return !!(env.YNAV_D1_DB && env.ENABLE_D1_SYNC === 'true');
+    }
+
+    // 检查R2是否启用
+    private static isR2Enabled(env: Env): boolean {
+        return !!(env.YNAV_R2_BUCKET && env.ENABLE_R2_STORAGE === 'true');
+    }
+
+    // 统一的数据获取方法
+    static async loadData(env: Env, userId: string): Promise<any | null> {
+        // 优先从D1读取
+        if (this.isD1Enabled(env)) {
+            const d1 = new D1StorageService(env.YNAV_D1_DB!, userId);
+            try {
+                const data = await d1.getAllData();
+                return {
+                    links: data.links,
+                    categories: data.categories,
+                    notes: data.notes,
+                    settings: data.settings,
+                    meta: data.meta
+                };
+            } catch (e) {
+                console.error('D1 read failed, falling back to KV:', e);
+            }
+        }
+
+        // 回退到KV
+        return await loadCurrentData(env);
+    }
+
+    // 统一的数据保存方法
+    static async saveData(env: Env, userId: string, data: any): Promise<void> {
+        const storage = createStorageService(env, userId);
+
+        // 保存到D1 (结构化数据)
+        if (storage.isD1Available()) {
+            await storage.d1!.saveAllData({
+                links: data.links || [],
+                categories: data.categories || [],
+                notes: data.notes || [],
+                settings: data.settings,
+                meta: data.meta
+            });
+        }
+
+        // 保存到KV (兼容性)
+        await env.YNAV_WORKER_KV.put(KV_KEYS.MAIN_DATA, JSON.stringify(data));
+
+        // 缓存到KV (加速读取)
+        if (storage.isKVAvailable()) {
+            await storage.kv!.cacheAggregatedData(data, 300);
+        }
+
+        // 大对象保存到R2 (如果有)
+        if (storage.isR2Available() && data.privateVault) {
+            // 隐私数据存储到R2
+            await storage.r2!.createBackupArchive(`vault-${Date.now()}`, {
+                vault: data.privateVault,
+                timestamp: Date.now()
+            });
+        }
+    }
+
+    // 主处理函数
     static async handleSync(request: Request, env: Env): Promise<Response> {
         const url = new URL(request.url);
         const action = url.searchParams.get('action');
+        const userId = this.getUserId(request);
 
         if (request.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
@@ -293,6 +381,47 @@ class ApiHandler {
         const auth = await getAuthStatus(request, env);
 
         try {
+            // 数据库健康检查
+            if (action === 'health') {
+                if (!this.isD1Enabled(env)) {
+                    return jsonResponse({ 
+                        success: true, 
+                        healthy: true, 
+                        storage: 'kv_only',
+                        message: '使用KV存储模式'
+                    });
+                }
+                const health = await checkDatabaseHealth(env.YNAV_D1_DB!);
+                return jsonResponse({ 
+                    success: true, 
+                    ...health,
+                    storage: 'hybrid'
+                });
+            }
+
+            // 执行数据库迁移
+            if (action === 'migrate' && request.method === 'POST') {
+                if (!this.isD1Enabled(env)) {
+                    return jsonResponse({ success: false, error: 'D1 not enabled' }, 400);
+                }
+                const result = await runMigrations(env.YNAV_D1_DB!);
+                return jsonResponse({
+                success: result.success,
+                message: result.message,
+                executedMigrations: result.executedMigrations,
+                errors: result.errors
+            });
+            }
+
+            // 从KV迁移到D1
+            if (action === 'migrate-from-kv' && request.method === 'POST') {
+                if (!this.isD1Enabled(env)) {
+                    return jsonResponse({ success: false, error: 'D1 not enabled' }, 400);
+                }
+                const result = await migrateFromKV(env.YNAV_WORKER_KV, env.YNAV_D1_DB!, userId);
+                return jsonResponse(result);
+            }
+
             // 公共端点
             if (request.method === 'GET' && action === 'whoami') {
                 return jsonResponse({
@@ -301,7 +430,13 @@ class ApiHandler {
                     passwordRequired: auth.passwordRequired,
                     canWrite: auth.canWrite,
                     viewPasswordRequired: auth.viewPasswordRequired,
-                    canView: auth.canWrite || auth.canView
+                    canView: auth.canWrite || auth.canView,
+                    storageMode: this.isD1Enabled(env) ? 'hybrid' : 'kv_only',
+                    features: {
+                        d1: this.isD1Enabled(env),
+                        r2: this.isR2Enabled(env),
+                        kv: true
+                    }
                 });
             }
 
@@ -311,23 +446,23 @@ class ApiHandler {
             }
 
             if (request.method === 'GET') {
-                if (action === 'backups') return this.handleListBackups(env);
+                if (action === 'backups') return this.handleListBackups(env, userId);
                 if (action === 'stats') return jsonResponse({ success: true, data: await AnalyticsService.getStats(env) });
                 if (action === 'shortlinks') return jsonResponse({ success: true, data: await ShortLinkService.getAll(env) });
-                return this.handleGet(request, env, auth);
+                return this.handleGet(request, env, auth, userId);
             }
 
             if (request.method === 'POST') {
-                if (action === 'backup') return this.handleBackup(request, env);
-                if (action === 'restore') return this.handleRestore(request, env);
+                if (action === 'backup') return this.handleBackup(request, env, userId);
+                if (action === 'restore') return this.handleRestore(request, env, userId);
                 if (action === 'shorten') return this.handleShorten(request, env);
-                if (action === 'export') return this.handleExport(env);
-                if (action === 'import') return this.handleImport(request, env);
-                return this.handlePost(request, env);
+                if (action === 'export') return this.handleExport(env, userId);
+                if (action === 'import') return this.handleImport(request, env, userId);
+                return this.handlePost(request, env, auth, userId);
             }
 
             if (request.method === 'DELETE') {
-                if (action === 'backup') return this.handleDeleteBackup(request, env);
+                if (action === 'backup') return this.handleDeleteBackup(request, env, userId);
                 if (action === 'shortlink') return this.handleDeleteShortLink(request, env);
                 return jsonResponse({ success: false, error: 'Method not allowed' }, 405);
             }
@@ -339,8 +474,8 @@ class ApiHandler {
         }
     }
 
-    private static async handleGet(request: Request, env: Env, auth: Awaited<ReturnType<typeof getAuthStatus>>): Promise<Response> {
-        const data = await loadCurrentData(env);
+    private static async handleGet(request: Request, env: Env, auth: Awaited<ReturnType<typeof getAuthStatus>>, userId: string): Promise<Response> {
+        const data = await this.loadData(env, userId);
         if (!data) {
             return jsonResponse({ success: true, data: null, message: 'No data' });
         }
@@ -356,9 +491,9 @@ class ApiHandler {
         }
 
         // 构建安全数据（过滤隐藏内容）
-        const visibleCategories = data.categories.filter(c => !c.hidden);
-        const visibleCategoryIds = new Set(visibleCategories.map(c => c.id));
-        const visibleLinks = data.links.filter(l => !l.hidden && (!l.categoryId || visibleCategoryIds.has(l.categoryId)));
+        const visibleCategories = data.categories?.filter((c: any) => !c.hidden) || [];
+        const visibleCategoryIds = new Set(visibleCategories.map((c: any) => c.id));
+        const visibleLinks = data.links?.filter((l: any) => !l.hidden && (!l.categoryId || visibleCategoryIds.has(l.categoryId))) || [];
 
         return jsonResponse({
             success: true,
@@ -372,18 +507,18 @@ class ApiHandler {
         });
     }
 
-    private static async handlePost(request: Request, env: Env): Promise<Response> {
+    private static async handlePost(request: Request, env: Env, auth: Awaited<ReturnType<typeof getAuthStatus>>, userId: string): Promise<Response> {
         const body = await request.json() as { data: YNavSyncData; expectedVersion?: number };
         
         if (!Validator.isSyncDataValid(body.data)) {
             return jsonResponse({ success: false, error: 'Invalid data' }, 400);
         }
 
-        const existingData = await loadCurrentData(env);
+        const existingData = await this.loadData(env, userId);
         
         // 版本冲突检测
         if (existingData && body.expectedVersion !== undefined) {
-            if (existingData.meta.version !== body.expectedVersion) {
+            if (existingData.meta?.version !== body.expectedVersion) {
                 return jsonResponse({
                     success: false,
                     conflict: true,
@@ -393,7 +528,7 @@ class ApiHandler {
             }
         }
 
-        const newVersion = (existingData?.meta.version || 0) + 1;
+        const newVersion = (existingData?.meta?.version || 0) + 1;
         const dataToSave: YNavSyncData = {
             ...body.data,
             meta: {
@@ -404,31 +539,58 @@ class ApiHandler {
             }
         };
 
-        await env.YNAV_WORKER_KV.put(KV_KEYS.MAIN_DATA, JSON.stringify(dataToSave));
+        await this.saveData(env, userId, dataToSave);
+        
+        // 记录同步日志 (如果D1可用)
+        if (this.isD1Enabled(env)) {
+            const d1 = new D1StorageService(env.YNAV_D1_DB!, userId);
+            await d1.logSync('push', 'success', { version: newVersion });
+        }
+
         return jsonResponse({ success: true, data: dataToSave });
     }
 
-    private static async handleBackup(request: Request, env: Env): Promise<Response> {
+    private static async handleBackup(request: Request, env: Env, userId: string): Promise<Response> {
         const body = await request.json() as { data: YNavSyncData };
         if (!body.data) return jsonResponse({ success: false, error: 'Missing data' }, 400);
 
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('.')[0];
-        const backupKey = `${KV_KEYS.BACKUP_PREFIX}${timestamp}`;
-
-        await env.YNAV_WORKER_KV.put(backupKey, JSON.stringify(body.data), { expirationTtl: BACKUP_TTL });
-        return jsonResponse({ success: true, backupKey });
-    }
-
-    private static async handleRestore(request: Request, env: Env): Promise<Response> {
-        const body = await request.json() as { backupKey: string };
-        if (!body.backupKey?.startsWith(KV_KEYS.BACKUP_PREFIX) && !body.backupKey?.startsWith(KV_KEYS.LEGACY_BACKUP_PREFIX)) {
-            return jsonResponse({ success: false, error: 'Invalid backup key' }, 400);
+        
+        // 保存到R2 (如果启用)
+        if (this.isR2Enabled(env)) {
+            const r2 = new R2StorageService(env.YNAV_R2_BUCKET!, userId);
+            const key = await r2.createBackupArchive(timestamp, body.data);
+            return jsonResponse({ success: true, backupKey: key, storage: 'r2' });
         }
 
-        const backupData = await env.YNAV_WORKER_KV.get<YNavSyncData>(body.backupKey, 'json');
+        // 回退到KV
+        const backupKey = `${KV_KEYS.BACKUP_PREFIX}${timestamp}`;
+        await env.YNAV_WORKER_KV.put(backupKey, JSON.stringify(body.data), { expirationTtl: BACKUP_TTL });
+        return jsonResponse({ success: true, backupKey, storage: 'kv' });
+    }
+
+    private static async handleRestore(request: Request, env: Env, userId: string): Promise<Response> {
+        const body = await request.json() as { backupKey: string; fromR2?: boolean };
+        
+        let backupData: YNavSyncData | null = null;
+
+        // 从R2恢复
+        if (body.fromR2 && this.isR2Enabled(env)) {
+            const r2 = new R2StorageService(env.YNAV_R2_BUCKET!, userId);
+            backupData = await r2.getBackupArchive(body.backupKey);
+        }
+
+        // 从KV恢复
+        if (!backupData) {
+            if (!body.backupKey?.startsWith(KV_KEYS.BACKUP_PREFIX) && !body.backupKey?.startsWith(KV_KEYS.LEGACY_BACKUP_PREFIX)) {
+                return jsonResponse({ success: false, error: 'Invalid backup key' }, 400);
+            }
+            backupData = await env.YNAV_WORKER_KV.get<YNavSyncData>(body.backupKey, 'json');
+        }
+
         if (!backupData) return jsonResponse({ success: false, error: 'Backup not found' }, 404);
 
-        const existingData = await loadCurrentData(env);
+        const existingData = await this.loadData(env, userId);
         const now = Date.now();
 
         // 创建回滚点
@@ -437,17 +599,30 @@ class ApiHandler {
             await env.YNAV_WORKER_KV.put(rollbackKey, JSON.stringify(existingData), { expirationTtl: BACKUP_TTL });
         }
 
-        const newVersion = (existingData?.meta.version || 0) + 1;
+        const newVersion = (existingData?.meta?.version || 0) + 1;
         const restoredData: YNavSyncData = {
             ...backupData,
             meta: { ...backupData.meta, updatedAt: now, version: newVersion }
         };
 
-        await env.YNAV_WORKER_KV.put(KV_KEYS.MAIN_DATA, JSON.stringify(restoredData));
+        await this.saveData(env, userId, restoredData);
         return jsonResponse({ success: true, data: restoredData });
     }
 
-    private static async handleListBackups(env: Env): Promise<Response> {
+    private static async handleListBackups(env: Env, userId: string): Promise<Response> {
+        // 尝试从R2获取备份列表
+        if (this.isR2Enabled(env)) {
+            const r2 = new R2StorageService(env.YNAV_R2_BUCKET!, userId);
+            const r2Keys = await r2.listObjects('backups');
+            const r2Backups = r2Keys.map(key => ({
+                key,
+                storage: 'r2',
+                timestamp: key.split('/').pop()?.replace('.json', '') || ''
+            }));
+            return jsonResponse({ success: true, backups: r2Backups, storage: 'r2' });
+        }
+
+        // 从KV获取
         const [v1List, legacyList] = await Promise.all([
             env.YNAV_WORKER_KV.list({ prefix: KV_KEYS.BACKUP_PREFIX }),
             env.YNAV_WORKER_KV.list({ prefix: KV_KEYS.LEGACY_BACKUP_PREFIX })
@@ -463,6 +638,7 @@ class ApiHandler {
 
             return {
                 key: key.name,
+                storage: 'kv',
                 timestamp: key.name.replace(KV_KEYS.BACKUP_PREFIX, '').replace(KV_KEYS.LEGACY_BACKUP_PREFIX, ''),
                 expiration: key.expiration,
                 ...meta
@@ -472,15 +648,22 @@ class ApiHandler {
         return jsonResponse({ success: true, backups });
     }
 
-    private static async handleDeleteBackup(request: Request, env: Env): Promise<Response> {
-        const body = await request.json() as { backupKey: string };
+    private static async handleDeleteBackup(request: Request, env: Env, userId: string): Promise<Response> {
+        const body = await request.json() as { backupKey: string; fromR2?: boolean };
         if (!body.backupKey) return jsonResponse({ success: false, error: 'Missing backup key' }, 400);
 
+        // 从R2删除
+        if (body.fromR2 && this.isR2Enabled(env)) {
+            const r2 = new R2StorageService(env.YNAV_R2_BUCKET!, userId);
+            await r2.deleteBackupArchive(body.backupKey);
+            return jsonResponse({ success: true, storage: 'r2' });
+        }
+
+        // 从KV删除
         await env.YNAV_WORKER_KV.delete(body.backupKey);
-        return jsonResponse({ success: true });
+        return jsonResponse({ success: true, storage: 'kv' });
     }
 
-    // 短链接处理
     private static async handleShorten(request: Request, env: Env): Promise<Response> {
         const body = await request.json() as { url: string };
         if (!Validator.isUrlValid(body.url)) return jsonResponse({ success: false, error: 'Invalid URL' }, 400);
@@ -495,9 +678,8 @@ class ApiHandler {
         return jsonResponse({ success: deleted, error: deleted ? undefined : 'Not found' }, deleted ? 200 : 404);
     }
 
-    // 导入导出
-    private static async handleExport(env: Env): Promise<Response> {
-        const data = await loadCurrentData(env);
+    private static async handleExport(env: Env, userId: string): Promise<Response> {
+        const data = await this.loadData(env, userId);
         if (!data) return jsonResponse({ success: false, error: 'No data' }, 404);
 
         // 导出为 Netscape 书签格式 (HTML)
@@ -506,15 +688,15 @@ class ApiHandler {
 <TITLE>Y-Nav Bookmarks</TITLE>
 <H1>Y-Nav Bookmarks</H1>
 <DL><p>
-${data.categories.map(cat => `
+${data.categories?.map((cat: any) => `
     <DT><H3>${cat.name}</H3>
     <DL><p>
-        ${data.links.filter(l => l.categoryId === cat.id).map(link => `
+        ${data.links?.filter((l: any) => l.categoryId === cat.id).map((link: any) => `
             <DT><A HREF="${link.url}">${link.title}</A>
         `).join('')}
     </DL><p>
 `).join('')}
-${data.links.filter(l => !l.categoryId).map(link => `
+${data.links?.filter((l: any) => !l.categoryId).map((link: any) => `
     <DT><A HREF="${link.url}">${link.title}</A>
 `).join('')}
 </DL><p>`;
@@ -527,15 +709,14 @@ ${data.links.filter(l => !l.categoryId).map(link => `
         });
     }
 
-    private static async handleImport(request: Request, env: Env): Promise<Response> {
-        // 简单的 JSON 导入实现
+    private static async handleImport(request: Request, env: Env, userId: string): Promise<Response> {
         const body = await request.json() as { data: YNavSyncData };
         if (!Validator.isSyncDataValid(body.data)) {
             return jsonResponse({ success: false, error: 'Invalid data format' }, 400);
         }
 
-        const existingData = await loadCurrentData(env);
-        const newVersion = (existingData?.meta.version || 0) + 1;
+        const existingData = await this.loadData(env, userId);
+        const newVersion = (existingData?.meta?.version || 0) + 1;
         
         const dataToSave: YNavSyncData = {
             ...body.data,
@@ -546,7 +727,7 @@ ${data.links.filter(l => !l.categoryId).map(link => `
             }
         };
 
-        await env.YNAV_WORKER_KV.put(KV_KEYS.MAIN_DATA, JSON.stringify(dataToSave));
+        await this.saveData(env, userId, dataToSave);
         return jsonResponse({ success: true, data: dataToSave });
     }
 }
@@ -623,7 +804,7 @@ export default {
 
         // 3. API 路由
         if (url.pathname.startsWith('/api/sync') || url.pathname.startsWith('/api/v1/sync')) {
-            return ApiHandler.handleSync(request, env);
+            return MultiStorageApiHandler.handleSync(request, env);
         }
 
         // 4. 跟踪访问 (非静态资源)
