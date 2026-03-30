@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { 
   X, ArrowUp, ArrowDown, Trash2, Edit2, Plus, Check, 
   Palette, Square, CheckSquare, Eye, EyeOff, Folder, Settings
@@ -7,22 +7,6 @@ import { Category } from '../../types';
 import { useDialog } from '../ui/DialogProvider';
 import Icon from '../ui/Icon';
 import IconSelector from '../ui/IconSelector';
-
-// 扩展 Window 接口以支持 Settings
-declare global {
-  interface Window {
-    Settings?: {
-      dialog?: Record<string, unknown>;
-      icons?: Record<string, unknown>;
-    };
-  }
-}
-
-// 使用导入的 Settings 图标，不再依赖 window.Settings
-const AppSettings = window.Settings || {
-  dialog: {},
-  icons: {}
-};
 
 interface CategoryManagerModalProps {
   isOpen: boolean;
@@ -44,12 +28,6 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = React.memo(({
   onDeleteCategories,
   closeOnBackdrop = true
 }) => {
-  // 仅在开发环境检查 Settings
-  useEffect(() => {
-    if (import.meta.env.DEV) {
-      console.log('AppSettings:', AppSettings);
-    }
-  }, []);
 
   // 编辑状态
   const [editingId, setEditingId] = useState<string | null>(null);

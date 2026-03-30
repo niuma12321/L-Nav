@@ -14,11 +14,15 @@ const ENV = {
   BUILD_TIMESTAMP: import.meta.env.VITE_BUILD_TIMESTAMP || new Date().toISOString(),
 };
 
-  // 仅在开发环境记录性能数据
-  if (ENV.isProduction) {
-    window.__PERF_MARKS = window.__PERF_MARKS || [];
+// 性能测量标记（安全包装）
+if (typeof window !== 'undefined' && ENV.isProduction) {
+  window.__PERF_MARKS = window.__PERF_MARKS || [];
+  try {
     performance.mark('app-entry-start');
+  } catch (e) {
+    // 忽略性能标记错误
   }
+}
 
 // ==============================================
 // 🎨 错误边界组件
@@ -326,14 +330,18 @@ const AppWrapper: React.FC = () => {
         // 4. 标记初始化完成
         setIsInitialized(true);
         
-        // 仅在生产环境记录性能数据
+        // 仅在生产环境记录性能数据（安全包装）
     if (ENV.isProduction) {
-      performance.mark('app-initialized');
-      performance.measure('app-initialization', 'app-entry-start', 'app-initialized');
-      
-      const measure = performance.getEntriesByName('app-initialization')[0];
-      if (import.meta.env.DEV) {
-        console.log(`🚀 应用初始化耗时: ${Math.round(measure?.duration || 0)}ms`);
+      try {
+        performance.mark('app-initialized');
+        performance.measure('app-initialization', 'app-entry-start', 'app-initialized');
+        
+        const measure = performance.getEntriesByName('app-initialization')[0];
+        if (import.meta.env.DEV) {
+          console.log(`🚀 应用初始化耗时: ${Math.round(measure?.duration || 0)}ms`);
+        }
+      } catch (e) {
+        // 忽略性能测量错误
       }
     }
         
@@ -511,14 +519,18 @@ function startApplication() {
     // 渲染应用
     root.render(AppComponent);
     
-    // 仅在生产环境记录渲染完成
+    // 仅在生产环境记录渲染完成（安全包装）
     if (ENV.isProduction) {
-      performance.mark('app-rendered');
-      performance.measure('app-render', 'app-initialized', 'app-rendered');
-      
-      const renderMeasure = performance.getEntriesByName('app-render')[0];
-      if (import.meta.env.DEV) {
-        console.log(`🎨 应用渲染耗时: ${Math.round(renderMeasure?.duration || 0)}ms`);
+      try {
+        performance.mark('app-rendered');
+        performance.measure('app-render', 'app-initialized', 'app-rendered');
+        
+        const renderMeasure = performance.getEntriesByName('app-render')[0];
+        if (import.meta.env.DEV) {
+          console.log(`🎨 应用渲染耗时: ${Math.round(renderMeasure?.duration || 0)}ms`);
+        }
+      } catch (e) {
+        // 忽略性能测量错误
       }
     }
     
