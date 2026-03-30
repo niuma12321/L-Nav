@@ -246,7 +246,7 @@ const DataTab: React.FC<DataTabProps> = React.memo(({
   const isWebmaster = useMemo(() => siteSettings.siteMode === 'webmaster', [siteSettings.siteMode]);
   const canWrite = useMemo(() => authInfo?.canWrite ?? false, [authInfo]);
   const isAdmin = useMemo(() => canWrite && (!isWebmaster || webmasterUnlocked), [canWrite, isWebmaster, webmasterUnlocked]);
-  const isSyncPasswordReady = useMemo(() => password.trim().length > 0, [password]);
+  const isSyncPasswordReady = useMemo(() => (password || '').trim().length > 0, [password]);
   const currentPrivacyMode = useMemo(() => useSeparatePrivacyPassword ? '独立密码' : '同步密码', [useSeparatePrivacyPassword]);
 
   // ==============================================
