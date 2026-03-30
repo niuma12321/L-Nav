@@ -10,10 +10,14 @@ compatibility_date = "2025-03-01"
 compatibility_flags = ["nodejs_compat"]
 
 # ---------- 自定义域名配置 ----------
-routes = [
-  { pattern = "678870.xyz/*", custom_domain = true },
-  { pattern = "www.678870.xyz/*", custom_domain = true }
-]
+# ⚠️ 注意：Cloudflare Workers 的 custom_domain 只能使用纯域名，不能使用通配符 * 或路径
+# 请在 Cloudflare Dashboard 中手动绑定自定义域名：
+# 1. 登录 Cloudflare Dashboard
+# 2. 进入 Workers & Pages -> home -> 触发器 -> 添加自定义域
+# 3. 添加域名：678870.xyz 和 www.678870.xyz
+# 
+# 或者使用触发器模式（不推荐用于自定义域）：
+# routes = [{ pattern = "678870.xyz/*", zone_name = "678870.xyz" }]
 
 # ---------- 性能优化配置 ----------
 minify = true
@@ -66,39 +70,96 @@ RATE_LIMIT_WINDOW_SECONDS = "60"
 # ---------- 开发环境配置 ----------
 [env.dev]
 name = "y-nav-dev"
-routes = [
-  { pattern = "dev.678870.xyz/*", custom_domain = true }
-]
 compatibility_date = "2025-03-01"
+
+# 开发环境使用本地绑定
+[[env.dev.kv_namespaces]]
+binding = "YNAV_WORKER_KV"
+id = "43e6854cf0354bf5970054b899dde7d9"
+
+[[env.dev.d1_databases]]
+binding = "YNAV_D1_DB"
+database_name = "ynav-db"
+database_id = "f6e0f916-2855-481f-b6dd-09790f377811"
+
+[[env.dev.r2_buckets]]
+binding = "YNAV_R2_BUCKET"
+bucket_name = "ynav-storage"
 
 [env.dev.vars]
 ENVIRONMENT = "development"
 DEBUG = "true"
+APP_NAME = "Y-Nav"
+APP_VERSION = "2.0.0"
+DOMAIN = "dev.678870.xyz"
+R2_S3_ENDPOINT = "https://35e396384ed3981abb800b25f550a695.r2.cloudflarestorage.com/ynav-storage"
+ENABLE_SHORT_LINKS = "true"
+ENABLE_ANALYTICS = "false"
+ENABLE_BACKUPS = "true"
+ENABLE_D1_SYNC = "true"
+ENABLE_R2_STORAGE = "true"
 
 # ---------- 预览环境配置 ----------
 [env.preview]
 name = "y-nav-preview"
-routes = [
-  { pattern = "preview.678870.xyz/*", custom_domain = true }
-]
 compatibility_date = "2025-03-01"
+
+[[env.preview.kv_namespaces]]
+binding = "YNAV_WORKER_KV"
+id = "43e6854cf0354bf5970054b899dde7d9"
+
+[[env.preview.d1_databases]]
+binding = "YNAV_D1_DB"
+database_name = "ynav-db"
+database_id = "f6e0f916-2855-481f-b6dd-09790f377811"
+
+[[env.preview.r2_buckets]]
+binding = "YNAV_R2_BUCKET"
+bucket_name = "ynav-storage"
 
 [env.preview.vars]
 ENVIRONMENT = "preview"
 DEBUG = "true"
+APP_NAME = "Y-Nav"
+APP_VERSION = "2.0.0"
+DOMAIN = "preview.678870.xyz"
+R2_S3_ENDPOINT = "https://35e396384ed3981abb800b25f550a695.r2.cloudflarestorage.com/ynav-storage"
+ENABLE_SHORT_LINKS = "true"
+ENABLE_ANALYTICS = "false"
+ENABLE_BACKUPS = "true"
+ENABLE_D1_SYNC = "true"
+ENABLE_R2_STORAGE = "true"
 
 # ---------- 生产环境配置 ----------
 [env.production]
 name = "home"
-routes = [
-  { pattern = "678870.xyz/*", custom_domain = true },
-  { pattern = "www.678870.xyz/*", custom_domain = true }
-]
 compatibility_date = "2025-03-01"
+
+[[env.production.kv_namespaces]]
+binding = "YNAV_WORKER_KV"
+id = "43e6854cf0354bf5970054b899dde7d9"
+
+[[env.production.d1_databases]]
+binding = "YNAV_D1_DB"
+database_name = "ynav-db"
+database_id = "f6e0f916-2855-481f-b6dd-09790f377811"
+
+[[env.production.r2_buckets]]
+binding = "YNAV_R2_BUCKET"
+bucket_name = "ynav-storage"
 
 [env.production.vars]
 ENVIRONMENT = "production"
 DEBUG = "false"
+APP_NAME = "Y-Nav"
+APP_VERSION = "2.0.0"
+DOMAIN = "678870.xyz"
+R2_S3_ENDPOINT = "https://35e396384ed3981abb800b25f550a695.r2.cloudflarestorage.com/ynav-storage"
+ENABLE_SHORT_LINKS = "true"
+ENABLE_ANALYTICS = "true"
+ENABLE_BACKUPS = "true"
+ENABLE_D1_SYNC = "true"
+ENABLE_R2_STORAGE = "true"
 
 # ============================================
 # 🔐 敏感配置（请在 Cloudflare Dashboard 设置）
