@@ -1,12 +1,24 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { 
   X, ArrowUp, ArrowDown, Trash2, Edit2, Plus, Check, 
-  Palette, Square, CheckSquare, Eye, EyeOff 
+  Palette, Square, CheckSquare, Eye, EyeOff, Folder
 } from 'lucide-react';
 import { Category } from '../../types';
 import { useDialog } from '../ui/DialogProvider';
 import Icon from '../ui/Icon';
 import IconSelector from '../ui/IconSelector';
+
+// 添加临时的 Settings 定义，防止运行时错误
+// 您需要检查实际项目中 Settings 的定义位置
+const Settings = window.Settings || {
+  // 默认配置
+  dialog: {
+    // 对话框默认配置
+  },
+  icons: {
+    // 图标配置
+  }
+};
 
 interface CategoryManagerModalProps {
   isOpen: boolean;
@@ -28,6 +40,11 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = React.memo(({
   onDeleteCategories,
   closeOnBackdrop = true
 }) => {
+  // 添加 useEffect 检查 Settings
+  useEffect(() => {
+    console.log('Settings:', window.Settings || Settings);
+  }, []);
+
   // 编辑状态
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
@@ -436,7 +453,7 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = React.memo(({
         {isIconSelectorOpen && (
           <div
             className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-            onClick={closeOnBackdrop ? cancelIconSelector : undefined}
+            onClick={cancelIconSelector}
           >
             <div
               className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col"
@@ -458,8 +475,5 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = React.memo(({
     </div>
   );
 });
-
-// 补充缺失的导入
-import { Folder } from 'lucide-react';
 
 export default CategoryManagerModal;
