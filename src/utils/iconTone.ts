@@ -4,6 +4,8 @@
  * 特性：顶级配色、哈希无碰撞、缓存加速、全类型安全、明暗模式完美适配
  */
 
+import type { CSSProperties } from 'react';
+
 // ==============================================
 // 🎯 顶级视觉调色板 (现代柔和风 · 明暗模式完美适配)
 // 16种高美感配色，比原版更柔和、更协调、辨识度拉满
@@ -116,7 +118,7 @@ export const getIconToneClass = (
 // ==============================================
 // 🎭 自定义颜色内联样式 (完美适配明暗模式)
 // ==============================================
-export const getIconToneStyle = (hexColor?: string | null): React.CSSProperties | undefined => {
+export const getIconToneStyle = (hexColor?: string | null): CSSProperties | undefined => {
   const rgb = hexToRgb(hexColor ?? '');
   if (!rgb) return undefined;
 

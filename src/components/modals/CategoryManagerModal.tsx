@@ -1,23 +1,27 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { 
   X, ArrowUp, ArrowDown, Trash2, Edit2, Plus, Check, 
-  Palette, Square, CheckSquare, Eye, EyeOff, Folder
+  Palette, Square, CheckSquare, Eye, EyeOff, Folder, Settings
 } from 'lucide-react';
 import { Category } from '../../types';
 import { useDialog } from '../ui/DialogProvider';
 import Icon from '../ui/Icon';
 import IconSelector from '../ui/IconSelector';
 
-// 添加临时的 Settings 定义，防止运行时错误
-// 您需要检查实际项目中 Settings 的定义位置
-const Settings = window.Settings || {
-  // 默认配置
-  dialog: {
-    // 对话框默认配置
-  },
-  icons: {
-    // 图标配置
+// 扩展 Window 接口以支持 Settings
+declare global {
+  interface Window {
+    Settings?: {
+      dialog?: Record<string, unknown>;
+      icons?: Record<string, unknown>;
+    };
   }
+}
+
+// 使用导入的 Settings 图标，不再依赖 window.Settings
+const AppSettings = window.Settings || {
+  dialog: {},
+  icons: {}
 };
 
 interface CategoryManagerModalProps {
@@ -42,7 +46,7 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = React.memo(({
 }) => {
   // 添加 useEffect 检查 Settings
   useEffect(() => {
-    console.log('Settings:', window.Settings || Settings);
+    console.log('AppSettings:', AppSettings);
   }, []);
 
   // 编辑状态

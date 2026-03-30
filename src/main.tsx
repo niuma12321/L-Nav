@@ -23,19 +23,24 @@ if (ENV.isProduction) {
 // ==============================================
 // 🎨 错误边界组件
 // ==============================================
-class ErrorBoundary extends React.Component<
-  { 
-    children: React.ReactNode; 
-    fallback?: (error: Error, resetError: () => void) => React.ReactNode;
-  },
-  { hasError: boolean; error: Error | null }
-> {
-  constructor(props: any) {
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+  fallback?: (error: Error, resetError: () => void) => React.ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  state: ErrorBoundaryState;
+  constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false, error: null };
   }
 
-  static getDerivedStateFromError(error: Error) {
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     return { hasError: true, error };
   }
 
@@ -43,14 +48,15 @@ class ErrorBoundary extends React.Component<
     console.error('应用错误:', error, errorInfo);
   }
 
-  resetError = () => {
-    this.setState({ hasError: false, error: null });
+  resetError = (): void => {
+    (this as any).setState({ hasError: false, error: null });
   };
 
   render() {
-    if (this.state.hasError) {
-      if (this.props.fallback) {
-        return this.props.fallback(this.state.error!, this.resetError);
+    const self = this as any;
+    if (self.state.hasError) {
+      if (self.props.fallback) {
+        return self.props.fallback(self.state.error, this.resetError);
       }
       
       return (
@@ -59,7 +65,7 @@ class ErrorBoundary extends React.Component<
             <div className="text-6xl mb-4">⚠️</div>
             <h1 className="text-2xl font-bold text-gray-800 mb-2">应用出错了</h1>
             <p className="text-gray-600 mb-2">抱歉，应用遇到了问题，请尝试刷新页面。</p>
-            <p className="text-sm text-gray-500 mb-4">错误信息: {this.state.error?.message}</p>
+            <p className="text-sm text-gray-500 mb-4">错误信息: {self.state.error?.message}</p>
             <div className="flex gap-3 justify-center">
               <button
                 onClick={this.resetError}
@@ -79,7 +85,7 @@ class ErrorBoundary extends React.Component<
       );
     }
 
-    return this.props.children;
+    return self.props.children;
   }
 }
 
@@ -412,7 +418,7 @@ const AppWrapper: React.FC = () => {
 
   return (
     <ErrorBoundary
-      fallback={({ error, resetError }) => (
+      fallback={(error: Error | null, resetError: () => void) => (
         <div className="p-4">
           <h2 className="text-xl font-bold text-red-600 mb-2">应用崩溃了</h2>
           <p className="text-gray-600 mb-4">{error?.message}</p>

@@ -71,7 +71,7 @@ const SYNC_STATUS_MAP = {
 };
 
 const DATE_LOCALE = 'zh-CN';
-const DATE_FORMAT_OPTIONS = {
+const DATE_FORMAT_OPTIONS: Record<string, Intl.DateTimeFormatOptions> = {
   short: { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' },
   full: { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }
 };
