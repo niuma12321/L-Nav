@@ -9,6 +9,12 @@ main = "worker/index.ts"
 compatibility_date = "2025-03-01"
 compatibility_flags = ["nodejs_compat"]
 
+# ---------- 自定义域名配置 ----------
+routes = [
+  { pattern = "678870.xyz/*", custom_domain = true },
+  { pattern = "www.678870.xyz/*", custom_domain = true }
+]
+
 # ---------- 性能优化配置 ----------
 minify = true
 
@@ -20,12 +26,13 @@ bucket = "./dist"
 [[kv_namespaces]]
 binding = "YNAV_WORKER_KV"
 id = "43e6854cf0354bf5970054b899dde7d9"
+preview_id = "43e6854cf0354bf5970054b899dde7d9"
 
 # ---------- D1 数据库绑定 ----------
 [[d1_databases]]
 binding = "YNAV_D1_DB"
 database_name = "ynav-db"
-database_id = "your-d1-database-id-here"  # 需要在Cloudflare Dashboard创建后替换
+database_id = "f6e0f916-2855-481f-b6dd-09790f377811"
 
 # ---------- R2 对象存储绑定 ----------
 [[r2_buckets]]
@@ -36,16 +43,32 @@ bucket_name = "ynav-storage"
 [vars]
 APP_NAME = "Y-Nav"
 APP_VERSION = "2.0.0"
+DOMAIN = "678870.xyz"
+ENVIRONMENT = "production"
+R2_S3_ENDPOINT = "https://35e396384ed3981abb800b25f550a695.r2.cloudflarestorage.com/ynav-storage"
+
+# 功能开关
 ENABLE_SHORT_LINKS = "true"
 ENABLE_ANALYTICS = "true"
 ENABLE_BACKUPS = "true"
-BACKUP_RETENTION_DAYS = "30"
 ENABLE_D1_SYNC = "true"
 ENABLE_R2_STORAGE = "true"
+
+# 备份和同步配置
+BACKUP_RETENTION_DAYS = "30"
+SYNC_API_VERSION = "v1"
+MAX_BACKUP_SIZE_MB = "50"
+
+# 安全设置
+RATE_LIMIT_MAX_REQUESTS = "100"
+RATE_LIMIT_WINDOW_SECONDS = "60"
 
 # ---------- 开发环境配置 ----------
 [env.dev]
 name = "y-nav-dev"
+routes = [
+  { pattern = "dev.678870.xyz/*", custom_domain = true }
+]
 compatibility_date = "2025-03-01"
 
 [env.dev.vars]
@@ -55,6 +78,9 @@ DEBUG = "true"
 # ---------- 预览环境配置 ----------
 [env.preview]
 name = "y-nav-preview"
+routes = [
+  { pattern = "preview.678870.xyz/*", custom_domain = true }
+]
 compatibility_date = "2025-03-01"
 
 [env.preview.vars]
@@ -64,6 +90,10 @@ DEBUG = "true"
 # ---------- 生产环境配置 ----------
 [env.production]
 name = "home"
+routes = [
+  { pattern = "678870.xyz/*", custom_domain = true },
+  { pattern = "www.678870.xyz/*", custom_domain = true }
+]
 compatibility_date = "2025-03-01"
 
 [env.production.vars]

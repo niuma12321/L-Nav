@@ -11,10 +11,16 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "deploy:workers": "npm run build && wrangler deploy",
-    "deploy:pages": "npm run build && wrangler pages deploy dist --project-name=y-nav",
+    "deploy": "./deploy.sh deploy",
+    "deploy:workers": "npm run build && wrangler deploy --env production",
+    "deploy:pages": "npm run build && wrangler pages deploy dist --project-name=home",
     "kv:create": "wrangler kv:namespace create YNAV_WORKER_KV",
-    "dev:workers": "npm run build && wrangler dev"
+    "d1:create": "wrangler d1 create ynav-db",
+    "d1:migrate": "wrangler d1 execute ynav-db --file=./database/schema.sql --local=false",
+    "r2:create": "wrangler r2 bucket create ynav-storage",
+    "dev:workers": "npm run build && wrangler dev --env dev",
+    "init": "./deploy.sh init",
+    "health": "curl -s https://678870.xyz/api/v1/sync?action=health | jq ."
   },
   "dependencies": {
     "@cloudflare/kv-asset-handler": "^0.3.4",
