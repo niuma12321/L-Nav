@@ -6,10 +6,11 @@ import {
   useMemo
 } from 'react';
 import { SearchMode, ExternalSearchSource, SearchConfig } from '../types';
-import { SEARCH_CONFIG_KEY, SEARCH_HISTORY_KEY } from '../utils/constants';
+import { SEARCH_CONFIG_KEY } from '../utils/constants';
 
 // ==================== 常量配置 ====================
 const POPUP_HIDE_DELAY = 150;
+const SEARCH_HISTORY_KEY = 'search-history';
 const MAX_SEARCH_HISTORY = 20;
 const DEFAULT_SEARCH_MODE: SearchMode = 'external';
 
@@ -319,6 +320,3 @@ export function useSearch() {
     restoreSearchConfig: saveSearchConfig
   };
 }
-
-// 类型导出（方便组件使用）
-export type UseSearchReturn = ReturnType<typeof useSearch>;
