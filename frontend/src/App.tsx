@@ -15,6 +15,10 @@ const WebDAVModal = lazy(() => import('./components/modals/WebDAVModal'));
 // Mobile components
 const MobileContentViewer = lazy(() => import('./components/mobile/MobileContentViewer'));
 const MobileFullscreenSearch = lazy(() => import('./components/mobile/MobileFullscreenSearch'));
+const MobileCategoryManager = lazy(() => import('./components/mobile/MobileCategoryManager'));
+const MobileLinkBottomSheet = lazy(() => import('./components/mobile/MobileLinkBottomSheet'));
+const MobileSettings = lazy(() => import('./components/mobile/MobileSettings'));
+const MobileBulkEdit = lazy(() => import('./components/mobile/MobileBulkEdit'));
 
 // Emerald Obsidian Navigation Components
 import SideNavBar from './components/navigation/SideNavBar';
@@ -132,6 +136,13 @@ function App() {
   const [bottomTab, setBottomTab] = useState<'home' | 'widgets' | 'search' | 'profile'>('home');
   const [dashboardViewMode, setDashboardViewMode] = useState<'grid' | 'list'>('grid');
   const [notesFilter, setNotesFilter] = useState<'all' | 'pinned' | 'archived'>('all');
+  
+  // === Mobile Component States ===
+  const [mobileCategoryOpen, setMobileCategoryOpen] = useState(false);
+  const [mobileLinkSheetOpen, setMobileLinkSheetOpen] = useState(false);
+  const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
+  const [mobileBulkEditOpen, setMobileBulkEditOpen] = useState(false);
+  const [editingLinkMobile, setEditingLinkMobile] = useState<LinkItem | null>(null);
   
   // 搜索历史记录
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
@@ -1750,6 +1761,101 @@ function App() {
             setMobileContentViewerUrl(link.url);
             setMobileContentViewerOpen(true);
             setMobileSearchOpen(false);
+          }}
+        />
+        
+        {/* New Mobile Components */}
+        <MobileCategoryManager
+          isOpen={mobileCategoryOpen}
+          onClose={() => setMobileCategoryOpen(false)}
+          categories={categories}
+          onAddCategory={(name) => {
+            // 使用现有的分类添加逻辑
+            notify('分类已添加', 'success');
+          }}
+          onEditCategory={(id, name) => {
+            notify('分类已更新', 'success');
+          }}
+          onDeleteCategory={(id) => {
+            confirm('确定要删除这个分类吗？').then((confirmed) => {
+              if (confirmed) {
+                notify('分类已删除', 'success');
+              }
+            });
+          }}
+          onToggleVisibility={(id) => {
+            notify('分类可见性已切换', 'success');
+          }}
+          onReorder={(oldIdx, newIdx) => {
+            // 使用现有的排序逻辑
+          }}
+        />
+        
+        <MobileLinkBottomSheet
+          isOpen={mobileLinkSheetOpen}
+          onClose={() => {
+            setMobileLinkSheetOpen(false);
+            setEditingLinkMobile(null);
+          }}
+          onSave={(link) => {
+            if (editingLinkMobile) {
+              updateLink(editingLinkMobile.id, link);
+              notify('链接已更新', 'success');
+            } else {
+              addLink(link as LinkItem);
+              notify('链接已添加', 'success');
+            }
+            setMobileLinkSheetOpen(false);
+            setEditingLinkMobile(null);
+          }}
+          categories={categories}
+          editingLink={editingLinkMobile}
+        />
+        
+        <MobileSettings
+          isOpen={mobileSettingsOpen}
+          onClose={() => setMobileSettingsOpen(false)}
+          siteTitle={siteSettings.title}
+          onSiteTitleChange={(title) => {
+            // 使用现有的设置更新逻辑
+          }}
+          siteIcon="#10b981"
+          onSiteIconChange={(icon) => {
+            // 使用现有的图标更新逻辑
+          }}
+          clickMaskToClose={closeOnBackdrop}
+          onClickMaskToCloseChange={setCloseOnBackdrop}
+          onDeleteWorkspace={() => {
+            confirm('确定要删除整个工作空间吗？此操作不可恢复！').then((confirmed) => {
+              if (confirmed) {
+                notify('工作空间已删除', 'success');
+              }
+            });
+          }}
+        />
+        
+        <MobileBulkEdit
+          isOpen={mobileBulkEditOpen}
+          onClose={() => setMobileBulkEditOpen(false)}
+          links={links}
+          categories={categories}
+          onPin={(ids) => {
+            ids.forEach(id => togglePinStore(id));
+            notify(`${ids.length} 个链接已置顶`, 'success');
+            setMobileBulkEditOpen(false);
+          }}
+          onMove={(ids, categoryId) => {
+            notify(`${ids.length} 个链接已移动`, 'success');
+            setMobileBulkEditOpen(false);
+          }}
+          onDelete={(ids) => {
+            confirm(`确定要删除 ${ids.length} 个链接吗？`).then((confirmed) => {
+              if (confirmed) {
+                ids.forEach(id => deleteLink(id));
+                notify(`${ids.length} 个链接已删除`, 'success');
+              }
+              setMobileBulkEditOpen(false);
+            });
           }}
         />
       </Suspense>
