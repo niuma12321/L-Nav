@@ -283,6 +283,7 @@ function App() {
     restoreAIConfig,
     restoreSiteSettings,
     siteSettings,
+    updateSiteSettings,
     handleViewModeChange,
     navTitleText,
     navTitleShort
@@ -1110,6 +1111,9 @@ function App() {
   }, [siteSettings.grayScale]);
 
   const closeOnBackdrop = siteSettings.closeOnBackdrop ?? false;
+  const setCloseOnBackdrop = useCallback((value: boolean) => {
+    updateSiteSettings({ closeOnBackdrop: value });
+  }, [updateSiteSettings]);
   const backgroundImage = siteSettings.backgroundImage && typeof siteSettings.backgroundImage === 'string' 
     ? String(siteSettings.backgroundImage ?? '').trim() 
     : '';
