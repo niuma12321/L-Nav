@@ -120,6 +120,22 @@ function App() {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   
+  // 搜索历史记录
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem('ynav:recentSearches');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+  const trendingSearches = ['AI工具', 'React教程', '设计资源', '开发文档', '效率工具'];
+  
+  // 保存搜索历史
+  useEffect(() => {
+    localStorage.setItem('ynav:recentSearches', JSON.stringify(recentSearches));
+  }, [recentSearches]);
+  
   // 检测移动端
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -388,6 +404,7 @@ function App() {
   // === Modals ===
   const {
     isModalOpen,
+    setIsModalOpen,
     editingLink,
     setEditingLink,
     prefillLink,
@@ -1714,7 +1731,7 @@ function App() {
           onSearch={setSearchQuery}
           recentSearches={recentSearches}
           trendingSearches={trendingSearches}
-          searchResults={filteredLinks}
+          searchResults={displayedLinks}
           searchQuery={searchQuery}
           onResultClick={(link) => {
             setMobileContentViewerUrl(link.url);
@@ -1747,7 +1764,7 @@ function App() {
           <ImmersiveHeader
             title={siteSettings.title}
             onMenuClick={() => setSidebarOpen(true)}
-            onProfileClick={() => setSettingsModalOpen(true)}
+            onProfileClick={() => setIsSettingsModalOpen(true)}
             unreadCount={0}
           />
           <MobileBottomNav
