@@ -30,7 +30,8 @@ const GRAY_SCALE_OPTIONS = [
 // ==============================================
 const parseRgbString = (value: string): number[] | null => {
   try {
-    const parts = value.trim().split(/\s+/).map(Number);
+    if (!value || typeof value !== 'string') return null;
+    const parts = String(value ?? '').trim().split(/\s+/).map(Number);
     if (parts.length < 3 || parts.some(isNaN)) return null;
     return parts.slice(0, 3).map(v => Math.min(255, Math.max(0, Math.round(v))));
   } catch {
@@ -45,7 +46,8 @@ const rgbStringToHex = (value: string): string => {
 
 const hexToRgbString = (hex: string): string | null => {
   try {
-    const normalized = hex.replace('#', '').trim();
+    if (!hex || typeof hex !== 'string') return null;
+    const normalized = String(hex.replace('#', '') ?? '').trim();
     const fullHex = normalized.length === 3
       ? normalized.split('').map(c => `${c}${c}`).join('')
       : normalized;

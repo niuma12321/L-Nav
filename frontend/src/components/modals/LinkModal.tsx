@@ -316,7 +316,7 @@ const LinkModal: React.FC<LinkModalProps> = ({
     const normalized = normalizeHexColor(value);
     if (normalized) {
       setIconTone(normalized);
-    } else if (!value.trim()) {
+    } else if (!value || typeof value !== 'string' || !value.trim()) {
       setIconTone('');
     }
   };

@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 // 路由状态类型
-type RouteView = 'home' | 'category' | 'notes' | 'private' | 'search';
+type RouteView = 'home' | 'category' | 'notes' | 'private' | 'search' | 'preview';
 
 interface RouteState {
   view: RouteView;
   categoryId?: string;
   searchQuery?: string;
+  previewUrl?: string;
 }
 
 interface UseRouterReturn {
@@ -19,6 +20,7 @@ interface UseRouterReturn {
   navigateToNotes: () => void;
   navigateToPrivate: () => void;
   navigateToSearch: (query: string) => void;
+  navigateToPreview: (url: string) => void;
   
   // 历史管理
   canGoBack: boolean;
@@ -59,6 +61,14 @@ const parseRouteFromUrl = (): RouteState => {
   if (categoryMatch) {
     return { view: 'category', categoryId: categoryMatch[1] };
   }
+
+  // /preview 路径（内嵌预览外部链接）
+  if (path === '/preview') {
+    const previewUrl = searchParams.get('url');
+    if (previewUrl) {
+      return { view: 'preview', previewUrl: decodeURIComponent(previewUrl) };
+    }
+  }
   
   // 默认回首页
   return { view: 'home' };
@@ -93,6 +103,8 @@ const routeToSelectedCategory = (route: RouteState): string => {
       return 'private';
     case 'category':
       return route.categoryId || 'all';
+    case 'preview':
+      return 'preview';
     default:
       return 'all';
   }
@@ -200,6 +212,16 @@ export function useRouter(): UseRouterReturn {
     window.history.replaceState({ index: historyIndex }, '', url);
     setCurrentRoute(newRoute);
   }, [historyIndex]);
+
+  // 导航到预览模式（内嵌显示外部链接）
+  const navigateToPreview = useCallback((url: string) => {
+    const newRoute: RouteState = { view: 'preview', previewUrl: url };
+    const nextIndex = historyIndex + 1;
+    window.history.pushState({ index: nextIndex }, '', `/preview?url=${encodeURIComponent(url)}`);
+    setHistoryIndex(nextIndex);
+    setCurrentRoute(newRoute);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [historyIndex]);
   
   // 后退
   const goBack = useCallback(() => {
@@ -227,6 +249,7 @@ export function useRouter(): UseRouterReturn {
     navigateToNotes,
     navigateToPrivate,
     navigateToSearch,
+    navigateToPreview,
     canGoBack,
     canGoForward,
     goBack,

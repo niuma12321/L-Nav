@@ -146,10 +146,11 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = React.memo(({
   }, []);
 
   const saveEdit = useCallback(() => {
-    if (!editingId || !editName.trim()) return;
+    const safeEditName = (editName && typeof editName === 'string') ? editName : '';
+    if (!editingId || !String(safeEditName ?? '').trim()) return;
     onUpdateCategories(
       categories.map(c => c.id === editingId 
-        ? { ...c, name: editName.trim(), icon: editIcon, hidden: editHidden } 
+        ? { ...c, name: String(safeEditName ?? '').trim(), icon: editIcon, hidden: editHidden } 
         : c
       )
     );
@@ -181,10 +182,11 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = React.memo(({
   }, [getFallbackCategory, confirm, notify, onDeleteCategory, isDefaultCategory]);
 
   const handleAdd = useCallback(() => {
-    if (!newCatName.trim()) return;
+    const safeNewCatName = (newCatName && typeof newCatName === 'string') ? newCatName : '';
+    if (!String(safeNewCatName ?? '').trim()) return;
     const newCat: Category = {
       id: Date.now().toString(),
-      name: newCatName.trim(),
+      name: String(safeNewCatName ?? '').trim(),
       icon: newCatIcon,
       hidden: newCatHidden
     };
@@ -424,7 +426,7 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = React.memo(({
             <div className="flex justify-end">
               <button
                 onClick={handleAdd}
-                disabled={!newCatName.trim()}
+                disabled={!(newCatName && typeof newCatName === 'string' && newCatName.trim())}
                 className="bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 px-4 py-2 rounded-lg transition-colors flex items-center justify-center"
               >
                 <Plus size={18} />

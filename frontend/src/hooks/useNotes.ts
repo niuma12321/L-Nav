@@ -6,9 +6,10 @@ const NOTES_STORAGE_KEY = 'ynav_notes';
 export interface UseNotesReturn {
   notes: StickyNote[];
   addNote: (content?: string) => StickyNote;
-  updateNote: (id: string, content: string) => void;
+  updateNote: (id: string, content: string, htmlContent?: string, isRichText?: boolean) => void;
   deleteNote: (id: string) => void;
   getNoteById: (id: string) => StickyNote | undefined;
+  importNotes: (newNotes: StickyNote[]) => void;
 }
 
 /**
@@ -50,7 +51,7 @@ export function useNotes(): UseNotesReturn {
    */
   const addNote = useCallback((content?: string): StickyNote => {
     const now = Date.now();
-    const safeContent = (content || '').trim();
+    const safeContent = content && typeof content === 'string' ? content.trim() : '';
     const newNote: StickyNote = {
       id: `note_${now}`,
       content: safeContent,
@@ -63,15 +64,21 @@ export function useNotes(): UseNotesReturn {
   }, []);
 
   /**
-   * 更新便签内容
+   * 更新便签内容（支持富文本）
    */
-  const updateNote = useCallback((id: string, content: string) => {
-    const trimmedContent = (content || '').trim();
+  const updateNote = useCallback((id: string, content: string, htmlContent?: string, isRichText?: boolean) => {
+    const trimmedContent = (content && typeof content === 'string') ? content.trim() : '';
     
     setNotes(prev =>
       prev.map(note =>
         note.id === id
-          ? { ...note, content: trimmedContent, updatedAt: Date.now() }
+          ? { 
+              ...note, 
+              content: trimmedContent, 
+              htmlContent: htmlContent || note.htmlContent,
+              isRichText: isRichText ?? note.isRichText,
+              updatedAt: Date.now() 
+            }
           : note
       )
     );
@@ -82,6 +89,13 @@ export function useNotes(): UseNotesReturn {
    */
   const deleteNote = useCallback((id: string) => {
     setNotes(prev => prev.filter(note => note.id !== id));
+  }, []);
+
+  /**
+   * 批量导入便签
+   */
+  const importNotes = useCallback((newNotes: StickyNote[]) => {
+    setNotes(newNotes);
   }, []);
 
   /**
@@ -100,6 +114,7 @@ export function useNotes(): UseNotesReturn {
     updateNote,
     deleteNote,
     getNoteById,
+    importNotes,
   };
 }
 

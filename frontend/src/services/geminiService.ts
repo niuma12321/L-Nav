@@ -45,7 +45,8 @@ const callOpenAICompatible = async (config: AIConfig, systemPrompt: string, user
         }
 
         const data = await response.json();
-        return data.choices?.[0]?.message?.content?.trim() || "";
+        const content = data.choices?.[0]?.message?.content;
+        return (content && typeof content === 'string') ? content.trim() : "";
     } catch (e) {
         if (import.meta.env.DEV) {
             console.error("OpenAI Call Failed", e);
@@ -78,7 +79,8 @@ export const generateLinkDescription = async (title: string, url: string, config
                 model: modelName,
                 contents: `I have a website bookmark. ${prompt}`,
             });
-            return response.text ? response.text.trim() : "无法生成描述";
+            const text = response.text;
+            return (text && typeof text === 'string') ? text.trim() : "无法生成描述";
         } else {
             // OpenAI Compatible
             const result = await callOpenAICompatible(
@@ -116,8 +118,8 @@ export const suggestCategory = async (title: string, url: string, categories: { 
     `;
 
     const normalizeCategoryId = (value: string | null | undefined): string | null => {
-        if (!value) return null;
-        const trimmed = value.trim();
+        if (!value || typeof value !== 'string') return null;
+        const trimmed = String(value ?? '').trim();
         if (!trimmed) return null;
         return categories.some(c => c.id === trimmed) ? trimmed : fallbackId;
     };

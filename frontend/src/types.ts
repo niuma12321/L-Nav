@@ -39,9 +39,13 @@ export interface SiteSettings {
 export interface StickyNote {
   id: string;
   content: string;
+  htmlContent?: string;
   createdAt: number;
   updatedAt: number;
   color?: string;
+  tags?: string[];
+  title?: string;
+  isRichText?: boolean;
 }
 
 export interface AppState {

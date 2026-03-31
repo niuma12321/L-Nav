@@ -43,7 +43,7 @@ const StickyNoteCard: React.FC<StickyNoteCardProps> = React.memo(({
   }, [isEditing, editContent]);
 
   const handleSave = useCallback(() => {
-    const trimmed = editContent.trim();
+    const trimmed = (editContent && typeof editContent === 'string') ? editContent.trim() : '';
     if (trimmed !== note.content) {
       onUpdate(note.id, trimmed);
     }

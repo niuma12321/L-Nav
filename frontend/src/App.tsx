@@ -9,6 +9,12 @@ const SettingsModal = lazy(() => import('./components/modals/SettingsModal'));
 const SearchConfigModal = lazy(() => import('./components/modals/SearchConfigModal'));
 const SyncConflictModal = lazy(() => import('./components/modals/SyncConflictModal'));
 const NotesView = lazy(() => import('./components/notes/NotesView'));
+const DataBackupModal = lazy(() => import('./components/modals/DataBackupModal'));
+const WebDAVModal = lazy(() => import('./components/modals/WebDAVModal'));
+
+// Mobile components
+const MobileContentViewer = lazy(() => import('./components/mobile/MobileContentViewer'));
+const MobileFullscreenSearch = lazy(() => import('./components/mobile/MobileFullscreenSearch'));
 
 // Eagerly load frequently used components
 import ContextMenu from './components/layout/ContextMenu';
@@ -17,6 +23,10 @@ import MainHeader from './components/layout/MainHeader';
 import LinkSections from './components/layout/LinkSections';
 import SyncStatusIndicator from './components/ui/SyncStatusIndicator';
 import { useDialog } from './components/ui/DialogProvider';
+
+// Mobile components (eagerly loaded for responsiveness)
+import ImmersiveHeader from './components/mobile/ImmersiveHeader';
+import MobileBottomNav from './components/mobile/MobileBottomNav';
 
 import {
   useDataStore,
@@ -31,6 +41,7 @@ import {
   useSyncEngine,
   useNotes,
   useRouter,
+  useWidgets,
   buildSyncData
 } from './hooks';
 
@@ -50,6 +61,8 @@ import {
   WEBMASTER_UNLOCKED_KEY,
   getDeviceId
 } from './utils/constants';
+// Widget components
+import WidgetGrid from './components/widgets/WidgetGrid';
 import { decryptPrivateVault, encryptPrivateVault } from './utils/privateVault';
 
 function App() {
@@ -72,7 +85,16 @@ function App() {
   const { notify, confirm } = useDialog();
 
   // === Notes ===
-  const { notes, addNote, updateNote, deleteNote } = useNotes();
+  const { notes, addNote, updateNote, deleteNote, importNotes } = useNotes();
+
+  // === Widgets ===
+  const { 
+    widgets, 
+    addWidget, 
+    removeWidget, 
+    updateWidgetSettings, 
+    toggleWidget 
+  } = useWidgets();
 
   // === Private Vault ===
   const [privateVaultCipher, setPrivateVaultCipher] = useState<string | null>(null);
@@ -89,16 +111,38 @@ function App() {
   // === Sync Engine ===
   const [syncConflictOpen, setSyncConflictOpen] = useState(false);
   const [currentConflict, setCurrentConflict] = useState<SyncConflict | null>(null);
+  const [dataBackupOpen, setDataBackupOpen] = useState(false);
+  
+  // === Mobile UI State ===
+  const [mobileActiveTab, setMobileActiveTab] = useState<'home' | 'search' | 'favorites' | 'more'>('home');
+  const [mobileContentViewerOpen, setMobileContentViewerOpen] = useState(false);
+  const [mobileContentViewerUrl, setMobileContentViewerUrl] = useState('');
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  
+  // 检测移动端
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
   const hasInitialSyncRun = useRef(false);
   const hasInitialCloudCheckCompletedRef = useRef(false);
   const suppressNextAutoSyncRef = useRef(false);
   const autoUnlockAttemptedRef = useRef(false);
   const syncPasswordRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const syncPasswordRefreshIdRef = useRef(0);
-  const lastSyncPasswordRef = useRef((localStorage.getItem(SYNC_PASSWORD_KEY) || '').trim());
+  const lastSyncPasswordRef = useRef((() => {
+    const pwd = localStorage.getItem(SYNC_PASSWORD_KEY);
+    return (pwd && typeof pwd === 'string') ? pwd.trim() : '';
+  })());
   const viewPasswordRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const viewPasswordRefreshIdRef = useRef(0);
-  const lastViewPasswordRef = useRef((localStorage.getItem(VIEW_PASSWORD_KEY) || '').trim());
+  const lastViewPasswordRef = useRef((() => {
+    const pwd = localStorage.getItem(VIEW_PASSWORD_KEY);
+    return (pwd && typeof pwd === 'string') ? pwd.trim() : '';
+  })());
   const isSyncPasswordRefreshingRef = useRef(false);
   const [remoteAuth, setRemoteAuth] = useState<{
     passwordRequired: boolean;
@@ -108,8 +152,10 @@ function App() {
   } | null>(null);
 
   const buildRemoteAuthHeaders = useCallback(() => {
-    const syncPassword = (localStorage.getItem(SYNC_PASSWORD_KEY) || '').trim();
-    const viewPassword = (localStorage.getItem(VIEW_PASSWORD_KEY) || '').trim();
+    const syncPwd = localStorage.getItem(SYNC_PASSWORD_KEY);
+    const viewPwd = localStorage.getItem(VIEW_PASSWORD_KEY);
+    const syncPassword = (syncPwd && typeof syncPwd === 'string') ? syncPwd.trim() : '';
+    const viewPassword = (viewPwd && typeof viewPwd === 'string') ? viewPwd.trim() : '';
     return {
       'Content-Type': 'application/json',
       ...(syncPassword ? { 'X-Sync-Password': syncPassword } : {}),
@@ -176,6 +222,7 @@ function App() {
     navigateToCategory,
     navigateToNotes,
     navigateToPrivate,
+    navigateToPreview,
     canGoBack,
     goBack,
     selectedCategory,
@@ -361,12 +408,15 @@ function App() {
   const isPrivateView = selectedCategory === PRIVATE_CATEGORY_ID;
 
   const resolvePrivacyPassword = useCallback((input?: string) => {
-    const trimmed = input?.trim();
+    const toHex = (value: string): string => (value && typeof value === 'string') ? String(value).trim().replace(/^#/, '') : '';
+    const trimmed = (input && typeof input === 'string') ? String(input).trim() : '';
     if (trimmed) return trimmed;
     if (useSeparatePrivacyPassword) {
-      return (localStorage.getItem(PRIVACY_PASSWORD_KEY) || '').trim();
+      const privacyPwd = localStorage.getItem(PRIVACY_PASSWORD_KEY);
+      return (privacyPwd && typeof privacyPwd === 'string') ? String(privacyPwd).trim() : '';
     }
-    return (localStorage.getItem(SYNC_PASSWORD_KEY) || '').trim();
+    const syncPwd = localStorage.getItem(SYNC_PASSWORD_KEY);
+    return (syncPwd && typeof syncPwd === 'string') ? syncPwd.trim() : '';
   }, [useSeparatePrivacyPassword]);
 
   const handleUnlockPrivateVault = useCallback(async (input?: string) => {
@@ -377,8 +427,9 @@ function App() {
     }
 
     if (!useSeparatePrivacyPassword) {
-      const syncPassword = (localStorage.getItem(SYNC_PASSWORD_KEY) || '').trim();
-      if (!syncPassword) {
+      const syncPwd = localStorage.getItem(SYNC_PASSWORD_KEY);
+      const syncPassword = (syncPwd && typeof syncPwd === 'string') ? String(syncPwd).trim() : '';
+      if (!String(syncPassword ?? '').trim()) {
         notify('请先设置同步密码，再解锁隐私分组', 'warning');
         return false;
       }
@@ -415,8 +466,9 @@ function App() {
 
   const persistPrivateVault = useCallback(async (nextLinks: LinkItem[], passwordOverride?: string) => {
     const resolvedPassword = passwordOverride || privateVaultPassword || resolvePrivacyPassword();
-    const password = (resolvedPassword || '').trim();
-    if (!password) {
+    const safePassword = (resolvedPassword && typeof resolvedPassword === 'string') ? String(resolvedPassword).trim() : '';
+    const password = String(safePassword ?? '').trim();
+    if (!String(password ?? '').trim()) {
       notify('请先设置隐私分组密码', 'warning');
       return false;
     }
@@ -441,16 +493,17 @@ function App() {
     newPassword: string;
   }) => {
     const { useSeparatePassword, oldPassword, newPassword } = payload;
-    const trimmedOld = oldPassword.trim();
-    const trimmedNew = newPassword.trim();
-    const syncPassword = (localStorage.getItem(SYNC_PASSWORD_KEY) || '').trim();
+    const trimmedOld = (oldPassword && typeof oldPassword === 'string') ? String(oldPassword).trim() : '';
+    const trimmedNew = (newPassword && typeof newPassword === 'string') ? String(newPassword).trim() : '';
+    const syncPwd = localStorage.getItem(SYNC_PASSWORD_KEY);
+    const syncPassword = (syncPwd && typeof syncPwd === 'string') ? String(syncPwd).trim() : '';
 
-    if (!trimmedOld || !trimmedNew) {
+    if (!String(trimmedOld ?? '').trim() || !String(trimmedNew ?? '').trim()) {
       notify('请填写旧密码和新密码', 'warning');
       return false;
     }
 
-    if (useSeparatePassword && !syncPassword) {
+    if (useSeparatePassword && !String(syncPassword ?? '').trim()) {
       notify('请先设置同步密码，再启用独立密码模式', 'warning');
       return false;
     }
@@ -461,7 +514,10 @@ function App() {
     }
 
     const expectedOld = useSeparatePrivacyPassword
-      ? (localStorage.getItem(PRIVACY_PASSWORD_KEY) || '').trim()
+      ? (() => {
+          const privacyPwd = localStorage.getItem(PRIVACY_PASSWORD_KEY);
+          return (privacyPwd && typeof privacyPwd === 'string') ? String(privacyPwd).trim() : '';
+        })()
       : syncPassword;
 
     if (expectedOld && trimmedOld !== expectedOld) {
@@ -507,9 +563,13 @@ function App() {
 
   // === Computed: Displayed Links ===
   const hasRevealCredential = !!(
-    (localStorage.getItem(VIEW_PASSWORD_KEY) || '').trim()
-    || (localStorage.getItem(SYNC_PASSWORD_KEY) || '').trim()
-    || webmasterUnlocked
+    (() => {
+      const viewPwd = localStorage.getItem(VIEW_PASSWORD_KEY);
+      const syncPwd = localStorage.getItem(SYNC_PASSWORD_KEY);
+      return ((viewPwd && typeof viewPwd === 'string') ? String(viewPwd).trim() : '')
+        || ((syncPwd && typeof syncPwd === 'string') ? String(syncPwd).trim() : '')
+        || webmasterUnlocked;
+    })()
   );
   const isWebmasterSite = remoteSiteMode === 'webmaster';
   const canRevealHidden = isWebmasterSite
@@ -551,8 +611,8 @@ function App() {
     let result = visibleLinks;
 
     // Search Filter
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
+    if (searchQuery && typeof searchQuery === 'string' && String(searchQuery).trim()) {
+      const q = String(searchQuery).toLowerCase();
       result = result.filter(l =>
         l.title.toLowerCase().includes(q) ||
         l.url.toLowerCase().includes(q) ||
@@ -576,8 +636,8 @@ function App() {
   const displayedPrivateLinks = useMemo(() => {
     let result = privateLinks;
 
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
+    if (searchQuery && typeof searchQuery === 'string' && String(searchQuery).trim()) {
+      const q = String(searchQuery).toLowerCase();
       result = result.filter(l =>
         l.title.toLowerCase().includes(q) ||
         l.url.toLowerCase().includes(q) ||
@@ -1009,7 +1069,9 @@ function App() {
   }, [siteSettings.grayScale]);
 
   const closeOnBackdrop = siteSettings.closeOnBackdrop ?? false;
-  const backgroundImage = siteSettings.backgroundImage?.trim();
+  const backgroundImage = siteSettings.backgroundImage && typeof siteSettings.backgroundImage === 'string' 
+    ? String(siteSettings.backgroundImage ?? '').trim() 
+    : '';
   const useCustomBackground = !!siteSettings.backgroundImageEnabled && !!backgroundImage;
   const backgroundMotion = siteSettings.backgroundMotion ?? false;
 
@@ -1162,7 +1224,7 @@ function App() {
   }, [pullFromCloud, handleSyncComplete, getLocalSyncMeta, links, categories, searchMode, externalSearchSources, aiConfig, siteSettings, privateVaultCipher, buildSyncData, handleSyncConflict]);
 
   const handleSyncPasswordChange = useCallback((nextPassword: string) => {
-    const trimmed = nextPassword.trim();
+    const trimmed = (nextPassword && typeof nextPassword === 'string') ? String(nextPassword).trim() : '';
     if (trimmed === lastSyncPasswordRef.current) return;
     lastSyncPasswordRef.current = trimmed;
 
@@ -1193,7 +1255,7 @@ function App() {
   }, [cancelPendingSync, handleManualPull, refreshRemoteAuth]);
 
   const handleViewPasswordChange = useCallback((nextPassword: string) => {
-    const trimmed = nextPassword.trim();
+    const trimmed = (nextPassword && typeof nextPassword === 'string') ? String(nextPassword).trim() : '';
     if (trimmed === lastViewPasswordRef.current) return;
     lastViewPasswordRef.current = trimmed;
 
@@ -1510,15 +1572,64 @@ function App() {
                 onDeleteNote={deleteNote}
               />
             </Suspense>
+          ) : currentRoute.view === 'preview' ? (
+            // 预览模式：内嵌显示外部链接
+            <div className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-slate-950">
+              <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 shadow-sm">
+                <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 truncate max-w-[50%]">
+                  <span className="font-medium shrink-0">预览:</span>
+                  <span className="truncate">{currentRoute.previewUrl}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => window.open(currentRoute.previewUrl, '_blank')}
+                    className="px-3 py-1.5 text-xs font-medium text-white bg-accent hover:bg-accent/90 rounded-lg transition-colors"
+                  >
+                    新窗口打开
+                  </button>
+                  <button
+                    onClick={() => goBack()}
+                    className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                  >
+                    返回
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 relative">
+                {currentRoute.previewUrl && (
+                  <iframe
+                    key={currentRoute.previewUrl}
+                    src={currentRoute.previewUrl}
+                    className="absolute inset-0 w-full h-full border-0 bg-white"
+                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                    title="预览"
+                    onError={(e) => {
+                      console.error('Iframe 加载失败:', e);
+                    }}
+                  />
+                )}
+              </div>
+            </div>
           ) : (
-            <LinkSections
-              linksCount={visibleLinks.length}
-              pinnedLinks={pinnedLinks}
-              displayedLinks={activeDisplayedLinks}
-              selectedCategory={selectedCategory}
-              searchQuery={searchQuery}
-              categories={visibleCategories}
-              siteTitle={siteSettings.title}
+            <div className="flex flex-col gap-6">
+              {/* Widget Grid - only show on home page */}
+              {selectedCategory === 'all' && !searchQuery && (
+                <WidgetGrid
+                  widgets={widgets}
+                  onAddWidget={addWidget}
+                  onRemoveWidget={removeWidget}
+                  onUpdateSettings={updateWidgetSettings}
+                  onToggleWidget={toggleWidget}
+                />
+              )}
+              <LinkSections
+                linksCount={visibleLinks.length}
+                pinnedLinks={pinnedLinks}
+                displayedLinks={activeDisplayedLinks}
+                selectedCategory={selectedCategory}
+                searchQuery={searchQuery}
+                categories={visibleCategories}
+                siteTitle={siteSettings.title}
               siteCardStyle={siteSettings.cardStyle}
               isSortingPinned={isSortingPinned}
               isSortingMode={isSortingMode}
@@ -1537,12 +1648,14 @@ function App() {
               onLinkSelect={handleLinkSelect}
               onLinkContextMenu={handleLinkContextMenu}
               onLinkEdit={handleLinkEdit}
+              onLinkNavigate={navigateToPreview}
               readOnly={isReadOnly}
               isPrivateUnlocked={isPrivateUnlocked}
               onPrivateUnlock={handleUnlockPrivateVault}
               privateUnlockHint={privateUnlockHint}
               privateUnlockSubHint={privateUnlockSubHint}
             />
+            </div>
           )}
         </div>
       </main>
@@ -1571,6 +1684,44 @@ function App() {
           defaultCategoryId={PRIVATE_CATEGORY_ID}
           closeOnBackdrop={closeOnBackdrop}
         />
+        <DataBackupModal
+          isOpen={dataBackupOpen}
+          onClose={() => setDataBackupOpen(false)}
+          links={links}
+          categories={categories}
+          siteSettings={siteSettings}
+          searchConfig={{ mode: searchMode, externalSources: externalSearchSources }}
+          aiConfig={aiConfig}
+          notes={notes}
+          onImport={(data) => {
+            if (data.links) importData(data.links, data.categories || []);
+            if (data.notes) importNotes(data.notes);
+            notify('数据导入成功', 'success');
+          }}
+          closeOnBackdrop={closeOnBackdrop}
+        />
+        
+        {/* Mobile Components */}
+        <MobileContentViewer
+          isOpen={mobileContentViewerOpen}
+          onClose={() => setMobileContentViewerOpen(false)}
+          url={mobileContentViewerUrl}
+          title="内容预览"
+        />
+        <MobileFullscreenSearch
+          isOpen={mobileSearchOpen}
+          onClose={() => setMobileSearchOpen(false)}
+          onSearch={setSearchQuery}
+          recentSearches={recentSearches}
+          trendingSearches={trendingSearches}
+          searchResults={filteredLinks}
+          searchQuery={searchQuery}
+          onResultClick={(link) => {
+            setMobileContentViewerUrl(link.url);
+            setMobileContentViewerOpen(true);
+            setMobileSearchOpen(false);
+          }}
+        />
       </Suspense>
 
       {/* Context Menu */}
@@ -1589,6 +1740,29 @@ function App() {
         onTogglePin={togglePinFromContextMenu}
         onToggleHidden={toggleHiddenFromContextMenu}
       />
+      
+      {/* Mobile Bottom Navigation */}
+      {isMobile && (
+        <>
+          <ImmersiveHeader
+            title={siteSettings.title}
+            onMenuClick={() => setSidebarOpen(true)}
+            onProfileClick={() => setSettingsModalOpen(true)}
+            unreadCount={0}
+          />
+          <MobileBottomNav
+            activeTab={mobileActiveTab}
+            onTabChange={(tab) => {
+              setMobileActiveTab(tab);
+              if (tab === 'search') {
+                setMobileSearchOpen(true);
+              }
+            }}
+            onFabClick={() => setIsModalOpen(true)}
+            unreadCount={pinnedLinks.length}
+          />
+        </>
+      )}
     </div>
   );
 }

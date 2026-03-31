@@ -30,7 +30,7 @@ export const parseBookmarks = async (file: File): Promise<ImportResult> => {
   const genericRootFolders = new Set(['Bookmarks Bar', '书签栏', 'Other Bookmarks', '其他书签']);
 
   const normalizeFolderPath = (path: string[]) => {
-    const trimmed = path.map(seg => seg.trim()).filter(Boolean);
+    const trimmed = path.map(seg => (seg && typeof seg === 'string') ? seg.trim() : '').filter(Boolean);
     // Strip generic root folders like "Bookmarks Bar" / "Other Bookmarks"
     while (trimmed.length > 0 && genericRootFolders.has(trimmed[0])) {
       trimmed.shift();
@@ -81,7 +81,8 @@ export const parseBookmarks = async (file: File): Promise<ImportResult> => {
 
         if (h3 && dl) {
             // It's a folder
-            const folderName = (h3.textContent || 'Unknown').trim();
+            const folderNameText = h3.textContent || 'Unknown';
+            const folderName = (folderNameText && typeof folderNameText === 'string') ? folderNameText.trim() : 'Unknown';
             traverse(dl, [...currentPath, folderName]);
         } else if (a) {
             // It's a link

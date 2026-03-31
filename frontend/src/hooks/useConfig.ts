@@ -142,7 +142,7 @@ const validateAIConfig = (config: Partial<AIConfig>): ConfigValidationResult => 
         errors.push('Base URL 必须以 http:// 或 https:// 开头');
     }
 
-    if (config.model && config.model.trim().length === 0) {
+    if (config.model && typeof config.model === 'string' && config.model.trim().length === 0) {
         errors.push('模型名称不能为空');
     }
 

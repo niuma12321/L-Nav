@@ -131,7 +131,8 @@ export const encryptPrivateVault = async (
   payload: PrivateVaultPayload
 ): Promise<string> => {
   try {
-    if (!password?.trim()) throw new Error('密码不能为空');
+    const safePassword = (password && typeof password === 'string') ? password : '';
+    if (!String(safePassword ?? '').trim()) throw new Error('密码不能为空');
     if (!isCryptoSupported()) throw new Error(VaultErrorType.UNSUPPORTED);
 
     // 生成安全随机数（盐值 + IV，不可预测）
@@ -179,7 +180,8 @@ export const decryptPrivateVault = async (
 
   try {
     // 空值校验
-    if (!password?.trim() || !cipherText) return defaultPayload;
+    const safePassword = (password && typeof password === 'string') ? password : '';
+    if (!String(safePassword ?? '').trim() || !cipherText) return defaultPayload;
     if (!isCryptoSupported()) throw new Error(VaultErrorType.UNSUPPORTED);
 
     // 拆分密文
