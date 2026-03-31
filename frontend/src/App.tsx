@@ -16,6 +16,13 @@ const WebDAVModal = lazy(() => import('./components/modals/WebDAVModal'));
 const MobileContentViewer = lazy(() => import('./components/mobile/MobileContentViewer'));
 const MobileFullscreenSearch = lazy(() => import('./components/mobile/MobileFullscreenSearch'));
 
+// Emerald Obsidian Navigation Components
+import SideNavBar from './components/navigation/SideNavBar';
+import BottomNavBar from './components/navigation/BottomNavBar';
+import TopBar from './components/navigation/TopBar';
+import Dashboard from './components/dashboard/Dashboard';
+import EmeraldNotesView from './components/notes/EmeraldNotesView';
+
 // Eagerly load frequently used components
 import ContextMenu from './components/layout/ContextMenu';
 import Sidebar from './components/layout/Sidebar';
@@ -119,6 +126,12 @@ function App() {
   const [mobileContentViewerUrl, setMobileContentViewerUrl] = useState('');
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  
+  // === Emerald Obsidian View State ===
+  const [emeraldView, setEmeraldView] = useState<'dashboard' | 'analytics' | 'notes' | 'bookmarks' | 'settings'>('dashboard');
+  const [bottomTab, setBottomTab] = useState<'home' | 'widgets' | 'search' | 'profile'>('home');
+  const [dashboardViewMode, setDashboardViewMode] = useState<'grid' | 'list'>('grid');
+  const [notesFilter, setNotesFilter] = useState<'all' | 'pinned' | 'archived'>('all');
   
   // 搜索历史记录
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
@@ -1780,6 +1793,34 @@ function App() {
           />
         </>
       )}
+      
+      {/* Emerald Obsidian Navigation */}
+      <SideNavBar
+        activeView={emeraldView}
+        onViewChange={setEmeraldView}
+        onAddNew={openAddLinkModal}
+        siteTitle="Obsidian"
+        siteSubtitle="EMERALD EDITION"
+      />
+      
+      <TopBar
+        onSearch={setSearchQuery}
+        searchResults={displayedLinks}
+        recentSearches={recentSearches}
+        onResultClick={(link) => navigateToPreview(link.url)}
+        unreadCount={0}
+        onNotificationClick={() => {}}
+        onProfileClick={() => setIsSettingsModalOpen(true)}
+        siteTitle={emeraldView.charAt(0).toUpperCase() + emeraldView.slice(1)}
+        userName="Alex"
+      />
+      
+      <BottomNavBar
+        activeTab={bottomTab}
+        onTabChange={setBottomTab}
+        onFabClick={openAddLinkModal}
+        unreadCount={pinnedLinks.length}
+      />
     </div>
   );
 }

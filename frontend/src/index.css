@@ -11,15 +11,39 @@
 @variant dark (&:where(.dark, .dark *));
 
 @theme {
-  /* 核心颜色系统 */
-  --color-primary: #3b82f6;
-  --color-primary-soft: rgb(59 130 246 / 0.1);
+  /* Emerald Obsidian 颜色系统 */
+  --color-obsidian: #0d0e10;
+  --color-obsidian-light: #15171a;
+  --color-obsidian-lighter: #1a1d21;
+  --color-obsidian-card: #1e2127;
+  
+  --color-emerald: #10b981;
+  --color-emerald-light: #34d399;
+  --color-emerald-glow: #69f6b8;
+  --color-emerald-soft: rgba(16, 185, 129, 0.1);
+  --color-emerald-soft-hover: rgba(16, 185, 129, 0.2);
+  
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+  
+  /* 核心映射 */
+  --color-primary: #10b981;
+  --color-primary-soft: rgba(16, 185, 129, 0.1);
   --color-secondary: #64748b;
-  --color-accent: rgb(var(--accent-color));
-  --color-accent-soft: rgb(var(--accent-color) / 0.1);
-  --color-dark: #0f172a;
-  --color-card: #1e293b;
-  --color-card-soft: rgb(30 41 59 / 0.5);
+  --color-accent: #69f6b8;
+  --color-accent-soft: rgba(105, 246, 184, 0.1);
+  --color-dark: #0d0e10;
+  --color-card: #1e2127;
+  --color-card-soft: rgba(30, 33, 39, 0.8);
+  --color-card-hover: rgba(30, 33, 39, 0.9);
 
   /* 字体系统 */
   --font-sans: "Manrope", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
@@ -48,14 +72,20 @@
   }
 
   .dark {
-    --accent-color: 129 140 248;
-    --background: #05070f;
+    --accent-color: 16 185 129;
+    --background: #0d0e10;
+    --background-secondary: #15171a;
     --foreground: #f8fafc;
-    --card: #0f172a;
+    --foreground-muted: #94a3b8;
+    --card: #1e2127;
     --card-foreground: #f8fafc;
-    --border: #1e293b;
+    --card-hover: #252a32;
+    --border: rgba(148, 163, 184, 0.1);
+    --border-hover: rgba(16, 185, 129, 0.3);
     --scrollbar: #334155;
     --scrollbar-hover: #475569;
+    --emerald-glow: #69f6b8;
+    --emerald-primary: #10b981;
   }
 
   * {
