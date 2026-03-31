@@ -1903,34 +1903,6 @@ function App() {
           />
         </>
       )}
-      
-      {/* Emerald Obsidian Navigation */}
-      <SideNavBar
-        activeView={emeraldView}
-        onViewChange={setEmeraldView}
-        onAddNew={openAddLinkModal}
-        siteTitle="Obsidian"
-        siteSubtitle="EMERALD EDITION"
-      />
-      
-      <TopBar
-        onSearch={setSearchQuery}
-        searchResults={displayedLinks}
-        recentSearches={recentSearches}
-        onResultClick={(link) => navigateToPreview(link.url)}
-        unreadCount={0}
-        onNotificationClick={() => {}}
-        onProfileClick={() => setIsSettingsModalOpen(true)}
-        siteTitle={emeraldView.charAt(0).toUpperCase() + emeraldView.slice(1)}
-        userName="Alex"
-      />
-      
-      <BottomNavBar
-        activeTab={bottomTab}
-        onTabChange={setBottomTab}
-        onFabClick={openAddLinkModal}
-        unreadCount={pinnedLinks.length}
-      />
     </div>
   );
 }
