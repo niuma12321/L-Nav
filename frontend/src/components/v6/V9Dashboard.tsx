@@ -72,8 +72,6 @@ const MagneticGrid: React.FC<{
             onDragStart={() => handleDragStart(widget.id)}
             onDragEnd={handleDragEnd}
             className={`
-              col-span-${widget.position.desktop.w} 
-              row-span-${widget.position.desktop.h}
               ${editMode ? 'cursor-move' : ''}
               ${draggedId === widget.id ? 'opacity-50 scale-95' : ''}
               transition-all duration-200
@@ -94,9 +92,10 @@ const MagneticGrid: React.FC<{
         {/* Add widget placeholder in edit mode */}
         {editMode && (
           <button 
-            className="col-span-4 row-span-2 rounded-3xl border-2 border-dashed border-white/20 
+            className="rounded-3xl border-2 border-dashed border-white/20 
                        flex flex-col items-center justify-center gap-3 text-slate-500
                        hover:border-emerald-500/50 hover:text-emerald-400 transition-colors"
+            style={{ gridColumn: 'span 4', gridRow: 'span 2', minHeight: '200px' }}
           >
             <Plus className="w-8 h-8" />
             <span className="text-sm font-medium">添加组件</span>
