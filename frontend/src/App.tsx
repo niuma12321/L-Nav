@@ -1668,7 +1668,7 @@ function App() {
               </div>
             </div>
           ) : (
-            <div className="flex flex-col gap-6">
+            <div>
               {/* Widget Grid - only show on home page */}
               {selectedCategory === 'all' && !searchQuery && (
                 <WidgetGrid
