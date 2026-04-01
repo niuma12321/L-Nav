@@ -5,18 +5,12 @@ import {
   Zap,
   Loader2,
   Grid3X3,
-  Settings,
   LayoutDashboard,
   FolderOpen,
   FlaskConical,
   Plus,
   Save,
-  GripVertical,
-  Cloud,
-  TrendingUp,
-  CheckSquare,
-  Newspaper,
-  MoreVertical
+  GripVertical
 } from 'lucide-react';
 import { useWidgetSystem } from '../../hooks/useWidgetSystem';
 import { WidgetConfig } from './widgetTypes';
