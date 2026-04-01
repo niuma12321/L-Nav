@@ -28,10 +28,12 @@ import {
   User
 } from 'lucide-react';
 import { useWidgetSystem } from '../../hooks/useWidgetSystem';
+import ContentPreview from './ContentPreview';
 
 // Lazy load views
 const ResourceCenterViewCN = lazy(() => import('./ResourceCenterViewCN'));
 const WidgetConfigCenter = lazy(() => import('./WidgetConfigCenter'));
+const LabView = lazy(() => import('./LabView'));
 
 interface V9DashboardProps {
   onAddResource?: () => void;
@@ -404,6 +406,8 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
   const [searchMode, setSearchMode] = useState<'internal' | 'external'>('external');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   
   const { 
     enabledWidgets, 
@@ -450,12 +454,15 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
     setHitokoto(quotes[Math.floor(Math.random() * quotes.length)]);
   };
 
-  const navItems = [
+  const [navItems, setNavItems] = useState([
     { id: 'dashboard', label: '控制台', icon: LayoutDashboard },
     { id: 'resources', label: '资源中心', icon: FolderOpen },
     { id: 'widgets', label: '组件配置', icon: Grid3X3 },
     { id: 'labs', label: '实验室', icon: FlaskConical },
-  ];
+  ]);
+  const [isNavEditMode, setIsNavEditMode] = useState(false);
+  const [navEditModalOpen, setNavEditModalOpen] = useState(false);
+  const [editingNavItem, setEditingNavItem] = useState<{id: string, label: string, originalId: string} | null>(null);
 
   if (!isLoaded) {
     return (
@@ -517,6 +524,15 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
               >
                 <Grid3X3 className="w-4 h-4" />
                 <span className="text-sm font-medium">{editMode ? '完成' : '编辑'}</span>
+              </button>
+
+              {/* 导航菜单编辑按钮 */}
+              <button
+                onClick={() => setNavEditModalOpen(true)}
+                className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all"
+              >
+                <Menu className="w-4 h-4" />
+                <span className="text-sm font-medium">菜单</span>
               </button>
 
               {/* 主题切换 */}
@@ -760,10 +776,21 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
               onImport={() => console.log('Import')}
               onEditLink={onEditLink}
               onDeleteLink={onDeleteLink}
-              onPreviewLink={(url) => window.open(url, '_blank')}
+              onPreviewLink={(url) => {
+                setPreviewUrl(url);
+                setIsPreviewOpen(true);
+              }}
               links={links}
               categories={categories}
             />
+          </Suspense>
+        ) : activeView === 'lab' ? (
+          <Suspense fallback={
+            <div className="flex items-center justify-center h-64">
+              <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+            </div>
+          }>
+            <LabView />
           </Suspense>
         ) : (
           <Suspense fallback={
@@ -775,6 +802,12 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
           </Suspense>
         )}
       </main>
+      
+      <ContentPreview
+        url={previewUrl || ''}
+        isOpen={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+      />
     </div>
   );
 };
