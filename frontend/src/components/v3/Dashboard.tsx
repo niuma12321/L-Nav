@@ -28,8 +28,8 @@ interface DashboardProps {
   onSearch: (query: string, engine?: string) => void;
   
   // View state
-  activeView: 'dashboard' | 'analytics' | 'notes' | 'resources' | 'settings';
-  onViewChange: (view: 'dashboard' | 'analytics' | 'notes' | 'resources' | 'settings') => void;
+  activeView: 'dashboard' | 'resources' | 'collection' | 'analytics' | 'settings';
+  onViewChange: (view: 'dashboard' | 'resources' | 'collection' | 'analytics' | 'settings') => void;
   
   // Command palette
   isCommandPaletteOpen: boolean;
@@ -142,9 +142,9 @@ const Dashboard: React.FC<DashboardProps> = ({
                 </div>
                 <div className="p-4 rounded-xl bg-white/5">
                   <div className="text-3xl font-bold text-emerald-400">
-                    {Math.round((notes.filter(n => n.pinned).length / Math.max(notes.length, 1)) * 100)}%
+                    {notes.length}
                   </div>
-                  <div className="text-xs text-slate-500 mt-1">便签置顶率</div>
+                  <div className="text-xs text-slate-500 mt-1">总便签数</div>
                 </div>
               </div>
             </div>
@@ -160,7 +160,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             home: 'dashboard',
             resources: 'resources',
             search: 'resources',
-            settings: 'settings'
+            profile: 'settings'
           };
           onViewChange(viewMap[tab] || 'dashboard');
         }}

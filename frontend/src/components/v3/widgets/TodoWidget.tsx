@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle2, Circle, Clock, Plus, X, MoreHorizontal } from 'lucide-react';
+import { CheckSquare, Square, ArrowRight } from 'lucide-react';
 
 interface Task {
   id: string;
   title: string;
-  status: 'todo' | 'in_progress' | 'done';
-  priority: 'low' | 'medium' | 'high';
-  createdAt: number;
+  completed: boolean;
+  category: string;
 }
 
 interface TodoWidgetProps {
@@ -14,162 +13,117 @@ interface TodoWidgetProps {
 }
 
 const TodoWidget: React.FC<TodoWidgetProps> = ({ className = '' }) => {
-  const [tasks, setTasks] = useState<Task[]>(() => {
-    const stored = localStorage.getItem('ynav:v3:tasks');
-    if (stored) {
-      try {
-        return JSON.parse(stored);
-      } catch {}
-    }
-    return [
-      { id: '1', title: '完成 Y-Nav V3 重构', status: 'in_progress', priority: 'high', createdAt: Date.now() },
-      { id: '2', title: '优化移动端交互', status: 'todo', priority: 'medium', createdAt: Date.now() },
-      { id: '3', title: '设计新图标集', status: 'done', priority: 'low', createdAt: Date.now() },
-    ];
-  });
-  
-  const [newTaskTitle, setNewTaskTitle] = useState('');
-  const [showInput, setShowInput] = useState(false);
+  const [tasks, setTasks] = useState<Task[]>([
+    { id: '1', title: 'Refactor navigation system', completed: true, category: 'Development' },
+    { id: '2', title: 'Finalize obsidian design system', completed: false, category: 'Design' },
+    { id: '3', title: 'Review Q4 analytics report', completed: false, category: 'Business' },
+    { id: '4', title: 'Prepare community update', completed: false, category: 'Marketing' },
+  ]);
 
-  // Persist tasks
-  useEffect(() => {
-    localStorage.setItem('ynav:v3:tasks', JSON.stringify(tasks));
-  }, [tasks]);
+  const completedCount = tasks.filter(t => t.completed).length;
+  const totalCount = tasks.length;
+  const progress = Math.round((completedCount / totalCount) * 100);
 
-  const addTask = () => {
-    if (!newTaskTitle.trim()) return;
-    const newTask: Task = {
-      id: Date.now().toString(),
-      title: newTaskTitle.trim(),
-      status: 'todo',
-      priority: 'medium',
-      createdAt: Date.now(),
-    };
-    setTasks([newTask, ...tasks]);
-    setNewTaskTitle('');
-    setShowInput(false);
+  const toggleTask = (id: string) => {
+    setTasks(tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
   };
 
-  const toggleStatus = (id: string) => {
-    setTasks(tasks.map(task => {
-      if (task.id === id) {
-        const statusOrder: Task['status'][] = ['todo', 'in_progress', 'done'];
-        const currentIndex = statusOrder.indexOf(task.status);
-        const nextStatus = statusOrder[(currentIndex + 1) % statusOrder.length];
-        return { ...task, status: nextStatus };
-      }
-      return task;
-    }));
-  };
-
-  const deleteTask = (id: string) => {
-    setTasks(tasks.filter(task => task.id !== id));
-  };
-
-  const getStatusIcon = (status: Task['status']) => {
-    switch (status) {
-      case 'done':
-        return <CheckCircle2 className="w-5 h-5 text-emerald-400" />;
-      case 'in_progress':
-        return <Clock className="w-5 h-5 text-amber-400" />;
-      default:
-        return <Circle className="w-5 h-5 text-slate-500" />;
-    }
-  };
-
-  const getPriorityColor = (priority: Task['priority']) => {
-    switch (priority) {
-      case 'high': return 'bg-red-500/20 text-red-400';
-      case 'medium': return 'bg-amber-500/20 text-amber-400';
-      default: return 'bg-slate-500/20 text-slate-400';
-    }
-  };
-
-  const stats = {
-    total: tasks.length,
-    done: tasks.filter(t => t.status === 'done').length,
-    inProgress: tasks.filter(t => t.status === 'in_progress').length,
-    todo: tasks.filter(t => t.status === 'todo').length,
-  };
+  // Circular progress SVG
+  const radius = 18;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (progress / 100) * circumference;
 
   return (
-    <div className={`v3-card p-5 ${className}`}>
-      <div className="flex items-center justify-between mb-4">
+    <div className={`rounded-3xl bg-[#181a1c] p-6 ${className}`}>
+      {/* Header */}
+      <div className="flex items-start justify-between mb-6">
         <div>
-          <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">专注清单</h3>
-          <p className="text-xs text-slate-500 mt-1">
-            {stats.done}/{stats.total} 完成 · {stats.inProgress} 进行中
-          </p>
+          <h3 className="text-lg font-semibold text-white">Focus Tasks</h3>
+          <p className="text-sm text-slate-400 mt-1">{completedCount} of {totalCount} completed today</p>
         </div>
-        <button
-          onClick={() => setShowInput(true)}
-          className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-        </button>
+        
+        {/* Circular Progress */}
+        <div className="relative w-12 h-12">
+          <svg className="w-12 h-12 -rotate-90" viewBox="0 0 44 44">
+            <circle
+              cx="22"
+              cy="22"
+              r={radius}
+              fill="none"
+              stroke="#242629"
+              strokeWidth="3"
+            />
+            <circle
+              cx="22"
+              cy="22"
+              r={radius}
+              fill="none"
+              stroke="#10b981"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset}
+              className="transition-all duration-500"
+            />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-xs font-semibold text-white">{progress}%</span>
+          </div>
+        </div>
       </div>
-
-      {/* Add Task Input */}
-      {showInput && (
-        <div className="flex items-center gap-2 mb-4">
-          <input
-            type="text"
-            value={newTaskTitle}
-            onChange={(e) => setNewTaskTitle(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && addTask()}
-            placeholder="添加新任务..."
-            className="flex-1 px-3 py-2 bg-white/5 rounded-xl text-white text-sm placeholder-slate-500 outline-none focus:ring-1 focus:ring-emerald-500/50"
-            autoFocus
-          />
-          <button
-            onClick={() => setShowInput(false)}
-            className="p-2 rounded-xl text-slate-500 hover:text-white"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
 
       {/* Task List */}
-      <div className="space-y-2 max-h-[200px] overflow-y-auto scrollbar-hide">
-        {tasks.length === 0 ? (
-          <div className="text-center py-8 text-slate-500 text-sm">
-            <p>暂无任务</p>
-            <p className="text-xs mt-1">点击 + 添加第一个任务</p>
-          </div>
-        ) : (
-          tasks.map((task) => (
-            <div
-              key={task.id}
-              className="group flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
-            >
-              <button
-                onClick={() => toggleStatus(task.id)}
-                className="flex-shrink-0 transition-transform active:scale-90"
-              >
-                {getStatusIcon(task.status)}
-              </button>
-              
-              <div className="flex-1 min-w-0">
-                <p className={`text-sm truncate ${task.status === 'done' ? 'line-through text-slate-500' : 'text-white'}`}>
-                  {task.title}
-                </p>
-              </div>
-
-              <span className={`text-[10px] px-2 py-0.5 rounded-full ${getPriorityColor(task.priority)}`}>
-                {task.priority === 'high' ? '高' : task.priority === 'medium' ? '中' : '低'}
-              </span>
-
-              <button
-                onClick={() => deleteTask(task.id)}
-                className="opacity-0 group-hover:opacity-100 p-1 rounded-lg text-slate-500 hover:text-red-400 transition-all"
-              >
-                <X className="w-4 h-4" />
-              </button>
+      <div className="space-y-3">
+        {tasks.map((task) => (
+          <div
+            key={task.id}
+            onClick={() => toggleTask(task.id)}
+            className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${
+              task.completed 
+                ? 'bg-[#0d0e10] opacity-60' 
+                : 'bg-[#242629] hover:bg-[#2a2d31]'
+            }`}
+          >
+            <button className="flex-shrink-0">
+              {task.completed ? (
+                <div className="w-5 h-5 rounded-md bg-emerald-500 flex items-center justify-center">
+                  <svg className="w-3.5 h-3.5 text-[#0d0e10]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              ) : (
+                <div className="w-5 h-5 rounded-md border-2 border-slate-500" />
+              )}
+            </button>
+            
+            <div className="flex-1 min-w-0">
+              <p className={`text-sm font-medium truncate ${task.completed ? 'line-through text-slate-500' : 'text-white'}`}>
+                {task.title}
+              </p>
+              {!task.completed && (
+                <p className="text-xs text-slate-500 mt-0.5">{task.category}</p>
+              )}
             </div>
-          ))
-        )}
+
+            {!task.completed && (
+              <span className={`text-xs px-2 py-1 rounded-full ${
+                task.category === 'Development' ? 'bg-emerald-500/20 text-emerald-400' :
+                task.category === 'Design' ? 'bg-blue-500/20 text-blue-400' :
+                task.category === 'Business' ? 'bg-purple-500/20 text-purple-400' :
+                'bg-amber-500/20 text-amber-400'
+              }`}>
+                {task.category}
+              </span>
+            )}
+          </div>
+        ))}
       </div>
+
+      {/* View All Link */}
+      <button className="w-full flex items-center justify-center gap-2 mt-4 py-3 text-emerald-400 hover:text-emerald-300 transition-colors">
+        <span className="text-sm font-medium">View All Tasks</span>
+        <ArrowRight className="w-4 h-4" />
+      </button>
     </div>
   );
 };

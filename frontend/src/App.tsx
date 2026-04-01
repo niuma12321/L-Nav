@@ -152,7 +152,7 @@ function App() {
   const [editingLinkMobile, setEditingLinkMobile] = useState<LinkItem | null>(null);
   
   // === V3 Component States ===
-  const [v3View, setV3View] = useState<'dashboard' | 'resources' | 'notes' | 'settings'>('dashboard');
+  const [v3View, setV3View] = useState<'dashboard' | 'resources' | 'collection' | 'analytics' | 'settings'>('dashboard');
   const [v3CommandOpen, setV3CommandOpen] = useState(false);
   const [v3ResourceCardOpen, setV3ResourceCardOpen] = useState(false);
   const [v3ChromeImportOpen, setV3ChromeImportOpen] = useState(false);
