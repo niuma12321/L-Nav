@@ -10,7 +10,10 @@ import {
   List,
   Import,
   Sparkles,
-  ChevronDown
+  ChevronDown,
+  Edit3,
+  Trash2,
+  Globe
 } from 'lucide-react';
 
 interface Category {
@@ -28,6 +31,7 @@ interface Resource {
   description: string;
   categoryId: string;
   favicon?: string;
+  icon?: string;
   createdAt: number;
 }
 
@@ -60,6 +64,9 @@ const mockResources: Resource[] = [
 interface ResourceCenterViewCNProps {
   onAddResource?: () => void;
   onImport?: () => void;
+  onPreviewLink?: (url: string) => void;
+  onEditLink?: (link: any) => void;
+  onDeleteLink?: (id: string) => void;
   links?: Array<{
     id: string;
     title: string;
@@ -80,6 +87,9 @@ interface ResourceCenterViewCNProps {
 const ResourceCenterViewCN: React.FC<ResourceCenterViewCNProps> = ({ 
   onAddResource,
   onImport,
+  onPreviewLink,
+  onEditLink,
+  onDeleteLink,
   links = [],
   categories = []
 }) => {
@@ -91,15 +101,36 @@ const ResourceCenterViewCN: React.FC<ResourceCenterViewCNProps> = ({
   // 将真实的 links 数据转换为 Resource 格式
   const resources = useMemo(() => {
     if (links.length > 0) {
-      return links.map(link => ({
-        id: link.id,
-        title: link.title,
-        url: link.url,
-        description: link.description || '',
-        categoryId: link.categoryId || 'uncategorized',
-        favicon: link.favicon || `https://www.faviconextractor.com/favicon/${link.url}?larger=true`,
-        createdAt: link.createdAt || Date.now()
-      }));
+      return links.map(link => {
+        // 改进 favicon 获取逻辑
+        let favicon = link.favicon;
+        if (!favicon || favicon.includes('faviconextractor')) {
+          // 提取域名
+          let domain = link.url;
+          try {
+            if (link.url.startsWith('http://') || link.url.startsWith('https://')) {
+              domain = new URL(link.url).hostname;
+            } else {
+              domain = link.url.split('/')[0];
+            }
+          } catch {
+            domain = link.url.replace(/^https?:\/\//, '').split('/')[0];
+          }
+          domain = domain.split(':')[0];
+          if (domain && !domain.includes('localhost') && !domain.startsWith('127.') && !domain.startsWith('192.168.')) {
+            favicon = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+          }
+        }
+        return {
+          id: link.id,
+          title: link.title,
+          url: link.url,
+          description: link.description || '',
+          categoryId: link.categoryId || 'uncategorized',
+          favicon: favicon || '',
+          createdAt: link.createdAt || Date.now()
+        };
+      });
     }
     // 如果没有真实数据，使用 mock 数据
     return mockResources;
@@ -267,7 +298,14 @@ const ResourceCenterViewCN: React.FC<ResourceCenterViewCNProps> = ({
       {/* Resources Grid */}
       <div className={`grid gap-4 ${viewMode === 'grid' ? 'grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'grid-cols-1'}`}>
         {filteredResources.map((resource) => (
-          <ResourceCard key={resource.id} resource={resource} viewMode={viewMode} />
+          <ResourceCard 
+            key={resource.id} 
+            resource={resource} 
+            viewMode={viewMode} 
+            onEdit={onEditLink}
+            onDelete={onDeleteLink}
+            onPreview={onPreviewLink}
+          />
         ))}
         
         {/* Add New Placeholder */}
@@ -300,24 +338,67 @@ const ResourceCenterViewCN: React.FC<ResourceCenterViewCNProps> = ({
 interface ResourceCardProps {
   resource: Resource;
   viewMode: 'grid' | 'list';
+  onEdit?: (link: any) => void;
+  onDelete?: (id: string) => void;
+  onPreview?: (url: string) => void;
 }
 
-const ResourceCard: React.FC<ResourceCardProps> = ({ resource, viewMode }) => {
+const ResourceCard: React.FC<ResourceCardProps> = ({ resource, viewMode, onEdit, onDelete, onPreview }) => {
+  const [showMenu, setShowMenu] = useState(false);
+  
   // 使用 resource 的 categoryId 直接显示，或显示默认文本
   const categoryName = resource.categoryId && resource.categoryId !== 'uncategorized' 
     ? resource.categoryId 
     : '未分类';
 
   const handleCardClick = () => {
-    if (resource.url) {
-      window.open(resource.url, '_blank');
+    if (onPreview && resource.url) {
+      let url = resource.url;
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'https://' + url;
+      }
+      onPreview(url);
+    } else if (resource.url) {
+      let url = resource.url;
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'https://' + url;
+      }
+      window.open(url, '_blank');
     }
+  };
+
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onEdit) {
+      onEdit({
+        id: resource.id,
+        title: resource.title,
+        url: resource.url,
+        description: resource.description,
+        categoryId: resource.categoryId,
+        icon: resource.icon,
+        favicon: resource.favicon,
+      });
+    }
+    setShowMenu(false);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onDelete) {
+      onDelete(resource.id);
+    }
+    setShowMenu(false);
   };
 
   const handleExternalLinkClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (resource.url) {
-      window.open(resource.url, '_blank');
+      let url = resource.url;
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'https://' + url;
+      }
+      window.open(url, '_blank');
     }
   };
 
@@ -341,12 +422,30 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resource, viewMode }) => {
         <span className="px-2 py-1 rounded-full text-xs bg-emerald-500/20 text-emerald-400">
           {categoryName}
         </span>
-        <button 
-          onClick={handleExternalLinkClick}
-          className="p-2 rounded-xl text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all opacity-0 group-hover:opacity-100"
-        >
-          <ExternalLink className="w-4 h-4" />
-        </button>
+        
+        {/* Edit/Delete buttons for list view */}
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={handleEditClick}
+            className="p-2 rounded-xl text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all"
+            title="编辑"
+          >
+            <Edit3 className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handleDeleteClick}
+            className="p-2 rounded-xl text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
+            title="删除"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+          <button 
+            onClick={handleExternalLinkClick}
+            className="p-2 rounded-xl text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all"
+          >
+            <ExternalLink className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     );
   }
@@ -354,7 +453,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resource, viewMode }) => {
   return (
     <div 
       onClick={handleCardClick}
-      className="p-5 rounded-2xl bg-[#181a1c] hover:bg-[#242629] transition-all group cursor-pointer"
+      className="p-5 rounded-2xl bg-[#181a1c] hover:bg-[#242629] transition-all group cursor-pointer relative"
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
@@ -365,12 +464,37 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resource, viewMode }) => {
             <Link2 className="w-6 h-6 text-slate-500" />
           )}
         </div>
-        <button 
-          onClick={(e) => e.stopPropagation()}
-          className="p-2 rounded-xl text-slate-500 hover:text-white hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-all"
-        >
-          <MoreVertical className="w-4 h-4" />
-        </button>
+        <div className="relative">
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowMenu(!showMenu);
+            }}
+            className="p-2 rounded-xl text-slate-500 hover:text-white hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-all"
+          >
+            <MoreVertical className="w-4 h-4" />
+          </button>
+          
+          {/* Dropdown Menu */}
+          {showMenu && (
+            <div className="absolute right-0 top-full mt-1 w-32 rounded-xl bg-[#242629] border border-white/10 shadow-lg z-50 py-1">
+              <button
+                onClick={handleEditClick}
+                className="w-full px-3 py-2 text-left text-sm text-slate-300 hover:text-white hover:bg-white/10 flex items-center gap-2"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                编辑
+              </button>
+              <button
+                onClick={handleDeleteClick}
+                className="w-full px-3 py-2 text-left text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 flex items-center gap-2"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                删除
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Content */}

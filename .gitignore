@@ -22,3 +22,6 @@ yarn-debug.log*
 test
 
 .vercel
+
+# Local Netlify folder
+.netlify

@@ -341,7 +341,7 @@ const LinkModal: React.FC<LinkModalProps> = ({
       onClick={closeOnBackdrop ? onClose : undefined}
     >
       <div
-        className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-100 dark:border-slate-800 transition-transform duration-300"
+        className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-slate-100 dark:border-slate-800 transition-transform duration-300"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

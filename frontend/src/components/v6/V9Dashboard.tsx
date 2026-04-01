@@ -249,6 +249,31 @@ const NewsWidget: React.FC = () => {
   );
 };
 
+// 便签小组件
+const NotesWidget: React.FC = () => {
+  const [notes] = useState([
+    { id: 1, content: '记得复盘昨日行情', color: 'bg-yellow-500/20' },
+    { id: 2, content: '查看季度财报数据', color: 'bg-blue-500/20' },
+    { id: 3, content: '更新投资组合', color: 'bg-green-500/20' },
+  ]);
+
+  return (
+    <div className="h-full flex flex-col">
+      <div className="flex-1 overflow-y-auto space-y-2">
+        {notes.map(note => (
+          <div key={note.id} className={`p-2 rounded-lg ${note.color} text-white/80 text-sm`}>
+            {note.content}
+          </div>
+        ))}
+      </div>
+      <button className="mt-2 text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1">
+        <Plus className="w-3 h-3" />
+        添加便签
+      </button>
+    </div>
+  );
+};
+
 // 搜索组件
 const SearchWidget: React.FC = () => {
   const engines = ['Google', '百度', 'GitHub', '知乎'];
@@ -615,32 +640,46 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
               </div>
 
               <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                {/* 天气 */}
-                <div className="relative bg-[#181a1c] rounded-2xl border border-white/10 shadow-sm hover:shadow-md transition-shadow overflow-hidden p-4 min-h-[200px]">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Cloud className="w-4 h-4 text-emerald-400" />
-                    <span className="text-sm font-medium text-slate-300">天气</span>
+                {/* 根据 enabledWidgets 配置动态渲染小组件 */}
+                {enabledWidgets.some(w => w.id === 'weather') && (
+                  <div className="relative bg-[#181a1c] rounded-2xl border border-white/10 shadow-sm hover:shadow-md transition-shadow overflow-hidden p-4 min-h-[200px]">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Cloud className="w-4 h-4 text-emerald-400" />
+                      <span className="text-sm font-medium text-slate-300">天气</span>
+                    </div>
+                    <WeatherWidget />
                   </div>
-                  <WeatherWidget />
-                </div>
+                )}
 
-                {/* 待办 */}
-                <div className="relative bg-[#181a1c] rounded-2xl border border-white/10 shadow-sm hover:shadow-md transition-shadow overflow-hidden p-4 min-h-[200px]">
-                  <div className="flex items-center gap-2 mb-2">
-                    <CheckSquare className="w-4 h-4 text-emerald-400" />
-                    <span className="text-sm font-medium text-slate-300">待办事项</span>
+                {enabledWidgets.some(w => w.id === 'custom-links') && (
+                  <div className="relative bg-[#181a1c] rounded-2xl border border-white/10 shadow-sm hover:shadow-md transition-shadow overflow-hidden p-4 min-h-[200px]">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckSquare className="w-4 h-4 text-emerald-400" />
+                      <span className="text-sm font-medium text-slate-300">待办事项</span>
+                    </div>
+                    <TodoWidget />
                   </div>
-                  <TodoWidget />
-                </div>
+                )}
 
-                {/* 热搜 */}
-                <div className="relative bg-[#181a1c] rounded-2xl border border-white/10 shadow-sm hover:shadow-md transition-shadow overflow-hidden p-4 min-h-[200px]">
-                  <div className="flex items-center gap-2 mb-2">
-                    <TrendingUp className="w-4 h-4 text-emerald-400" />
-                    <span className="text-sm font-medium text-slate-300">热搜榜单</span>
+                {enabledWidgets.some(w => w.id === 'stock-widget') && (
+                  <div className="relative bg-[#181a1c] rounded-2xl border border-white/10 shadow-sm hover:shadow-md transition-shadow overflow-hidden p-4 min-h-[200px]">
+                    <div className="flex items-center gap-2 mb-2">
+                      <TrendingUp className="w-4 h-4 text-emerald-400" />
+                      <span className="text-sm font-medium text-slate-300">热搜榜单</span>
+                    </div>
+                    <NewsWidget />
                   </div>
-                  <NewsWidget />
-                </div>
+                )}
+
+                {enabledWidgets.some(w => w.id === 'news-feed') && (
+                  <div className="relative bg-[#181a1c] rounded-2xl border border-white/10 shadow-sm hover:shadow-md transition-shadow overflow-hidden p-4 min-h-[200px] lg:col-span-2">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Pin className="w-4 h-4 text-emerald-400" />
+                      <span className="text-sm font-medium text-slate-300">便签</span>
+                    </div>
+                    <NotesWidget />
+                  </div>
+                )}
               </div>
             </section>
 
@@ -719,6 +758,9 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
             <ResourceCenterViewCN 
               onAddResource={onAddResource}
               onImport={() => console.log('Import')}
+              onEditLink={onEditLink}
+              onDeleteLink={onDeleteLink}
+              onPreviewLink={(url) => window.open(url, '_blank')}
               links={links}
               categories={categories}
             />

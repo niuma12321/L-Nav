@@ -216,7 +216,10 @@ export function useSyncEngine(options: UseSyncEngineOptions = {}): UseSyncEngine
         // 设置新的定时器
         debounceTimer.current = setTimeout(async () => {
             if (pendingData.current) {
-                await pushToCloud(pendingData.current);
+                const success = await pushToCloud(pendingData.current);
+                if (success) {
+                    onSyncComplete?.();
+                }
                 pendingData.current = null;
             }
         }, SYNC_DEBOUNCE_MS);
