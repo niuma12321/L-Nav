@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { useWidgetSystem } from '../../hooks/useWidgetSystem';
 import ContentPreview from './ContentPreview';
+import NavEditModal from '../modals/NavEditModal';
 
 // Lazy load views
 const ResourceCenterViewCN = lazy(() => import('./ResourceCenterViewCN'));
@@ -807,6 +808,13 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
         url={previewUrl || ''}
         isOpen={isPreviewOpen}
         onClose={() => setIsPreviewOpen(false)}
+      />
+      
+      <NavEditModal
+        isOpen={navEditModalOpen}
+        onClose={() => setNavEditModalOpen(false)}
+        navItems={navItems}
+        onSave={setNavItems}
       />
     </div>
   );
