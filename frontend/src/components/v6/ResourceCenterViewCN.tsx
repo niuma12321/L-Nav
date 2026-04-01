@@ -60,20 +60,70 @@ const mockResources: Resource[] = [
 interface ResourceCenterViewCNProps {
   onAddResource?: () => void;
   onImport?: () => void;
+  links?: Array<{
+    id: string;
+    title: string;
+    url: string;
+    description?: string;
+    icon?: string;
+    categoryId?: string;
+    favicon?: string;
+    createdAt?: number;
+  }>;
+  categories?: Array<{
+    id: string;
+    name: string;
+    icon?: string;
+  }>;
 }
 
 const ResourceCenterViewCN: React.FC<ResourceCenterViewCNProps> = ({ 
   onAddResource,
-  onImport 
+  onImport,
+  links = [],
+  categories = []
 }) => {
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showCategoryMenu, setShowCategoryMenu] = useState(false);
 
+  // 将真实的 links 数据转换为 Resource 格式
+  const resources = useMemo(() => {
+    if (links.length > 0) {
+      return links.map(link => ({
+        id: link.id,
+        title: link.title,
+        url: link.url,
+        description: link.description || '',
+        categoryId: link.categoryId || 'uncategorized',
+        favicon: link.favicon || `https://www.faviconextractor.com/favicon/${link.url}?larger=true`,
+        createdAt: link.createdAt || Date.now()
+      }));
+    }
+    // 如果没有真实数据，使用 mock 数据
+    return mockResources;
+  }, [links]);
+
+  // 构建分类数据
+  const categoryList = useMemo(() => {
+    if (categories.length > 0) {
+      const allCategory = { id: 'all', name: '全部资源', icon: '⊞', count: links.length, color: 'bg-emerald-500' };
+      const mappedCategories = categories.map(cat => ({
+        id: cat.id,
+        name: cat.name,
+        icon: cat.icon || '📁',
+        count: links.filter(l => l.categoryId === cat.id).length,
+        color: 'bg-blue-500'
+      }));
+      return [allCategory, ...mappedCategories];
+    }
+    return mockCategories;
+  }, [categories, links]);
+
   // 过滤资源
   const filteredResources = useMemo(() => {
-    let filtered = mockResources;
+    let filtered = resources;
     
     if (activeCategory !== 'all') {
       filtered = filtered.filter(r => r.categoryId === activeCategory);
@@ -89,9 +139,9 @@ const ResourceCenterViewCN: React.FC<ResourceCenterViewCNProps> = ({
     }
     
     return filtered;
-  }, [activeCategory, searchQuery]);
+  }, [activeCategory, searchQuery, resources]);
 
-  const activeCategoryData = mockCategories.find(c => c.id === activeCategory);
+  const activeCategoryData = categoryList.find(c => c.id === activeCategory);
 
   return (
     <div className="space-y-6">
@@ -139,7 +189,7 @@ const ResourceCenterViewCN: React.FC<ResourceCenterViewCNProps> = ({
           {/* Dropdown Menu */}
           {showCategoryMenu && (
             <div className="absolute top-full left-0 mt-2 w-56 rounded-2xl bg-[#181a1c] border border-white/10 shadow-xl z-50">
-              {mockCategories.map((category) => (
+              {categoryList.map((category) => (
                 <button
                   key={category.id}
                   onClick={() => {
@@ -253,7 +303,10 @@ interface ResourceCardProps {
 }
 
 const ResourceCard: React.FC<ResourceCardProps> = ({ resource, viewMode }) => {
-  const category = mockCategories.find(c => c.id === resource.categoryId);
+  // 使用 resource 的 categoryId 直接显示，或显示默认文本
+  const categoryName = resource.categoryId && resource.categoryId !== 'uncategorized' 
+    ? resource.categoryId 
+    : '未分类';
 
   if (viewMode === 'list') {
     return (
@@ -269,8 +322,8 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resource, viewMode }) => {
           <h4 className="text-base font-medium text-white truncate">{resource.title}</h4>
           <p className="text-sm text-slate-500 truncate">{resource.description}</p>
         </div>
-        <span className={`px-2 py-1 rounded-full text-xs ${category?.color.replace('bg-', 'text-') || 'text-slate-400'} ${category?.color.replace('bg-', 'bg-')?.replace('500', '500/20') || 'bg-slate-500/20'}`}>
-          {category?.name}
+        <span className="px-2 py-1 rounded-full text-xs bg-emerald-500/20 text-emerald-400">
+          {categoryName}
         </span>
         <button className="p-2 rounded-xl text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all opacity-0 group-hover:opacity-100">
           <ExternalLink className="w-4 h-4" />
@@ -301,8 +354,8 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resource, viewMode }) => {
 
       {/* Footer */}
       <div className="flex items-center justify-between">
-        <span className={`px-2 py-1 rounded-full text-xs ${category?.color.replace('bg-', 'bg-')?.replace('500', '500/20') || 'bg-slate-500/20'} ${category?.color.replace('bg-', 'text-') || 'text-slate-400'}`}>
-          {category?.name}
+        <span className="px-2 py-1 rounded-full text-xs bg-blue-500/20 text-blue-400">
+          {categoryName}
         </span>
         <button className="p-2 rounded-xl text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all">
           <ExternalLink className="w-4 h-4" />

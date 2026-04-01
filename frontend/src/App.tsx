@@ -1661,6 +1661,8 @@ function App() {
           setV4EditingResource(null);
           setV4ResourceCardOpen(true);
         }}
+        onOpenSettings={() => setIsSettingsModalOpen(true)}
+        onOpenImport={() => setIsImportModalOpen(true)}
         links={links}
         categories={categories}
       />

@@ -35,6 +35,8 @@ const WidgetConfigCenter = lazy(() => import('./WidgetConfigCenter'));
 
 interface V9DashboardProps {
   onAddResource?: () => void;
+  onOpenSettings?: () => void;
+  onOpenImport?: () => void;
   links?: Array<{
     id: string;
     title: string;
@@ -361,7 +363,7 @@ const LinkCard: React.FC<{
   );
 };
 
-const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, links = [], categories = [] }) => {
+const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings, onOpenImport, links = [], categories = [] }) => {
   const [activeView, setActiveView] = useState('dashboard');
   const [currentTime, setCurrentTime] = useState(new Date());
   const [searchMode, setSearchMode] = useState<'internal' | 'external'>('external');
@@ -488,20 +490,29 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, links = [], ca
               </button>
 
               {/* 设置 */}
-              <button className="p-2 rounded-xl text-slate-400 hover:text-emerald-400 hover:bg-white/5 transition-all">
+              <button 
+                onClick={onOpenSettings}
+                className="p-2 rounded-xl text-slate-400 hover:text-emerald-400 hover:bg-white/5 transition-all"
+              >
                 <Settings className="w-5 h-5" />
               </button>
 
               {/* 通知 */}
-              <button className="relative p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+              <button 
+                onClick={() => alert('通知功能即将上线')}
+                className="relative p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all"
+              >
                 <Bell className="w-5 h-5" />
                 <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-emerald-500" />
               </button>
 
               {/* 用户头像 */}
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
+              <button 
+                onClick={() => alert('用户功能即将上线')}
+                className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center hover:ring-2 hover:ring-white/20 transition-all"
+              >
                 <span className="text-sm font-bold text-white">李</span>
-              </div>
+              </button>
 
               {/* 移动端菜单按钮 */}
               <button 
@@ -696,6 +707,8 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, links = [], ca
             <ResourceCenterViewCN 
               onAddResource={onAddResource}
               onImport={() => console.log('Import')}
+              links={links}
+              categories={categories}
             />
           </Suspense>
         ) : (
