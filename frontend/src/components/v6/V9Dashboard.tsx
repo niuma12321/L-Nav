@@ -414,10 +414,10 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource }) => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0d0e10] text-white">
+    <div className="min-h-screen w-full bg-[#0d0e10] text-white">
       {/* 顶部导航栏 */}
       <header className="sticky top-0 z-50 border-b border-white/5 bg-[#0d0e10]/80 backdrop-blur-xl">
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
           <div className="h-16 flex items-center justify-between">
             {/* Logo */}
             <div className="flex items-center gap-3">
@@ -525,7 +525,7 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource }) => {
       </header>
 
       {/* 主内容区 */}
-      <main className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-6">
         {activeView === 'dashboard' ? (
           <div className="space-y-8">
             {/* 欢迎区域 + 搜索 */}
