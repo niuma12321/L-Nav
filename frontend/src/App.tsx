@@ -36,6 +36,9 @@ import V4Dashboard from './components/v4/V4Dashboard';
 // V6 Components - Y-Nav Elite V6.0 Chinese Edition
 import V6Dashboard from './components/v6/V6Dashboard';
 
+// V9 Components - Y-Nav Elite V9.0 Modular Edition
+import V9Dashboard from './components/v6/V9Dashboard';
+
 // Eagerly load frequently used components
 import ContextMenu from './components/layout/ContextMenu';
 import Sidebar from './components/layout/Sidebar';
@@ -1890,8 +1893,8 @@ function App() {
         onToggleHidden={toggleHiddenFromContextMenu}
       />
       
-      {/* V6 Dashboard - Elite Edition (全中文界面) */}
-      <V6Dashboard
+      {/* V9 Dashboard - Modular Edition (全模块化架构) */}
+      <V9Dashboard
         onAddResource={() => {
           setV4EditingResource(null);
           setV4ResourceCardOpen(true);
