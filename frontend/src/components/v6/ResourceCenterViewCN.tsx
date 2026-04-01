@@ -308,9 +308,25 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resource, viewMode }) => {
     ? resource.categoryId 
     : '未分类';
 
+  const handleCardClick = () => {
+    if (resource.url) {
+      window.open(resource.url, '_blank');
+    }
+  };
+
+  const handleExternalLinkClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (resource.url) {
+      window.open(resource.url, '_blank');
+    }
+  };
+
   if (viewMode === 'list') {
     return (
-      <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#181a1c] hover:bg-[#242629] transition-colors group">
+      <div 
+        onClick={handleCardClick}
+        className="flex items-center gap-4 p-4 rounded-2xl bg-[#181a1c] hover:bg-[#242629] transition-colors group cursor-pointer"
+      >
         <div className="w-12 h-12 rounded-xl bg-[#0d0e10] flex items-center justify-center shrink-0">
           {resource.favicon ? (
             <img src={resource.favicon} alt="" className="w-6 h-6 rounded" />
@@ -325,7 +341,10 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resource, viewMode }) => {
         <span className="px-2 py-1 rounded-full text-xs bg-emerald-500/20 text-emerald-400">
           {categoryName}
         </span>
-        <button className="p-2 rounded-xl text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all opacity-0 group-hover:opacity-100">
+        <button 
+          onClick={handleExternalLinkClick}
+          className="p-2 rounded-xl text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all opacity-0 group-hover:opacity-100"
+        >
           <ExternalLink className="w-4 h-4" />
         </button>
       </div>
@@ -333,7 +352,10 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resource, viewMode }) => {
   }
 
   return (
-    <div className="p-5 rounded-2xl bg-[#181a1c] hover:bg-[#242629] transition-all group cursor-pointer">
+    <div 
+      onClick={handleCardClick}
+      className="p-5 rounded-2xl bg-[#181a1c] hover:bg-[#242629] transition-all group cursor-pointer"
+    >
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="w-12 h-12 rounded-xl bg-[#0d0e10] flex items-center justify-center">
@@ -343,7 +365,10 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resource, viewMode }) => {
             <Link2 className="w-6 h-6 text-slate-500" />
           )}
         </div>
-        <button className="p-2 rounded-xl text-slate-500 hover:text-white hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-all">
+        <button 
+          onClick={(e) => e.stopPropagation()}
+          className="p-2 rounded-xl text-slate-500 hover:text-white hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-all"
+        >
           <MoreVertical className="w-4 h-4" />
         </button>
       </div>
@@ -357,7 +382,10 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resource, viewMode }) => {
         <span className="px-2 py-1 rounded-full text-xs bg-blue-500/20 text-blue-400">
           {categoryName}
         </span>
-        <button className="p-2 rounded-xl text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all">
+        <button 
+          onClick={handleExternalLinkClick}
+          className="p-2 rounded-xl text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all"
+        >
           <ExternalLink className="w-4 h-4" />
         </button>
       </div>

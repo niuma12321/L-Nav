@@ -1663,6 +1663,8 @@ function App() {
         }}
         onOpenSettings={() => setIsSettingsModalOpen(true)}
         onOpenImport={() => setIsImportModalOpen(true)}
+        onEditLink={handleLinkEdit}
+        onDeleteLink={handleDeleteLink}
         links={links}
         categories={categories}
       />

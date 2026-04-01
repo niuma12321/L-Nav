@@ -37,6 +37,8 @@ interface V9DashboardProps {
   onAddResource?: () => void;
   onOpenSettings?: () => void;
   onOpenImport?: () => void;
+  onEditLink?: (link: any) => void;
+  onDeleteLink?: (id: string) => void;
   links?: Array<{
     id: string;
     title: string;
@@ -308,15 +310,23 @@ const SearchWidget: React.FC = () => {
 
 // 链接卡片组件
 const LinkCard: React.FC<{
+  id: string;
   title: string;
   url: string;
   icon?: string;
   description?: string;
   color?: string;
   isHidden?: boolean;
-}> = ({ title, url, icon, description, color = 'bg-indigo-500/20 text-indigo-400', isHidden }) => {
+  onEdit?: () => void;
+}> = ({ id, title, url, icon, description, color = 'bg-indigo-500/20 text-indigo-400', isHidden, onEdit }) => {
   const domain = new URL(url).hostname;
   const faviconUrl = `https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://${domain}&size=64`;
+
+  const handleEdit = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onEdit?.();
+  };
 
   return (
     <a
@@ -347,7 +357,7 @@ const LinkCard: React.FC<{
         <button
           className="p-1.5 rounded-lg bg-[#0d0e10] text-slate-400 hover:text-emerald-400 border border-white/5 transition-colors"
           title="编辑链接"
-          onClick={(e) => { e.preventDefault(); }}
+          onClick={handleEdit}
         >
           <Settings className="w-3.5 h-3.5" />
         </button>
@@ -363,7 +373,7 @@ const LinkCard: React.FC<{
   );
 };
 
-const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings, onOpenImport, links = [], categories = [] }) => {
+const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings, onOpenImport, onEditLink, onDeleteLink, links = [], categories = [] }) => {
   const [activeView, setActiveView] = useState('dashboard');
   const [currentTime, setCurrentTime] = useState(new Date());
   const [searchMode, setSearchMode] = useState<'internal' | 'external'>('external');
@@ -656,21 +666,23 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
                   links.filter(link => !link.hidden).slice(0, 10).map((link) => (
                     <LinkCard 
                       key={link.id}
+                      id={link.id}
                       title={link.title} 
                       url={link.url} 
                       icon={link.icon}
                       description={link.description}
                       color="bg-emerald-500/20 text-emerald-400"
                       isHidden={link.hidden}
+                      onEdit={() => onEditLink?.(link)}
                     />
                   ))
                 ) : (
                   // 默认示例链接
                   <>
-                    <LinkCard title="PanHub" url="https://sou.678870.xyz" color="bg-indigo-500/20 text-indigo-400" isHidden />
-                    <LinkCard title="盘搜" url="https://pansou.nas.678870.xyz" icon="🌐" color="bg-teal-500/20 text-teal-400" isHidden />
-                    <LinkCard title="GitHub" url="https://github.com" description="代码托管平台" color="bg-cyan-500/20 text-cyan-400" />
-                    <LinkCard title="React" url="https://react.dev" description="构建Web用户界面的库" color="bg-fuchsia-500/20 text-fuchsia-400" />
+                    <LinkCard id="demo1" title="PanHub" url="https://sou.678870.xyz" color="bg-indigo-500/20 text-indigo-400" isHidden />
+                    <LinkCard id="demo2" title="盘搜" url="https://pansou.nas.678870.xyz" icon="🌐" color="bg-teal-500/20 text-teal-400" isHidden />
+                    <LinkCard id="demo3" title="GitHub" url="https://github.com" description="代码托管平台" color="bg-cyan-500/20 text-cyan-400" />
+                    <LinkCard id="demo4" title="React" url="https://react.dev" description="构建Web用户界面的库" color="bg-fuchsia-500/20 text-fuchsia-400" />
                   </>
                 )}
               </div>
