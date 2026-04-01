@@ -112,10 +112,10 @@ const V4Dashboard: React.FC<V4DashboardProps> = ({ onAddResource }) => {
       </aside>
 
       {/* Main Content */}
-      <main className="lg:ml-[260px] min-h-screen pb-24 lg:pb-0">
-        {/* Header */}
-        <header className="sticky top-0 z-40 bg-[#0d0e10]/95 backdrop-blur-xl px-6 py-4">
-          <div className="flex items-center justify-between">
+      <main className="lg:ml-[260px] min-h-screen pb-24 lg:pb-0 pt-16 lg:pt-0 overflow-y-auto">
+        {/* Desktop Header */}
+        <header className="hidden lg:flex sticky top-0 z-40 bg-[#0d0e10]/95 backdrop-blur-xl px-6 py-4">
+          <div className="flex items-center justify-between w-full">
             {/* Search */}
             <div className="flex items-center gap-3 flex-1 max-w-xl">
               <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-[#181a1c] border border-white/5 w-full">
@@ -151,9 +151,9 @@ const V4Dashboard: React.FC<V4DashboardProps> = ({ onAddResource }) => {
         </header>
 
         {/* Dashboard Content */}
-        <div className="p-6">
+        <div className="p-4 lg:p-6">
           {/* Top Row: Weather + Market Pulse */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 mb-4 lg:mb-6">
             <WeatherWidget />
             <div className="lg:col-span-2">
               <MarketIndicesWidget />
@@ -161,8 +161,8 @@ const V4Dashboard: React.FC<V4DashboardProps> = ({ onAddResource }) => {
           </div>
 
           {/* Middle Row: Watchlist + Todo + News */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 mb-4 lg:mb-6">
+            <div className="space-y-4 lg:space-y-6">
               <TodoWidget />
             </div>
             <WatchlistWidget />
@@ -170,11 +170,14 @@ const V4Dashboard: React.FC<V4DashboardProps> = ({ onAddResource }) => {
           </div>
 
           {/* Bottom Row: Crypto */}
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 lg:gap-6">
             <div className="lg:col-span-1">
               <CryptoWidget />
             </div>
           </div>
+          
+          {/* Extra padding for mobile bottom nav */}
+          <div className="h-20 lg:hidden" />
         </div>
       </main>
 

@@ -41,10 +41,6 @@ import LinkSections from './components/layout/LinkSections';
 import SyncStatusIndicator from './components/ui/SyncStatusIndicator';
 import { useDialog } from './components/ui/DialogProvider';
 
-// Mobile components (eagerly loaded for responsiveness)
-import ImmersiveHeader from './components/mobile/ImmersiveHeader';
-import MobileBottomNav from './components/mobile/MobileBottomNav';
-
 import {
   useDataStore,
   useTheme,
@@ -1891,30 +1887,7 @@ function App() {
         onToggleHidden={toggleHiddenFromContextMenu}
       />
       
-      {/* Mobile Bottom Navigation */}
-      {isMobile && (
-        <>
-          <ImmersiveHeader
-            title={siteSettings.title}
-            onMenuClick={() => setSidebarOpen(true)}
-            onProfileClick={() => setIsSettingsModalOpen(true)}
-            unreadCount={0}
-          />
-          <MobileBottomNav
-            activeTab={mobileActiveTab}
-            onTabChange={(tab) => {
-              setMobileActiveTab(tab);
-              if (tab === 'search') {
-                setMobileSearchOpen(true);
-              }
-            }}
-            onFabClick={() => setIsModalOpen(true)}
-            unreadCount={pinnedLinks.length}
-          />
-        </>
-      )}
-
-      {/* V4 Dashboard - Financial Edition (唯一主界面) */}
+      {/* V4 Dashboard - Financial Edition (唯一主界面，已包含移动端布局) */}
       <V4Dashboard
         onAddResource={() => {
           setV4EditingResource(null);
