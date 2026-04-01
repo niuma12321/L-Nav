@@ -35,6 +35,21 @@ const WidgetConfigCenter = lazy(() => import('./WidgetConfigCenter'));
 
 interface V9DashboardProps {
   onAddResource?: () => void;
+  links?: Array<{
+    id: string;
+    title: string;
+    url: string;
+    description?: string;
+    icon?: string;
+    categoryId?: string;
+    pinned?: boolean;
+    hidden?: boolean;
+  }>;
+  categories?: Array<{
+    id: string;
+    name: string;
+    icon?: string;
+  }>;
 }
 
 // 天气小组件
@@ -346,7 +361,7 @@ const LinkCard: React.FC<{
   );
 };
 
-const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource }) => {
+const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, links = [], categories = [] }) => {
   const [activeView, setActiveView] = useState('dashboard');
   const [currentTime, setCurrentTime] = useState(new Date());
   const [searchMode, setSearchMode] = useState<'internal' | 'external'>('external');
@@ -624,15 +639,29 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource }) => {
                 </div>
               </div>
 
+              {/* 动态渲染链接卡片 */}
               <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-                <LinkCard title="PanHub" url="https://sou.678870.xyz" color="bg-indigo-500/20 text-indigo-400" isHidden />
-                <LinkCard title="盘搜" url="https://pansou.nas.678870.xyz" icon="🌐" color="bg-teal-500/20 text-teal-400" isHidden />
-                <LinkCard title="GitHub" url="https://github.com" description="代码托管平台" color="bg-cyan-500/20 text-cyan-400" />
-                <LinkCard title="React" url="https://react.dev" description="构建Web用户界面的库" color="bg-fuchsia-500/20 text-fuchsia-400" />
-                <LinkCard title="Tailwind CSS" url="https://tailwindcss.com" description="原子化CSS框架" color="bg-lime-500/20 text-lime-400" />
-                <LinkCard title="ChatGPT" url="https://chat.openai.com" description="OpenAI聊天机器人" color="bg-emerald-500/20 text-emerald-400" />
-                <LinkCard title="Gemini" url="https://gemini.google.com" description="Google DeepMind AI" color="bg-purple-500/20 text-purple-400" />
-                <LinkCard title="飞牛" url="https://nas.678870.xyz/login" icon="🖥️" color="bg-orange-500/20 text-orange-400" isHidden />
+                {links.length > 0 ? (
+                  links.filter(link => !link.hidden).slice(0, 10).map((link) => (
+                    <LinkCard 
+                      key={link.id}
+                      title={link.title} 
+                      url={link.url} 
+                      icon={link.icon}
+                      description={link.description}
+                      color="bg-emerald-500/20 text-emerald-400"
+                      isHidden={link.hidden}
+                    />
+                  ))
+                ) : (
+                  // 默认示例链接
+                  <>
+                    <LinkCard title="PanHub" url="https://sou.678870.xyz" color="bg-indigo-500/20 text-indigo-400" isHidden />
+                    <LinkCard title="盘搜" url="https://pansou.nas.678870.xyz" icon="🌐" color="bg-teal-500/20 text-teal-400" isHidden />
+                    <LinkCard title="GitHub" url="https://github.com" description="代码托管平台" color="bg-cyan-500/20 text-cyan-400" />
+                    <LinkCard title="React" url="https://react.dev" description="构建Web用户界面的库" color="bg-fuchsia-500/20 text-fuchsia-400" />
+                  </>
+                )}
               </div>
             </section>
 

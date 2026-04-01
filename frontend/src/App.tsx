@@ -1397,7 +1397,7 @@ function App() {
 
   // === Render ===
   return (
-    <div className={`flex h-screen overflow-hidden ${toneClasses.text}`}>
+    <div className={`flex min-h-screen ${toneClasses.text}`}>
       {/* Modals - Wrapped in Suspense for lazy loading */}
       <Suspense fallback={null}>
         <CategoryManagerModal
@@ -1661,6 +1661,8 @@ function App() {
           setV4EditingResource(null);
           setV4ResourceCardOpen(true);
         }}
+        links={links}
+        categories={categories}
       />
 
       {/* V4 Smart Resource Card */}
