@@ -1,7 +1,9 @@
 /**
  * Y-Nav V4.0 金融数据服务
- * 集成腾讯财经、新浪财经 API
+ * 集成腾讯财经、新浪财经 API，带高性能缓存
  */
+
+import { createApiCache, LRUCache } from '../utils/cache';
 
 export interface StockData {
   code: string;
@@ -33,11 +35,21 @@ const INDEX_CODES: Record<string, string> = {
   'kc50': 's_sh000688',    // 科创50
 };
 
+// API 响应缓存（30秒有效期）
+const stockCache = new LRUCache<string, StockData[]>({ maxSize: 20, ttl: 30 * 1000 });
+const indexCache = new LRUCache<string, IndexData[]>({ maxSize: 5, ttl: 30 * 1000 });
+
 /**
- * 从腾讯财经获取股票数据
+ * 从腾讯财经获取股票数据（带缓存）
  * API: http://qt.gtimg.cn/q=sh000001,sz399001
  */
 export async function fetchStockData(codes: string[]): Promise<StockData[]> {
+  const cacheKey = codes.sort().join(',');
+  
+  // 检查内存缓存
+  const cached = stockCache.get(cacheKey);
+  if (cached) return cached;
+  
   try {
     const codeString = codes.join(',');
     const response = await fetch(`https://qt.gtimg.cn/q=${codeString}`, {
@@ -48,7 +60,12 @@ export async function fetchStockData(codes: string[]): Promise<StockData[]> {
     });
     
     const text = await response.text();
-    return parseTencentData(text);
+    const data = parseTencentData(text);
+    
+    // 写入缓存
+    stockCache.set(cacheKey, data);
+    
+    return data;
   } catch (error) {
     console.error('Failed to fetch stock data:', error);
     return getMockStockData(codes);
@@ -56,21 +73,30 @@ export async function fetchStockData(codes: string[]): Promise<StockData[]> {
 }
 
 /**
- * 获取 A 股主要指数数据
+ * 获取 A 股主要指数数据（带缓存）
  */
 export async function fetchMarketIndices(): Promise<IndexData[]> {
+  // 检查内存缓存
+  const cached = indexCache.get('indices');
+  if (cached) return cached;
+  
   try {
     const codes = Object.values(INDEX_CODES);
     const response = await fetch(`https://qt.gtimg.cn/q=${codes.join(',')}`);
     const text = await response.text();
     
     const data = parseTencentIndexData(text);
-    return [
+    const result = [
       { name: '上证指数', code: 'sh000001', ...data['sh000001'] },
       { name: '深证成指', code: 'sz399001', ...data['sz399001'] },
       { name: '创业板指', code: 'sz399006', ...data['sz399006'] },
       { name: '沪深300', code: 'sh000300', ...data['sh000300'] },
     ];
+    
+    // 写入缓存
+    indexCache.set('indices', result);
+    
+    return result;
   } catch (error) {
     console.error('Failed to fetch indices:', error);
     return getMockIndexData();
@@ -180,18 +206,30 @@ export interface CryptoData {
   volume24h: number;
 }
 
+// 加密货币缓存（1分钟有效期）
+const cryptoCache = new LRUCache<string, CryptoData[]>({ maxSize: 1, ttl: 60 * 1000 });
+
 export async function fetchCryptoData(): Promise<CryptoData[]> {
+  // 检查内存缓存
+  const cached = cryptoCache.get('crypto');
+  if (cached) return cached;
+  
   try {
     const response = await fetch(
       'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,binancecoin&vs_currencies=cny&include_24hr_change=true'
     );
     const data = await response.json();
     
-    return [
+    const result = [
       { id: 'bitcoin', symbol: 'BTC', name: 'Bitcoin', price: data.bitcoin.cny, changePercent24h: data.bitcoin.cny_24h_change || 0 } as CryptoData,
       { id: 'ethereum', symbol: 'ETH', name: 'Ethereum', price: data.ethereum.cny, changePercent24h: data.ethereum.cny_24h_change || 0 } as CryptoData,
       { id: 'solana', symbol: 'SOL', name: 'Solana', price: data.solana?.cny || 0, changePercent24h: data.solana?.cny_24h_change || 0 } as CryptoData,
     ];
+    
+    // 写入缓存
+    cryptoCache.set('crypto', result);
+    
+    return result;
   } catch (error) {
     console.error('Failed to fetch crypto:', error);
     return getMockCryptoData();
