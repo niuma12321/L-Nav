@@ -34,6 +34,9 @@ import ChromeBookmarkImport from './components/v3/ChromeBookmarkImport';
 import WidgetMarketplace from './components/v3/WidgetMarketplace';
 import ThemeToggle from './components/v3/ThemeToggle';
 
+// V4 Components - Y-Nav V4.0 Financial Edition
+import V4Dashboard from './components/v4/V4Dashboard';
+
 // Eagerly load frequently used components
 import ContextMenu from './components/layout/ContextMenu';
 import Sidebar from './components/layout/Sidebar';
@@ -1920,6 +1923,14 @@ function App() {
           />
         </>
       )}
+
+      {/* V4 Dashboard - Financial Edition */}
+      <V4Dashboard
+        onAddResource={() => {
+          setV3EditingResource(null);
+          setV3ResourceCardOpen(true);
+        }}
+      />
 
       {/* V3 Dashboard - Emerald Obsidian */}
       <V3Dashboard
