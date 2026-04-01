@@ -27,12 +27,8 @@ import TopBar from './components/navigation/TopBar';
 import Dashboard from './components/dashboard/Dashboard';
 import EmeraldNotesView from './components/notes/EmeraldNotesView';
 
-// V3 Components - Y-Nav V3 Refactoring
-import V3Dashboard from './components/v3/Dashboard';
+// V3 Components - Keep only essential modals
 import SmartResourceCard from './components/v3/SmartResourceCard';
-import ChromeBookmarkImport from './components/v3/ChromeBookmarkImport';
-import WidgetMarketplace from './components/v3/WidgetMarketplace';
-import ThemeToggle from './components/v3/ThemeToggle';
 
 // V4 Components - Y-Nav V4.0 Financial Edition
 import V4Dashboard from './components/v4/V4Dashboard';
@@ -154,15 +150,9 @@ function App() {
   const [mobileBulkEditOpen, setMobileBulkEditOpen] = useState(false);
   const [editingLinkMobile, setEditingLinkMobile] = useState<LinkItem | null>(null);
   
-  // === V3 Component States ===
-  const [v3View, setV3View] = useState<'dashboard' | 'resources' | 'collection' | 'analytics' | 'settings'>('dashboard');
-  const [v3CommandOpen, setV3CommandOpen] = useState(false);
-  const [v3ResourceCardOpen, setV3ResourceCardOpen] = useState(false);
-  const [v3ChromeImportOpen, setV3ChromeImportOpen] = useState(false);
-  const [v3WidgetMarketOpen, setV3WidgetMarketOpen] = useState(false);
-  const [v3ThemeToggleOpen, setV3ThemeToggleOpen] = useState(false);
-  const [v3ActiveWidgets, setV3ActiveWidgets] = useState<string[]>(['weather', 'todo', 'hotlist', 'notes', 'stats']);
-  const [v3EditingResource, setV3EditingResource] = useState<LinkItem | null>(null);
+  // === V4 Component States (Financial Edition) ===
+  const [v4ResourceCardOpen, setV4ResourceCardOpen] = useState(false);
+  const [v4EditingResource, setV4EditingResource] = useState<LinkItem | null>(null);
   
   // 搜索历史记录
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
@@ -1924,116 +1914,36 @@ function App() {
         </>
       )}
 
-      {/* V4 Dashboard - Financial Edition */}
+      {/* V4 Dashboard - Financial Edition (唯一主界面) */}
       <V4Dashboard
         onAddResource={() => {
-          setV3EditingResource(null);
-          setV3ResourceCardOpen(true);
+          setV4EditingResource(null);
+          setV4ResourceCardOpen(true);
         }}
       />
 
-      {/* V3 Dashboard - Emerald Obsidian */}
-      <V3Dashboard
-        links={links}
-        notes={notes}
-        onAddNote={(note) => {
-          addNote(note);
-          notify('便签已添加', 'success');
-        }}
-        onUpdateNote={updateNote}
-        onDeleteNote={(id) => {
-          deleteNote(id);
-          notify('便签已删除', 'success');
-        }}
-        onAddResource={() => {
-          setV3EditingResource(null);
-          setV3ResourceCardOpen(true);
-        }}
-        onNavigate={(url) => {
-          window.open(url, '_blank');
-        }}
-        onSearch={(query, engine) => {
-          const engines: Record<string, string> = {
-            google: 'https://www.google.com/search?q=',
-            baidu: 'https://www.baidu.com/s?wd=',
-            bing: 'https://www.bing.com/search?q=',
-            duckduckgo: 'https://duckduckgo.com/?q='
-          };
-          const base = engine ? engines[engine] : engines.google;
-          window.open(`${base}${encodeURIComponent(query)}`, '_blank');
-        }}
-        activeView={v3View}
-        onViewChange={setV3View}
-        isCommandPaletteOpen={v3CommandOpen}
-        onCloseCommandPalette={() => setV3CommandOpen(false)}
-      />
-
-      {/* V3 Smart Resource Card */}
+      {/* V4 Smart Resource Card */}
       <SmartResourceCard
-        isOpen={v3ResourceCardOpen}
+        isOpen={v4ResourceCardOpen}
         onClose={() => {
-          setV3ResourceCardOpen(false);
-          setV3EditingResource(null);
+          setV4ResourceCardOpen(false);
+          setV4EditingResource(null);
         }}
         onSave={(link) => {
-          if (v3EditingResource) {
-            updateLink(v3EditingResource.id, link);
+          if (v4EditingResource) {
+            updateLink(v4EditingResource.id, link);
             notify('资源已更新', 'success');
           } else {
             addLink(link as LinkItem);
             notify('资源已添加', 'success');
           }
-          setV3ResourceCardOpen(false);
-          setV3EditingResource(null);
+          setV4ResourceCardOpen(false);
+          setV4EditingResource(null);
         }}
         categories={categories}
-        editingLink={v3EditingResource}
+        editingLink={v4EditingResource}
       />
 
-      {/* V3 Chrome Bookmark Import */}
-      <ChromeBookmarkImport
-        isOpen={v3ChromeImportOpen}
-        onClose={() => setV3ChromeImportOpen(false)}
-        categories={categories}
-        onImport={(importedLinks) => {
-          importedLinks.forEach(link => addLink(link as LinkItem));
-          notify(`成功导入 ${importedLinks.length} 个书签`, 'success');
-          setV3ChromeImportOpen(false);
-        }}
-      />
-
-      {/* V3 Widget Marketplace */}
-      <WidgetMarketplace
-        isOpen={v3WidgetMarketOpen}
-        onClose={() => setV3WidgetMarketOpen(false)}
-        activeWidgets={v3ActiveWidgets}
-        onToggleWidget={(widgetId) => {
-          setV3ActiveWidgets(prev => 
-            prev.includes(widgetId) 
-              ? prev.filter(id => id !== widgetId)
-              : [...prev, widgetId]
-          );
-        }}
-        onReorderWidgets={(oldIdx, newIdx) => {
-          setV3ActiveWidgets(prev => {
-            const newOrder = [...prev];
-            const [moved] = newOrder.splice(oldIdx, 1);
-            newOrder.splice(newIdx, 0, moved);
-            return newOrder;
-          });
-        }}
-      />
-
-      {/* V3 Theme Toggle */}
-      <ThemeToggle
-        isOpen={v3ThemeToggleOpen}
-        onClose={() => setV3ThemeToggleOpen(false)}
-        currentMode={darkMode ? 'dark' : 'light'}
-        onModeChange={(mode) => {
-          setThemeAndApply(mode === 'dark');
-          notify(`已切换到${mode === 'dark' ? '深色' : '浅色'}模式`, 'success');
-        }}
-      />
     </div>
   );
 }
