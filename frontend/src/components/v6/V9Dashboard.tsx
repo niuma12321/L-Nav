@@ -217,62 +217,7 @@ const SearchWidget: React.FC = () => {
   );
 };
 
-// 侧边栏迷你小组件预览
-const SidebarWidgetPreview: React.FC = () => {
-  return (
-    <div className="px-4 py-3">
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-medium text-slate-400">我的小组件</span>
-        <button className="text-xs text-emerald-400 hover:text-emerald-300">+ 添加</button>
-      </div>
-      
-      {/* 天气迷你卡片 */}
-      <div className="p-3 rounded-2xl bg-[#181a1c] mb-2">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-lg font-bold text-white">24°C</p>
-            <p className="text-xs text-slate-500">多云</p>
-          </div>
-          <span className="text-2xl">☁️</span>
-        </div>
-      </div>
-
-      {/* 待办迷你卡片 */}
-      <div className="p-3 rounded-2xl bg-[#181a1c] mb-2">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs text-slate-400">待办事项</span>
-          <span className="text-xs text-emerald-400">0/3</span>
-        </div>
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded bg-emerald-500/30" />
-            <span className="text-xs text-slate-500 line-through">复盘昨日北向...</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded border border-slate-600" />
-            <span className="text-xs text-slate-400">分析半导体Q3...</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 热搜迷你卡片 */}
-      <div className="p-3 rounded-2xl bg-[#181a1c]">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs text-slate-400">微博热搜</span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">爆</span>
-        </div>
-        <div className="space-y-1.5">
-          {['1 科...450.0万', '2 今...320.0万', '3 娱...280.0万'].map((item, i) => (
-            <div key={i} className="flex items-center gap-2 text-xs">
-              <span className={`w-4 text-center ${i < 2 ? 'text-red-400' : 'text-slate-500'}`}>{i + 1}</span>
-              <span className="text-slate-400 truncate">{item}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-};
+// 侧边栏导航
 const Sidebar: React.FC<{
   activeView: string;
   onViewChange: (view: string) => void;
@@ -319,9 +264,6 @@ const Sidebar: React.FC<{
             </button>
           );
         })}
-        
-        {/* 我的小组件预览区 */}
-        <SidebarWidgetPreview />
       </nav>
 
       <div className="p-4 border-t border-white/5">
