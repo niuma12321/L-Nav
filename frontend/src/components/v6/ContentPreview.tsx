@@ -13,20 +13,28 @@ const ContentPreview: React.FC<ContentPreviewProps> = ({ url, isOpen, onClose })
   return (
     <div className="fixed inset-0 z-50 bg-[#0d0e10]/95 backdrop-blur-sm">
       {/* Header */}
-      <div className="h-14 px-4 flex items-center justify-between border-b border-white/10 bg-[#181a1c]">
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-slate-400">页面预览</span>
-          <span className="text-xs text-slate-500 truncate max-w-[300px]">{url}</span>
+      <div className="h-14 px-3 sm:px-4 flex items-center justify-between border-b border-white/10 bg-[#181a1c]">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+          <span className="text-sm text-slate-400 shrink-0">页面预览</span>
+          <span className="text-xs text-slate-500 truncate">{url}</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <a
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
           >
             <ExternalLink className="w-3.5 h-3.5" />
             新窗口打开
+          </a>
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="sm:hidden p-2 text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
+          >
+            <ExternalLink className="w-4 h-4" />
           </a>
           <button
             onClick={onClose}
