@@ -10,7 +10,7 @@ import {
   List,
   Import,
   Sparkles,
-  Filter
+  ChevronDown
 } from 'lucide-react';
 
 interface Category {
@@ -69,18 +69,16 @@ const ResourceCenterViewCN: React.FC<ResourceCenterViewCNProps> = ({
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [showAIRecommend, setShowAIRecommend] = useState(false);
+  const [showCategoryMenu, setShowCategoryMenu] = useState(false);
 
   // 过滤资源
   const filteredResources = useMemo(() => {
     let filtered = mockResources;
     
-    // 按分类过滤
     if (activeCategory !== 'all') {
       filtered = filtered.filter(r => r.categoryId === activeCategory);
     }
     
-    // 按搜索词过滤
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(r => 
@@ -93,189 +91,157 @@ const ResourceCenterViewCN: React.FC<ResourceCenterViewCNProps> = ({
     return filtered;
   }, [activeCategory, searchQuery]);
 
-  // AI推荐资源
-  const aiRecommendations = useMemo(() => {
-    return mockResources.slice(0, 4);
-  }, []);
-
   const activeCategoryData = mockCategories.find(c => c.id === activeCategory);
 
   return (
-    <div className="min-h-screen bg-[#0d0e10] text-white">
-      <div className="flex h-screen">
-        {/* 左侧分类栏 */}
-        <aside className="w-64 bg-[#181a1c] border-r border-white/5 flex flex-col">
-          <div className="p-5 border-b border-white/5">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-500 flex items-center justify-center">
-                <FolderOpen className="w-5 h-5 text-[#0d0e10]" />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-white">资源中心</h2>
-                <p className="text-xs text-slate-500">{mockResources.length} 个资源链接</p>
-              </div>
-            </div>
-          </div>
+    <div className="space-y-6">
+      {/* Header Section */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white mb-2">数字资源中心</h1>
+          <p className="text-sm text-slate-400">
+            高效整理您的数字化资产，从开发工具到灵感采集，一站式管理您的工作流。
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onImport}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#181a1c] text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
+          >
+            <Import className="w-4 h-4" />
+            <span className="text-sm font-medium">导入</span>
+          </button>
+          <button
+            onClick={onAddResource}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 text-[#0d0e10] font-medium hover:bg-emerald-400 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="text-sm">添加新链接</span>
+          </button>
+        </div>
+      </div>
 
-          <div className="flex-1 overflow-y-auto p-3 space-y-1">
-            {mockCategories.map((category) => (
-              <button
-                key={category.id}
-                onClick={() => setActiveCategory(category.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                  activeCategory === category.id
-                    ? 'bg-emerald-500/15 text-emerald-400 border-l-2 border-emerald-400'
-                    : 'text-slate-400 hover:text-white hover:bg-white/5'
-                }`}
-              >
-                <span className={`w-2 h-2 rounded-full ${category.color}`} />
-                <span className="flex-1 text-left text-sm font-medium">{category.name}</span>
-                <span className="text-xs text-slate-500 px-2 py-0.5 rounded-full bg-white/5">
-                  {category.count}
-                </span>
-              </button>
-            ))}
-          </div>
-
-          {/* AI推荐开关 */}
-          <div className="p-4 border-t border-white/5">
-            <button
-              onClick={() => setShowAIRecommend(!showAIRecommend)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                showAIRecommend ? 'bg-amber-500/15 text-amber-400' : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <Sparkles className="w-5 h-5" />
-              <span className="text-sm font-medium">AI智能推荐</span>
-            </button>
-          </div>
-        </aside>
-
-        {/* 主内容区 */}
-        <main className="flex-1 flex flex-col overflow-hidden">
-          {/* 顶部工具栏 */}
-          <header className="px-6 py-4 border-b border-white/5 bg-[#0d0e10]/50 backdrop-blur-xl">
-            <div className="flex items-center justify-between">
-              {/* 搜索框 */}
-              <div className="flex-1 max-w-xl">
-                <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-[#181a1c] border border-white/5">
-                  <Search className="w-4 h-4 text-slate-500" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="搜索资源名称、描述..."
-                    className="flex-1 bg-transparent text-sm text-white placeholder-slate-500 outline-none"
-                  />
-                  {searchQuery && (
-                    <button 
-                      onClick={() => setSearchQuery('')}
-                      className="text-slate-500 hover:text-white"
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* 操作按钮 */}
-              <div className="flex items-center gap-3">
-                {/* 视图切换 */}
-                <div className="flex items-center bg-[#181a1c] rounded-xl p-1">
-                  <button
-                    onClick={() => setViewMode('grid')}
-                    className={`p-2 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-emerald-500 text-[#0d0e10]' : 'text-slate-400 hover:text-white'}`}
-                  >
-                    <Grid3X3 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setViewMode('list')}
-                    className={`p-2 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-emerald-500 text-[#0d0e10]' : 'text-slate-400 hover:text-white'}`}
-                  >
-                    <List className="w-4 h-4" />
-                  </button>
-                </div>
-
+      {/* Category Filter Bar */}
+      <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#181a1c]">
+        <div className="relative">
+          <button
+            onClick={() => setShowCategoryMenu(!showCategoryMenu)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 text-emerald-400 text-sm font-medium"
+          >
+            <FolderOpen className="w-4 h-4" />
+            {activeCategoryData?.name || '全部资源'}
+            <span className="ml-2 px-2 py-0.5 rounded-full bg-emerald-500/20 text-xs">
+              {filteredResources.length}
+            </span>
+            <ChevronDown className="w-4 h-4" />
+          </button>
+          
+          {/* Dropdown Menu */}
+          {showCategoryMenu && (
+            <div className="absolute top-full left-0 mt-2 w-56 rounded-2xl bg-[#181a1c] border border-white/10 shadow-xl z-50">
+              {mockCategories.map((category) => (
                 <button
-                  onClick={onImport}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#181a1c] text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
+                  key={category.id}
+                  onClick={() => {
+                    setActiveCategory(category.id);
+                    setShowCategoryMenu(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 transition-colors first:rounded-t-2xl last:rounded-b-2xl ${
+                    activeCategory === category.id
+                      ? 'bg-emerald-500/10 text-emerald-400'
+                      : 'text-slate-400 hover:text-white hover:bg-white/5'
+                  }`}
                 >
-                  <Import className="w-4 h-4" />
-                  <span className="text-sm font-medium">导入</span>
+                  <span className={`w-2 h-2 rounded-full ${category.color}`} />
+                  <span className="flex-1 text-left text-sm">{category.name}</span>
+                  <span className="text-xs text-slate-500">{category.count}</span>
                 </button>
-
-                <button
-                  onClick={onAddResource}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 text-[#0d0e10] font-medium hover:bg-emerald-400 transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span className="text-sm">添加资源</span>
-                </button>
-              </div>
-            </div>
-
-            {/* 分类标题和统计 */}
-            <div className="flex items-center justify-between mt-4">
-              <div className="flex items-center gap-3">
-                <h1 className="text-xl font-bold text-white">
-                  {activeCategoryData?.name || '全部资源'}
-                </h1>
-                <span className="px-2 py-1 rounded-full bg-white/10 text-xs text-slate-400">
-                  {filteredResources.length} 个资源
-                </span>
-              </div>
-              
-              {searchQuery && (
-                <p className="text-sm text-slate-500">
-                  搜索 "{searchQuery}" 找到 {filteredResources.length} 个结果
-                </p>
-              )}
-            </div>
-          </header>
-
-          {/* 资源列表 */}
-          <div className="flex-1 overflow-y-auto p-6">
-            {/* AI推荐区 */}
-            {showAIRecommend && (
-              <div className="mb-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <Sparkles className="w-5 h-5 text-amber-400" />
-                  <h3 className="text-base font-bold text-white">AI智能推荐</h3>
-                  <span className="text-xs text-slate-500">根据您的使用习惯推荐</span>
-                </div>
-                <div className={`grid gap-4 ${viewMode === 'grid' ? 'grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'grid-cols-1'}`}>
-                  {aiRecommendations.map((resource) => (
-                    <ResourceCard 
-                      key={`ai-${resource.id}`} 
-                      resource={resource} 
-                      viewMode={viewMode}
-                      isAIRecommended
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* 资源网格 */}
-            <div className={`grid gap-4 ${viewMode === 'grid' ? 'grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'grid-cols-1'}`}>
-              {filteredResources.map((resource) => (
-                <ResourceCard key={resource.id} resource={resource} viewMode={viewMode} />
               ))}
             </div>
+          )}
+        </div>
 
-            {/* 空状态 */}
-            {filteredResources.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-20">
-                <div className="w-20 h-20 rounded-full bg-[#181a1c] flex items-center justify-center mb-4">
-                  <Search className="w-10 h-10 text-slate-500" />
-                </div>
-                <p className="text-lg font-medium text-white mb-2">没有找到相关资源</p>
-                <p className="text-sm text-slate-500">试试其他搜索词或分类</p>
-              </div>
+        {/* Search */}
+        <div className="flex-1 max-w-md">
+          <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-[#0d0e10] border border-white/5">
+            <Search className="w-4 h-4 text-slate-500" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="搜索资源名称、描述..."
+              className="flex-1 bg-transparent text-sm text-white placeholder-slate-500 outline-none"
+            />
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="text-slate-500 hover:text-white"
+              >
+                ×
+              </button>
             )}
           </div>
-        </main>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* View Toggle */}
+          <div className="flex items-center bg-[#0d0e10] rounded-xl p-1">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`p-2 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-emerald-500 text-[#0d0e10]' : 'text-slate-400 hover:text-white'}`}
+            >
+              <Grid3X3 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`p-2 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-emerald-500 text-[#0d0e10]' : 'text-slate-400 hover:text-white'}`}
+            >
+              <List className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
       </div>
+
+      {/* AI Recommendations Banner */}
+      <div className="flex items-center gap-3 p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 to-emerald-500/10 border border-amber-500/20">
+        <Sparkles className="w-5 h-5 text-amber-400" />
+        <div className="flex-1">
+          <p className="text-sm text-white font-medium">AI 智能推荐</p>
+          <p className="text-xs text-slate-400">根据您的使用习惯，为您推荐相关资源</p>
+        </div>
+        <button className="px-4 py-2 rounded-xl bg-amber-500/20 text-amber-400 text-sm font-medium hover:bg-amber-500/30 transition-colors">
+          查看推荐
+        </button>
+      </div>
+
+      {/* Resources Grid */}
+      <div className={`grid gap-4 ${viewMode === 'grid' ? 'grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'grid-cols-1'}`}>
+        {filteredResources.map((resource) => (
+          <ResourceCard key={resource.id} resource={resource} viewMode={viewMode} />
+        ))}
+        
+        {/* Add New Placeholder */}
+        <button 
+          onClick={onAddResource}
+          className={`rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-3 text-slate-500 hover:border-emerald-500/30 hover:text-emerald-400 transition-all ${viewMode === 'list' ? 'p-4 flex-row' : 'p-6 min-h-[200px]'}`}
+        >
+          <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center">
+            <Plus className="w-6 h-6" />
+          </div>
+          <span className="text-sm font-medium">快速添加</span>
+        </button>
+      </div>
+
+      {/* Empty State */}
+      {filteredResources.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-20">
+          <div className="w-20 h-20 rounded-full bg-[#181a1c] flex items-center justify-center mb-4">
+            <Search className="w-10 h-10 text-slate-500" />
+          </div>
+          <p className="text-lg font-medium text-white mb-2">没有找到相关资源</p>
+          <p className="text-sm text-slate-500">试试其他搜索词或分类</p>
+        </div>
+      )}
     </div>
   );
 };
@@ -284,15 +250,14 @@ const ResourceCenterViewCN: React.FC<ResourceCenterViewCNProps> = ({
 interface ResourceCardProps {
   resource: Resource;
   viewMode: 'grid' | 'list';
-  isAIRecommended?: boolean;
 }
 
-const ResourceCard: React.FC<ResourceCardProps> = ({ resource, viewMode, isAIRecommended }) => {
+const ResourceCard: React.FC<ResourceCardProps> = ({ resource, viewMode }) => {
   const category = mockCategories.find(c => c.id === resource.categoryId);
-  
+
   if (viewMode === 'list') {
     return (
-      <div className={`flex items-center gap-4 p-4 rounded-2xl bg-[#181a1c] hover:bg-[#242629] transition-colors group ${isAIRecommended ? 'border border-amber-500/30' : ''}`}>
+      <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#181a1c] hover:bg-[#242629] transition-colors group">
         <div className="w-12 h-12 rounded-xl bg-[#0d0e10] flex items-center justify-center shrink-0">
           {resource.favicon ? (
             <img src={resource.favicon} alt="" className="w-6 h-6 rounded" />
@@ -301,31 +266,23 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resource, viewMode, isAIRec
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h4 className="text-base font-medium text-white truncate">{resource.title}</h4>
-            {isAIRecommended && <Sparkles className="w-4 h-4 text-amber-400" />}
-          </div>
+          <h4 className="text-base font-medium text-white truncate">{resource.title}</h4>
           <p className="text-sm text-slate-500 truncate">{resource.description}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className={`px-2 py-1 rounded-full text-xs ${category?.color.replace('bg-', 'bg-')?.replace('500', '500/20') || 'bg-slate-500/20'} ${category?.color.replace('bg-', 'text-') || 'text-slate-400'}`}>
-            {category?.name}
-          </span>
-          <button className="p-2 rounded-xl text-slate-500 hover:text-white hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-all">
-            <ExternalLink className="w-4 h-4" />
-          </button>
-          <button className="p-2 rounded-xl text-slate-500 hover:text-white hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-all">
-            <MoreVertical className="w-4 h-4" />
-          </button>
-        </div>
+        <span className={`px-2 py-1 rounded-full text-xs ${category?.color.replace('bg-', 'text-') || 'text-slate-400'} ${category?.color.replace('bg-', 'bg-')?.replace('500', '500/20') || 'bg-slate-500/20'}`}>
+          {category?.name}
+        </span>
+        <button className="p-2 rounded-xl text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all opacity-0 group-hover:opacity-100">
+          <ExternalLink className="w-4 h-4" />
+        </button>
       </div>
     );
   }
 
   return (
-    <div className={`p-4 rounded-2xl bg-[#181a1c] hover:bg-[#242629] transition-all group cursor-pointer ${isAIRecommended ? 'border border-amber-500/30' : ''}`}>
-      {/* 头部 */}
-      <div className="flex items-start justify-between mb-3">
+    <div className="p-5 rounded-2xl bg-[#181a1c] hover:bg-[#242629] transition-all group cursor-pointer">
+      {/* Header */}
+      <div className="flex items-start justify-between mb-4">
         <div className="w-12 h-12 rounded-xl bg-[#0d0e10] flex items-center justify-center">
           {resource.favicon ? (
             <img src={resource.favicon} alt="" className="w-6 h-6 rounded" />
@@ -333,19 +290,16 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resource, viewMode, isAIRec
             <Link2 className="w-6 h-6 text-slate-500" />
           )}
         </div>
-        <div className="flex items-center gap-1">
-          {isAIRecommended && <Sparkles className="w-4 h-4 text-amber-400" />}
-          <button className="p-2 rounded-xl text-slate-500 hover:text-white hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-all">
-            <MoreVertical className="w-4 h-4" />
-          </button>
-        </div>
+        <button className="p-2 rounded-xl text-slate-500 hover:text-white hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-all">
+          <MoreVertical className="w-4 h-4" />
+        </button>
       </div>
 
-      {/* 内容 */}
-      <h4 className="text-base font-medium text-white mb-1 truncate">{resource.title}</h4>
-      <p className="text-sm text-slate-500 mb-3 line-clamp-2">{resource.description}</p>
+      {/* Content */}
+      <h4 className="text-base font-bold text-white mb-1 truncate">{resource.title}</h4>
+      <p className="text-sm text-slate-500 mb-4 line-clamp-2">{resource.description}</p>
 
-      {/* 底部 */}
+      {/* Footer */}
       <div className="flex items-center justify-between">
         <span className={`px-2 py-1 rounded-full text-xs ${category?.color.replace('bg-', 'bg-')?.replace('500', '500/20') || 'bg-slate-500/20'} ${category?.color.replace('bg-', 'text-') || 'text-slate-400'}`}>
           {category?.name}
