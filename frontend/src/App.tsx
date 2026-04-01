@@ -33,6 +33,9 @@ import SmartResourceCard from './components/v3/SmartResourceCard';
 // V4 Components - Y-Nav V4.0 Financial Edition
 import V4Dashboard from './components/v4/V4Dashboard';
 
+// V6 Components - Y-Nav Elite V6.0 Chinese Edition
+import V6Dashboard from './components/v6/V6Dashboard';
+
 // Eagerly load frequently used components
 import ContextMenu from './components/layout/ContextMenu';
 import Sidebar from './components/layout/Sidebar';
@@ -1887,8 +1890,8 @@ function App() {
         onToggleHidden={toggleHiddenFromContextMenu}
       />
       
-      {/* V4 Dashboard - Financial Edition (唯一主界面，已包含移动端布局) */}
-      <V4Dashboard
+      {/* V6 Dashboard - Elite Edition (全中文界面) */}
+      <V6Dashboard
         onAddResource={() => {
           setV4EditingResource(null);
           setV4ResourceCardOpen(true);
