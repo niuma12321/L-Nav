@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import type { LucideIcon } from 'lucide-react';
 import { X, Plus, Trash2, GripVertical, LayoutDashboard, FolderOpen, Grid3X3, FlaskConical, Save } from 'lucide-react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
@@ -7,7 +8,7 @@ import { CSS } from '@dnd-kit/utilities';
 interface NavItem {
   id: string;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: LucideIcon;
 }
 
 interface NavEditModalProps {

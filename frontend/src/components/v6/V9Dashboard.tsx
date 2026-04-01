@@ -1,4 +1,5 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
+import type { LucideIcon } from 'lucide-react';
 import { 
   Search, 
   Zap,
@@ -28,6 +29,12 @@ import {
   User
 } from 'lucide-react';
 import { useWidgetSystem } from '../../hooks/useWidgetSystem';
+
+interface NavItem {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+}
 import ContentPreview from './ContentPreview';
 import NavEditModal from '../modals/NavEditModal';
 
@@ -814,7 +821,7 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
         isOpen={navEditModalOpen}
         onClose={() => setNavEditModalOpen(false)}
         navItems={navItems}
-        onSave={setNavItems}
+        onSave={(updatedItems) => setNavItems(updatedItems)}
       />
     </div>
   );

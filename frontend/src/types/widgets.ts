@@ -8,7 +8,8 @@ export type WidgetType =
   | 'countdown' 
   | 'exchange' 
   | 'lifeprogress' 
-  | 'zen';
+  | 'zen'
+  | 'api';
 
 export interface WidgetPosition {
   x: number;
@@ -103,6 +104,15 @@ export interface LifeProgressWidgetSettings {
 export interface ZenWidgetSettings {
   soundEnabled: boolean;
   animationEnabled: boolean;
+}
+
+// API数据小组件配置
+export interface ApiWidgetSettings {
+  apiUrl: string;
+  refreshInterval?: number;
+  headers?: Record<string, string>;
+  method?: 'GET' | 'POST';
+  body?: string;
 }
 
 // 默认小组件配置
@@ -214,6 +224,15 @@ export const WIDGET_DISPLAY_CONFIG: Record<WidgetType, {
     minH: 1,
     defaultW: 1,
     defaultH: 1
+  },
+  api: {
+    name: 'API数据',
+    icon: 'ExternalLink',
+    description: '根据API返回内容自动渲染显示',
+    minW: 2,
+    minH: 2,
+    defaultW: 3,
+    defaultH: 3
   }
 };
 

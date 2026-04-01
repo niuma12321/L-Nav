@@ -11,6 +11,7 @@ const SyncConflictModal = lazy(() => import('./components/modals/SyncConflictMod
 const NotesView = lazy(() => import('./components/notes/NotesView'));
 const DataBackupModal = lazy(() => import('./components/modals/DataBackupModal'));
 const WebDAVModal = lazy(() => import('./components/modals/WebDAVModal'));
+const LoginModal = lazy(() => import('./components/modals/LoginModal'));
 
 // Mobile components
 const MobileContentViewer = lazy(() => import('./components/mobile/MobileContentViewer'));
@@ -26,15 +27,6 @@ import BottomNavBar from './components/navigation/BottomNavBar';
 import TopBar from './components/navigation/TopBar';
 import Dashboard from './components/dashboard/Dashboard';
 import EmeraldNotesView from './components/notes/EmeraldNotesView';
-
-// V3 Components - Keep only essential modals
-import SmartResourceCard from './components/v3/SmartResourceCard';
-
-// V4 Components - Y-Nav V4.0 Financial Edition
-import V4Dashboard from './components/v4/V4Dashboard';
-
-// V6 Components - Y-Nav Elite V6.0 Chinese Edition
-import V6Dashboard from './components/v6/V6Dashboard';
 
 // V9 Components - Y-Nav Elite V9.0 Modular Edition
 import V9Dashboard from './components/v6/V9Dashboard';
@@ -127,6 +119,31 @@ function App() {
   const [editingPrivateLink, setEditingPrivateLink] = useState<LinkItem | null>(null);
   const [prefillPrivateLink, setPrefillPrivateLink] = useState<Partial<LinkItem> | null>(null);
 
+  // === Login State ===
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return localStorage.getItem('ynav_logged_in') === 'true';
+  });
+  const [showLoginModal, setShowLoginModal] = useState(false);
+
+  const handleLogin = useCallback((username: string, password: string): boolean => {
+    if (username === 'ljq' && password === 'jk712732') {
+      setIsLoggedIn(true);
+      localStorage.setItem('ynav_logged_in', 'true');
+      localStorage.setItem('ynav_username', username);
+      notify('登录成功', 'success');
+      setShowLoginModal(false);
+      return true;
+    }
+    return false;
+  }, [notify]);
+
+  const handleLogout = useCallback(() => {
+    setIsLoggedIn(false);
+    localStorage.removeItem('ynav_logged_in');
+    localStorage.removeItem('ynav_username');
+    notify('已退出登录', 'info');
+  }, [notify]);
+
   // === Sync Engine ===
   const [syncConflictOpen, setSyncConflictOpen] = useState(false);
   const [currentConflict, setCurrentConflict] = useState<SyncConflict | null>(null);
@@ -151,10 +168,6 @@ function App() {
   const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
   const [mobileBulkEditOpen, setMobileBulkEditOpen] = useState(false);
   const [editingLinkMobile, setEditingLinkMobile] = useState<LinkItem | null>(null);
-  
-  // === V4 Component States (Financial Edition) ===
-  const [v4ResourceCardOpen, setV4ResourceCardOpen] = useState(false);
-  const [v4EditingResource, setV4EditingResource] = useState<LinkItem | null>(null);
   
   // 搜索历史记录
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
@@ -1555,7 +1568,7 @@ function App() {
             notify('分类已更新', 'success');
           }}
           onDeleteCategory={(id) => {
-            confirm('确定要删除这个分类吗？').then((confirmed) => {
+            confirm({ title: '确认删除', message: '确定要删除这个分类吗？' }).then((confirmed) => {
               if (confirmed) {
                 notify('分类已删除', 'success');
               }
@@ -1604,7 +1617,7 @@ function App() {
           clickMaskToClose={closeOnBackdrop}
           onClickMaskToCloseChange={setCloseOnBackdrop}
           onDeleteWorkspace={() => {
-            confirm('确定要删除整个工作空间吗？此操作不可恢复！').then((confirmed) => {
+            confirm({ title: '确认删除', message: '确定要删除整个工作空间吗？此操作不可恢复！' }).then((confirmed) => {
               if (confirmed) {
                 notify('工作空间已删除', 'success');
               }
@@ -1627,12 +1640,11 @@ function App() {
             setMobileBulkEditOpen(false);
           }}
           onDelete={(ids) => {
-            confirm(`确定要删除 ${ids.length} 个链接吗？`).then((confirmed) => {
+            confirm({ title: '确认删除', message: `确定要删除 ${ids.length} 个链接吗？` }).then((confirmed) => {
               if (confirmed) {
                 ids.forEach(id => deleteLink(id));
                 notify(`${ids.length} 个链接已删除`, 'success');
               }
-              setMobileBulkEditOpen(false);
             });
           }}
         />
@@ -1654,43 +1666,14 @@ function App() {
         onTogglePin={togglePinFromContextMenu}
         onToggleHidden={toggleHiddenFromContextMenu}
       />
-      
-      {/* V9 Dashboard - Modular Edition (全模块化架构) */}
-      <V9Dashboard
-        onAddResource={() => {
-          setV4EditingResource(null);
-          setV4ResourceCardOpen(true);
-        }}
-        onOpenSettings={() => setIsSettingsModalOpen(true)}
-        onOpenImport={() => setIsImportModalOpen(true)}
-        onEditLink={handleLinkEdit}
-        onDeleteLink={handleDeleteLink}
-        links={links}
-        categories={categories}
-      />
 
-      {/* V4 Smart Resource Card */}
-      <SmartResourceCard
-        isOpen={v4ResourceCardOpen}
-        onClose={() => {
-          setV4ResourceCardOpen(false);
-          setV4EditingResource(null);
-        }}
-        onSave={(link) => {
-          if (v4EditingResource) {
-            updateLink(v4EditingResource.id, link);
-            notify('资源已更新', 'success');
-          } else {
-            addLink(link as LinkItem);
-            notify('资源已添加', 'success');
-          }
-          setV4ResourceCardOpen(false);
-          setV4EditingResource(null);
-        }}
-        categories={categories}
-        editingLink={v4EditingResource}
-      />
-
+      <Suspense fallback={<div />}>
+        <LoginModal
+          isOpen={showLoginModal}
+          onLogin={handleLogin}
+          onClose={() => setShowLoginModal(false)}
+        />
+      </Suspense>
     </div>
   );
 }
