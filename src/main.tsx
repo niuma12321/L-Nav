@@ -1,7 +1,9 @@
-import React, { StrictMode, Suspense, lazy, useEffect, useState, useRef } from 'react';
+import React, { StrictMode, Suspense, useEffect, useState, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 import { DialogProvider } from './components/ui/DialogProvider';
 import './index.css';
+// 同步导入App，避免懒加载Promise问题
+import App from './App';
 
 // ==============================================
 // 🎯 环境检测与配置
@@ -236,11 +238,6 @@ const ThemeContext = React.createContext({
 export const useTheme = () => React.useContext(ThemeContext);
 
 // ==============================================
-// 🎨 懒加载主应用组件 - 标准React模式
-// ==============================================
-const LazyApp = lazy(() => import('./App'));
-
-// ==============================================
 // 🔧 工具函数
 // ==============================================
 /**
@@ -437,17 +434,7 @@ const AppWrapper: React.FC = () => {
           toastPosition="top-right"
           maxToasts={5}
         >
-          <Suspense
-            fallback={
-              <LoadingFallback
-                message="加载应用中..."
-                showLogo
-                spinnerColor="purple"
-              />
-            }
-          >
-            <LazyApp />
-          </Suspense>
+          <App />
         </DialogProvider>
       </ThemeProvider>
     </ErrorBoundary>
