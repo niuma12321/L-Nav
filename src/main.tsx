@@ -335,6 +335,10 @@ const AppWrapper: React.FC = () => {
     if (ENV.isProduction) {
       try {
         performance.mark('app-initialized');
+        // 确保 app-entry-start 标记存在
+        if (!performance.getEntriesByName('app-entry-start').length) {
+          performance.mark('app-entry-start');
+        }
         performance.measure('app-initialization', 'app-entry-start', 'app-initialized');
         
         const measure = performance.getEntriesByName('app-initialization')[0];
@@ -524,6 +528,10 @@ function startApplication() {
     if (ENV.isProduction) {
       try {
         performance.mark('app-rendered');
+        // 确保 app-initialized 标记存在
+        if (!performance.getEntriesByName('app-initialized').length) {
+          performance.mark('app-initialized');
+        }
         performance.measure('app-render', 'app-initialized', 'app-rendered');
         
         const renderMeasure = performance.getEntriesByName('app-render')[0];
