@@ -58,7 +58,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   // 核心打字机逻辑
   React.useEffect(() => {
-    let timeout: NodeJS.Timeout;
+    let timeout: ReturnType<typeof setTimeout>;
 
     const typeSpeed = 150;
     const deleteSpeed = 100;

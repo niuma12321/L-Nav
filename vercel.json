@@ -5,7 +5,16 @@
   "buildCommand": "cd frontend && npm install && npm run build",
   "outputDirectory": "frontend/dist",
   "installCommand": "cd frontend && npm install",
+  "functions": {
+    "api/**/*.js": {
+      "runtime": "nodejs18.x"
+    }
+  },
   "rewrites": [
+    {
+      "source": "/api/v1/(.*)",
+      "destination": "/api/v1/$1"
+    },
     {
       "source": "/api/(.*)",
       "destination": "/api/$1"
@@ -23,7 +32,7 @@
       "destination": "/index.html"
     },
     {
-      "source": "/((?!assets/).*)",
+      "source": "/((?!api/|assets/).*)",
       "destination": "/index.html"
     }
   ],

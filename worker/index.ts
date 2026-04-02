@@ -346,13 +346,19 @@ class ApiHandler {
 // ============================================
 
 async function handleStaticAssets(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const url = new URL(request.url);
+    
+    // 保护：API 路径不应进入静态资源处理
+    if (url.pathname.startsWith('/api/')) {
+        return new Response('Not Found', { status: 404 });
+    }
+    
     try {
         const response = await getAssetFromKV(
             { request, waitUntil: ctx.waitUntil.bind(ctx) },
             { ASSET_NAMESPACE: env.__STATIC_CONTENT, ASSET_MANIFEST: assetManifest }
         );
 
-        const url = new URL(request.url);
         const isHTML = url.pathname.endsWith('.html') || url.pathname === '/';
         const isHashedAsset = /\.[0-9a-f]{8,}\./.test(url.pathname);
 

@@ -49,7 +49,7 @@ export function useSearch() {
     const [isPopupHovered, setIsPopupHovered] = useState(false);
     const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
 
-    const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // 保存配置（全空值防护）
     const saveSearchConfig = useCallback((sources: ExternalSearchSource[], mode: SearchMode, selected?: ExternalSearchSource | null) => {

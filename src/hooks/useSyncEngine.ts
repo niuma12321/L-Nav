@@ -94,7 +94,7 @@ export function useSyncEngine(options: UseSyncEngineOptions = {}): UseSyncEngine
     const [currentConflict, setCurrentConflict] = useState<SyncConflict | null>(null);
 
     // Refs for debounce
-    const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+    const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const pendingData = useRef<Omit<YNavSyncData, 'meta'> | null>(null);
 
     // 从云端拉取数据

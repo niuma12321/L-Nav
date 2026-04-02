@@ -23,10 +23,6 @@ routes = [
 # ---------- 性能优化配置 ----------
 minify = true
 
-# ---------- 静态资源配置 (Workers Sites) ----------
-[site]
-bucket = "./frontend/dist"
-
 # ---------- KV 命名空间绑定 ----------
 [[kv_namespaces]]
 binding = "YNAV_WORKER_KV"
