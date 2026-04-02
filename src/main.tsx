@@ -236,33 +236,9 @@ const ThemeContext = React.createContext({
 export const useTheme = () => React.useContext(ThemeContext);
 
 // ==============================================
-// 🎨 懒加载主应用组件
+// 🎨 懒加载主应用组件 - 标准React模式
 // ==============================================
-const LazyApp = lazy(() => 
-  import('./App').then(module => ({ 
-    default: module.default 
-  }))
-  .catch(error => {
-    console.error('应用加载失败:', error);
-    // 返回一个错误回退组件
-    return Promise.resolve({
-      default: () => (
-        <div className="min-h-screen flex items-center justify-center p-4">
-          <div className="text-center">
-            <h1 className="text-xl font-bold text-red-600 mb-2">应用加载失败</h1>
-            <p className="text-gray-600 mb-4">请检查网络连接后刷新页面</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-            >
-              重新加载
-            </button>
-          </div>
-        </div>
-      )
-    });
-  })
-);
+const LazyApp = lazy(() => import('./App'));
 
 // ==============================================
 // 🔧 工具函数
