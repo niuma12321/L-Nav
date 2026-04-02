@@ -78,8 +78,8 @@ export const PRIVATE_CATEGORY_ID = STORAGE_KEYS.PRIVATE_CATEGORY;
 // ==============================================
 /** 同步防抖时间 (3秒) */
 export const SYNC_DEBOUNCE_MS = 3000;
-/** 同步 API 地址 - 前后端分离架构 */
-export const SYNC_API_ENDPOINT = 'https://api.678870.xyz/api/v1/sync';
+/** 同步 API 地址 - 使用相对路径 */
+export const SYNC_API_ENDPOINT = '/api/v1/sync';
 /** 同步 API 版本 */
 export const SYNC_API_VERSION = 'v1';
 /** 数据结构版本 */
