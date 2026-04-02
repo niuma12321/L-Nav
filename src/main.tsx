@@ -12,6 +12,7 @@ const ENV = {
   isTest: import.meta.env.MODE === 'test',
   APP_VERSION: import.meta.env.VITE_APP_VERSION || '1.0.0',
   BUILD_TIMESTAMP: import.meta.env.VITE_BUILD_TIMESTAMP || new Date().toISOString(),
+  BUILD_ID: '2026-04-02-v4', // 强制刷新标记
 };
 
 // 性能测量标记（安全包装）
