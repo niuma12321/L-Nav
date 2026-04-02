@@ -333,6 +333,69 @@ class ApiHandler {
                 return jsonResponse({ success: true, data: dataToSave });
             }
 
+            // 备份操作
+            if (action === 'backup' && request.method === 'POST') {
+                const body = await request.json() as { data: YNavSyncData };
+                if (!body.data) {
+                    return jsonResponse({ success: false, error: 'No data provided' }, 400);
+                }
+
+                const backupKey = `${KV_KEYS.BACKUP_PREFIX}${Date.now()}_${body.data.meta.deviceId || 'unknown'}`;
+                const backupData = {
+                    ...body.data,
+                    meta: {
+                        ...body.data.meta,
+                        backedUpAt: Date.now()
+                    }
+                };
+
+                await env.YNAV_WORKER_KV.put(backupKey, JSON.stringify(backupData));
+                return jsonResponse({ success: true, backupKey, message: '备份创建成功' });
+            }
+
+            // 删除备份
+            if (action === 'backup' && request.method === 'DELETE') {
+                const body = await request.json() as { backupKey: string };
+                if (!body.backupKey) {
+                    return jsonResponse({ success: false, error: 'No backup key provided' }, 400);
+                }
+
+                await env.YNAV_WORKER_KV.delete(body.backupKey);
+                return jsonResponse({ success: true, message: '备份删除成功' });
+            }
+
+            // 恢复备份
+            if (action === 'restore' && request.method === 'POST') {
+                const body = await request.json() as { backupKey: string; deviceId?: string };
+                if (!body.backupKey) {
+                    return jsonResponse({ success: false, error: 'No backup key provided' }, 400);
+                }
+
+                const backupData = await env.YNAV_WORKER_KV.get<YNavSyncData>(body.backupKey, 'json');
+                if (!backupData) {
+                    return jsonResponse({ success: false, error: 'Backup not found' }, 404);
+                }
+
+                // 加载当前数据以获取版本号
+                const currentData = await loadCurrentData(env);
+
+                // 将备份数据恢复到主存储
+                const newVersion = (currentData?.meta?.version || 0) + 1;
+                const restoredData: YNavSyncData = {
+                    ...backupData,
+                    meta: {
+                        ...backupData.meta,
+                        updatedAt: Date.now(),
+                        version: newVersion,
+                        deviceId: body.deviceId || backupData.meta.deviceId,
+                        userAgent: request.headers.get('user-agent') || undefined
+                    }
+                };
+
+                await env.YNAV_WORKER_KV.put(KV_KEYS.MAIN_DATA, JSON.stringify(restoredData));
+                return jsonResponse({ success: true, data: restoredData, message: '备份恢复成功' });
+            }
+
             return jsonResponse({ success: false, error: 'Method not allowed' }, 405);
         } catch (error: any) {
             console.error('API Error:', error);

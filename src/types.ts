@@ -27,7 +27,7 @@ export interface SiteSettings {
   navTitle: string;
   favicon: string;
   cardStyle: 'detailed' | 'simple';
-  siteMode?: 'personal' | 'webmaster';
+  siteMode?: 'personal' | 'webmaster' | 'private';
   accentColor?: string;
   grayScale?: 'slate' | 'zinc' | 'neutral';
   closeOnBackdrop?: boolean;
