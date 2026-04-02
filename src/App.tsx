@@ -1,25 +1,25 @@
-import React, { useMemo, useEffect, lazy, Suspense, useState, useCallback, useRef } from 'react';
+import React, { useMemo, useEffect, useState, useCallback, useRef } from 'react';
 import { LinkItem, Category, SyncConflict, YNavSyncData } from './types';
 
-// Lazy load modal components for better code splitting
-const LinkModal = lazy(() => import('./components/modals/LinkModal'));
-const CategoryManagerModal = lazy(() => import('./components/modals/CategoryManagerModal'));
-const ImportModal = lazy(() => import('./components/modals/ImportModal'));
-const SettingsModal = lazy(() => import('./components/modals/SettingsModal'));
-const SearchConfigModal = lazy(() => import('./components/modals/SearchConfigModal'));
-const SyncConflictModal = lazy(() => import('./components/modals/SyncConflictModal'));
-const NotesView = lazy(() => import('./components/notes/NotesView'));
-const DataBackupModal = lazy(() => import('./components/modals/DataBackupModal'));
-const WebDAVModal = lazy(() => import('./components/modals/WebDAVModal'));
-const LoginModal = lazy(() => import('./components/modals/LoginModal'));
+// 同步导入所有组件，避免懒加载Promise问题
+import LinkModal from './components/modals/LinkModal';
+import CategoryManagerModal from './components/modals/CategoryManagerModal';
+import ImportModal from './components/modals/ImportModal';
+import SettingsModal from './components/modals/SettingsModal';
+import SearchConfigModal from './components/modals/SearchConfigModal';
+import SyncConflictModal from './components/modals/SyncConflictModal';
+import NotesView from './components/notes/NotesView';
+import DataBackupModal from './components/modals/DataBackupModal';
+import WebDAVModal from './components/modals/WebDAVModal';
+import LoginModal from './components/modals/LoginModal';
 
 // Mobile components
-const MobileContentViewer = lazy(() => import('./components/mobile/MobileContentViewer'));
-const MobileFullscreenSearch = lazy(() => import('./components/mobile/MobileFullscreenSearch'));
-const MobileCategoryManager = lazy(() => import('./components/mobile/MobileCategoryManager'));
-const MobileLinkBottomSheet = lazy(() => import('./components/mobile/MobileLinkBottomSheet'));
-const MobileSettings = lazy(() => import('./components/mobile/MobileSettings'));
-const MobileBulkEdit = lazy(() => import('./components/mobile/MobileBulkEdit'));
+import MobileContentViewer from './components/mobile/MobileContentViewer';
+import MobileFullscreenSearch from './components/mobile/MobileFullscreenSearch';
+import MobileCategoryManager from './components/mobile/MobileCategoryManager';
+import MobileLinkBottomSheet from './components/mobile/MobileLinkBottomSheet';
+import MobileSettings from './components/mobile/MobileSettings';
+import MobileBulkEdit from './components/mobile/MobileBulkEdit';
 
 // Emerald Obsidian Navigation Components
 import SideNavBar from './components/navigation/SideNavBar';
@@ -1411,9 +1411,8 @@ function App() {
   // === Render ===
   return (
     <div className={`flex min-h-screen ${toneClasses.text}`}>
-      {/* Modals - Wrapped in Suspense for lazy loading */}
-      <Suspense fallback={null}>
-        <CategoryManagerModal
+      {/* Modals - 同步导入，无需Suspense */}
+      <CategoryManagerModal
           isOpen={isCatManagerOpen}
           onClose={() => setIsCatManagerOpen(false)}
           categories={categories}
@@ -1478,7 +1477,6 @@ function App() {
           onClose={() => setSyncConflictOpen(false)}
           closeOnBackdrop={closeOnBackdrop}
         />
-      </Suspense>
 
       {/* Sync Status Indicator - Fixed bottom right */}
       <div className="fixed bottom-4 right-4 z-30">
@@ -1493,8 +1491,8 @@ function App() {
         />
       </div>
 
-      <Suspense fallback={null}>
-        <LinkModal
+      {/* Link Modal and Data Backup */}
+      <LinkModal
           isOpen={isModalOpen}
           onClose={closeLinkModal}
           onSave={editingLink ? handleEditLink : handleAddLink}
@@ -1648,7 +1646,6 @@ function App() {
             });
           }}
         />
-      </Suspense>
 
       {/* Context Menu */}
       <ContextMenu
@@ -1667,13 +1664,12 @@ function App() {
         onToggleHidden={toggleHiddenFromContextMenu}
       />
 
-      <Suspense fallback={<div />}>
-        <LoginModal
-          isOpen={showLoginModal}
-          onLogin={handleLogin}
-          onClose={() => setShowLoginModal(false)}
-        />
-      </Suspense>
+      {/* Login Modal */}
+      <LoginModal
+        isOpen={showLoginModal}
+        onLogin={handleLogin}
+        onClose={() => setShowLoginModal(false)}
+      />
     </div>
   );
 }
