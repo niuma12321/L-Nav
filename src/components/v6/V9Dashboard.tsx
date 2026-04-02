@@ -35,6 +35,8 @@ interface NavItem {
   label: string;
   icon: LucideIcon;
 }
+import { Database, Globe } from 'lucide-react';
+import { APIDataWidget } from './APIDataWidget';
 import ContentPreview from './ContentPreview';
 import NavEditModal from '../modals/NavEditModal';
 
@@ -677,7 +679,12 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
               </div>
 
               <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                {/* 根据 enabledWidgets 配置动态渲染小组件 */}
+                {/* API 数据组件动态渲染 */}
+                {enabledWidgets.filter(w => w.type === 'api-data').map(widget => (
+                  <div key={widget.id} className="relative bg-[#181a1c] rounded-2xl border border-white/10 shadow-sm hover:shadow-md transition-shadow overflow-hidden p-4 min-h-[200px]">
+                    <APIDataWidget config={widget.settings.api} />
+                  </div>
+                ))}
                 {enabledWidgets.some(w => w.id === 'weather') && (
                   <div className="relative bg-[#181a1c] rounded-2xl border border-white/10 shadow-sm hover:shadow-md transition-shadow overflow-hidden p-4 min-h-[200px]">
                     <div className="flex items-center gap-2 mb-2">

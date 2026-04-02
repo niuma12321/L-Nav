@@ -120,7 +120,10 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     return localStorage.getItem('ynav_logged_in') === 'true';
   });
-  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(() => {
+    // 如果未登录，自动显示登录弹窗
+    return localStorage.getItem('ynav_logged_in') !== 'true';
+  });
 
   const handleLogin = useCallback((username: string, password: string): boolean => {
     if (username === 'ljq' && password === 'jk712732') {
@@ -131,6 +134,7 @@ function App() {
       setShowLoginModal(false);
       return true;
     }
+    notify('账号或密码错误', 'error');
     return false;
   }, [notify]);
 
@@ -1673,11 +1677,12 @@ function App() {
         onToggleHidden={toggleHiddenFromContextMenu}
       />
 
-      {/* Login Modal */}
+      {/* Login Modal - 强制登录，不能关闭 */}
       <LoginModal
         isOpen={showLoginModal}
         onLogin={handleLogin}
-        onClose={() => setShowLoginModal(false)}
+        onClose={() => {}}
+        forceLogin={true}
       />
     </div>
   );

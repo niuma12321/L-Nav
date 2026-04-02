@@ -8,7 +8,8 @@ export type WidgetType =
   | 'todo-list'
   | 'notes'
   | 'news-feed'
-  | 'market-overview';
+  | 'market-overview'
+  | 'api-data'; // 新增：API数据组件
 
 export interface WidgetConfig {
   id: string;
@@ -146,6 +147,48 @@ export const DEFAULT_WIDGETS: WidgetConfig[] = [
     }
   }
 ];
+
+// API 数据组件配置接口
+export interface APIDataConfig {
+  id: string;
+  name: string;
+  apiUrl: string;
+  method: 'GET' | 'POST';
+  headers?: Record<string, string>;
+  body?: string;
+  refreshInterval: number; // 秒，0表示不自动刷新
+  dataPath: string; // 数据路径，如 'data.items' 或 'results'
+  displayType: 'list' | 'table' | 'card' | 'text';
+  fields: {
+    title: string;
+    value: string;
+    subtitle?: string;
+    image?: string;
+    link?: string;
+  };
+  maxItems: number;
+  emptyText: string;
+}
+
+export interface CustomAPIWidgetSettings {
+  apis: APIDataConfig[];
+}
+
+export const createAPIWidget = (apiConfig: APIDataConfig): WidgetConfig => ({
+  id: `api-${apiConfig.id}-${Date.now()}`,
+  type: 'api-data',
+  title: apiConfig.name,
+  description: `从 ${apiConfig.apiUrl} 获取数据`,
+  icon: 'Database',
+  enabled: true,
+  position: {
+    desktop: { x: 0, y: 0, w: 4, h: 3 },
+    mobile: { order: 0 }
+  },
+  settings: {
+    api: apiConfig
+  }
+});
 
 export const DEFAULT_SEARCH_ENGINES: SearchEngine[] = [
   { id: 'google', name: 'Google', url: 'https://google.com/search', queryParam: 'q' },

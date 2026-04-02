@@ -5,12 +5,13 @@ interface LoginModalProps {
   isOpen: boolean;
   onLogin: (username: string, password: string) => boolean;
   onClose: () => void;
+  forceLogin?: boolean;
 }
 
 const VALID_USERNAME = 'ljq';
 const VALID_PASSWORD = 'jk712732';
 
-export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onLogin, onClose }) => {
+export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onLogin, onClose, forceLogin = false }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -18,6 +19,13 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onLogin, onClose
   const [isLoading, setIsLoading] = useState(false);
 
   if (!isOpen) return null;
+
+  // 强制登录模式下，点击背景不关闭
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget && !forceLogin) {
+      onClose();
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +48,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onLogin, onClose
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      onClick={handleBackdropClick}
+    >
       <div className="w-full max-w-md p-8 rounded-3xl bg-gradient-to-br from-[#1a1c1e] to-[#0d0e10] border border-white/10 shadow-2xl">
         <div className="text-center mb-8">
           <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 flex items-center justify-center">
