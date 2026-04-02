@@ -862,12 +862,12 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
 
               <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 auto-rows-min">
                 {/* API 数据组件动态渲染 */}
-                {enabledWidgets.filter(w => w.type === 'api-data').map(widget => (
+                {enabledWidgets.filter(w => w.type === 'api-data' && w.enabled).map(widget => (
                   <div key={widget.id} className="relative bg-[#181a1c] rounded-2xl border border-white/10 shadow-sm hover:shadow-md transition-shadow overflow-hidden p-4 min-h-[200px] resize-y overflow-y-auto" style={{ minHeight: '200px', maxHeight: '500px' }}>
                     <APIDataWidget config={widget.settings.api} />
                   </div>
                 ))}
-                {enabledWidgets.some(w => w.id === 'weather') && (
+                {enabledWidgets.some(w => w.type === 'weather' && w.enabled) && (
                   <div className="relative bg-[#181a1c] rounded-2xl border border-white/10 shadow-sm hover:shadow-md transition-shadow overflow-hidden p-4 min-h-[200px] resize-y overflow-y-auto" style={{ minHeight: '200px', maxHeight: '500px' }}>
                     <div className="flex items-center gap-2 mb-2">
                       <Cloud className="w-4 h-4 text-emerald-400" />
@@ -877,7 +877,7 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
                   </div>
                 )}
 
-                {enabledWidgets.some(w => w.id === 'custom-links') && (
+                {enabledWidgets.some(w => w.type === 'custom-links' && w.enabled) && (
                   <div className="relative bg-[#181a1c] rounded-2xl border border-white/10 shadow-sm hover:shadow-md transition-shadow overflow-hidden p-4 min-h-[200px] resize-y overflow-y-auto" style={{ minHeight: '200px', maxHeight: '500px' }}>
                     <div className="flex items-center gap-2 mb-2">
                       <CheckSquare className="w-4 h-4 text-emerald-400" />
@@ -887,7 +887,7 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
                   </div>
                 )}
 
-                {enabledWidgets.some(w => w.id === 'stock-widget') && (
+                {enabledWidgets.some(w => w.type === 'stock-widget' && w.enabled) && (
                   <div className="relative bg-[#181a1c] rounded-2xl border border-white/10 shadow-sm hover:shadow-md transition-shadow overflow-hidden p-4 min-h-[200px] resize-y overflow-y-auto" style={{ minHeight: '200px', maxHeight: '500px' }}>
                     <div className="flex items-center gap-2 mb-2">
                       <TrendingUp className="w-4 h-4 text-emerald-400" />
@@ -897,7 +897,7 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
                   </div>
                 )}
 
-                {enabledWidgets.some(w => w.id === 'news-feed') && (
+                {enabledWidgets.some(w => w.type === 'news-feed' && w.enabled) && (
                   <div className="relative bg-[#181a1c] rounded-2xl border border-white/10 shadow-sm hover:shadow-md transition-shadow overflow-hidden p-4 min-h-[200px] lg:col-span-2 resize-y overflow-y-auto" style={{ minHeight: '200px', maxHeight: '500px' }}>
                     <div className="flex items-center gap-2 mb-2">
                       <Pin className="w-4 h-4 text-emerald-400" />
