@@ -362,7 +362,7 @@ const AppWrapper: React.FC = () => {
 
     const cleanup = initialize();
     return () => {
-      cleanup.then(cleanupFn => cleanupFn && cleanupFn());
+      cleanup.then(cleanupFn => cleanupFn && cleanupFn()).catch(() => {});
     };
   }, []);
 
