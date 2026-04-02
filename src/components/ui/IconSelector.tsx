@@ -47,7 +47,7 @@ type CategoryKey = keyof typeof ICON_CATEGORIES;
 // ==============================================
 // 防抖函数
 const debounce = <T extends (...args: any[]) => void>(func: T, delay: number) => {
-  let timeout: ReturnType<typeof setTimeout>;
+  let timeout: NodeJS.Timeout;
   return (...args: Parameters<T>) => {
     clearTimeout(timeout);
     timeout = setTimeout(() => func(...args), delay);
@@ -104,7 +104,7 @@ const IconSelector: React.FC<IconSelectorProps> = ({ onSelectIcon }) => {
   // 🎯 图标校验与选择（逻辑优化）
   // ==============================================
   const validateIconName = useCallback((iconName: string): boolean => {
-    if (!iconName.trim()) return false;
+    if (!iconName || typeof iconName !== 'string' || !iconName.trim()) return false;
     const formatted = formatIconName(iconName);
     return formatted in LucideIcons;
   }, []);
@@ -119,7 +119,7 @@ const IconSelector: React.FC<IconSelectorProps> = ({ onSelectIcon }) => {
 
   const handleCustomIconChange = useCallback((value: string) => {
     setCustomIconName(value);
-    if (!value.trim()) {
+    if (!value || typeof value !== 'string' || !value.trim()) {
       setIsValidIcon(true);
       return;
     }

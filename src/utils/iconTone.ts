@@ -57,7 +57,7 @@ const hashString = (value: string): number => {
 // ==============================================
 // 🛡️ 安全工具函数 (全容错处理)
 // ==============================================
-const toHex = (value: string): string => value?.trim().replace(/^#/, '') ?? '';
+const toHex = (value: string): string => (value && typeof value === 'string') ? String(value).trim().replace(/^#/, '') : '';
 
 const isHexColor = (hex: string): boolean => /^([0-9a-fA-F]{3}){1,2}$/.test(hex);
 

@@ -5,13 +5,14 @@
     "url": "https://github.com/yml2213/Y-Nav.git"
   },
   "private": true,
-  "version": "0.1.6",
+  "version": "0.1.7",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "deploy": "./deploy.sh deploy",
+    "vercel-build": "vite build",
+    "deploy": "vercel --prod",
     "deploy:workers": "npm run build && wrangler deploy --env production",
     "deploy:pages": "npm run build && wrangler pages deploy dist --project-name=home",
     "kv:create": "wrangler kv:namespace create YNAV_WORKER_KV",

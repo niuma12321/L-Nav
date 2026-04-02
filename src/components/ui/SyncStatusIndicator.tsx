@@ -28,7 +28,7 @@ const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
 }) => {
     const [visible, setVisible] = useState(false);
     const [isExiting, setIsExiting] = useState(false);
-    const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const hideTimer = useRef<NodeJS.Timeout | null>(null);
     const prevStatus = useRef<SyncStatus>(status);
 
     // 清除定时器

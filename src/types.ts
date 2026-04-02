@@ -27,7 +27,7 @@ export interface SiteSettings {
   navTitle: string;
   favicon: string;
   cardStyle: 'detailed' | 'simple';
-  siteMode?: 'personal' | 'webmaster' | 'private';
+  siteMode?: 'personal' | 'webmaster';
   accentColor?: string;
   grayScale?: 'slate' | 'zinc' | 'neutral';
   closeOnBackdrop?: boolean;
@@ -39,9 +39,13 @@ export interface SiteSettings {
 export interface StickyNote {
   id: string;
   content: string;
+  htmlContent?: string;
   createdAt: number;
   updatedAt: number;
   color?: string;
+  tags?: string[];
+  title?: string;
+  isRichText?: boolean;
 }
 
 export interface AppState {

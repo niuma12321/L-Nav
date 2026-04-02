@@ -1,8 +1,9 @@
 import React, { useMemo, useCallback } from 'react';
 import { LinkItem } from '../../types';
-import { EyeOff, Settings, Globe } from 'lucide-react';
-import Favicon from './Favicon'; // 引入我们的终极Favicon组件（核心修复）
+import { EyeOff, Settings, Globe, Activity } from 'lucide-react';
+import Favicon from './Favicon';
 import { getIconToneClass, getIconToneStyle } from '../../utils/iconTone';
+import { LinkStatus } from '../../hooks/useLinkCheck';
 
 interface LinkCardProps {
   link: LinkItem;
@@ -10,9 +11,11 @@ interface LinkCardProps {
   isBatchEditMode: boolean;
   isSelected: boolean;
   readOnly?: boolean;
+  linkStatus?: LinkStatus;
   onSelect: (id: string) => void;
   onContextMenu: (e: React.MouseEvent, link: LinkItem) => void;
   onEdit: (link: LinkItem) => void;
+  onNavigate?: (url: string) => void;
 }
 
 const LinkCard: React.FC<LinkCardProps> = React.memo(({
@@ -21,9 +24,11 @@ const LinkCard: React.FC<LinkCardProps> = React.memo(({
   isBatchEditMode,
   isSelected,
   readOnly = false,
+  linkStatus,
   onSelect,
   onContextMenu,
-  onEdit
+  onEdit,
+  onNavigate
 }) => {
   const isDetailedView = siteCardStyle === 'detailed';
 
@@ -75,8 +80,13 @@ const LinkCard: React.FC<LinkCardProps> = React.memo(({
 
   // 回调缓存
   const handleCardClick = useCallback(() => {
-    if (isBatchEditMode) onSelect(link.id);
-  }, [isBatchEditMode, onSelect, link.id]);
+    if (isBatchEditMode) {
+      onSelect(link.id);
+    } else if (onNavigate) {
+      // 使用客户端路由跳转，不打开新窗口
+      onNavigate(link.url);
+    }
+  }, [isBatchEditMode, onSelect, onNavigate, link.id, link.url]);
 
   const handleEditClick = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -124,15 +134,13 @@ const LinkCard: React.FC<LinkCardProps> = React.memo(({
           {renderContent()}
         </div>
       ) : (
-        <a
-          href={link.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={`flex ${isDetailedView ? 'flex-col' : 'items-center'} min-w-0 gap-3`}
+        <div
+          onClick={handleCardClick}
+          className={`flex ${isDetailedView ? 'flex-col' : 'items-center'} min-w-0 gap-3 cursor-pointer`}
           title={isDetailedView ? link.url : (link.description || link.url)}
         >
           {renderContent()}
-        </a>
+        </div>
       )}
 
       {/* Tooltip */}
@@ -149,12 +157,21 @@ const LinkCard: React.FC<LinkCardProps> = React.memo(({
         </div>
       )}
 
-      {/* 编辑按钮 */}
+      {/* 编辑按钮和状态指示 */}
       {!isBatchEditMode && !readOnly && (
         <div className={`
-          absolute transition-all duration-200 opacity-0 group-hover:opacity-100 z-20
+          absolute transition-all duration-200 opacity-0 group-hover:opacity-100 z-20 flex items-center gap-1
           ${isDetailedView ? 'top-3 right-3' : 'right-2 top-1/2 -translate-y-1/2'}
         `}>
+          {linkStatus && linkStatus.status !== 'online' && linkStatus.status !== 'checking' && (
+            <div 
+              className={`w-2 h-2 rounded-full ${
+                linkStatus.status === 'offline' ? 'bg-red-500' : 
+                linkStatus.status === 'timeout' ? 'bg-yellow-500' : 'bg-orange-500'
+              }`}
+              title={`链接状态: ${linkStatus.status}${linkStatus.error ? ` - ${linkStatus.error}` : ''}`}
+            />
+          )}
           <button
             onClick={handleEditClick}
             className="p-1.5 rounded-lg backdrop-blur-sm

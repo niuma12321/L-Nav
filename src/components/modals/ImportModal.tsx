@@ -34,19 +34,21 @@ const getFolderLabel = (path?: string[]) => {
 };
 
 const normalizeUrlForCompare = (input: string) => {
-    const raw = (input || '').trim();
+    const safeInput = (input && typeof input === 'string') ? input : '';
+    const raw = String(safeInput ?? '').trim();
     if (!raw) return '';
     const hasScheme = /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(raw);
     const withScheme = hasScheme ? raw : `https://${raw}`;
     try {
         const url = new URL(withScheme);
+        const trimmed = String(url.pathname ?? '').trim();
         url.hash = '';
         url.hostname = url.hostname.toLowerCase();
         if ((url.protocol === 'http:' && url.port === '80') || (url.protocol === 'https:' && url.port === '443')) {
             url.port = '';
         }
-        if (url.pathname !== '/' && url.pathname.endsWith('/')) {
-            url.pathname = url.pathname.replace(/\/+$/, '');
+        if (trimmed !== '/' && trimmed.endsWith('/')) {
+            url.pathname = trimmed.replace(/\/+$/, '');
         }
         return url.toString();
     } catch {

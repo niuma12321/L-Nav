@@ -94,7 +94,7 @@ export function useSyncEngine(options: UseSyncEngineOptions = {}): UseSyncEngine
     const [currentConflict, setCurrentConflict] = useState<SyncConflict | null>(null);
 
     // Refs for debounce
-    const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const debounceTimer = useRef<NodeJS.Timeout | null>(null);
     const pendingData = useRef<Omit<YNavSyncData, 'meta'> | null>(null);
 
     // 从云端拉取数据
@@ -216,7 +216,10 @@ export function useSyncEngine(options: UseSyncEngineOptions = {}): UseSyncEngine
         // 设置新的定时器
         debounceTimer.current = setTimeout(async () => {
             if (pendingData.current) {
-                await pushToCloud(pendingData.current);
+                const success = await pushToCloud(pendingData.current);
+                if (success) {
+                    onSyncComplete?.();
+                }
                 pendingData.current = null;
             }
         }, SYNC_DEBOUNCE_MS);

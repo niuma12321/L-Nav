@@ -48,6 +48,7 @@ interface LinkSectionsProps {
   onLinkSelect: (id: string) => void;
   onLinkContextMenu: (e: React.MouseEvent, link: LinkItem) => void;
   onLinkEdit: (link: LinkItem) => void;
+  onLinkNavigate?: (url: string) => void; // 新增：用于客户端路由跳转
   readOnly?: boolean;
   isPrivateUnlocked: boolean;
   onPrivateUnlock: (password?: string) => Promise<boolean>;
@@ -109,6 +110,7 @@ const LinkSections: React.FC<LinkSectionsProps> = ({
   onLinkSelect,
   onLinkContextMenu,
   onLinkEdit,
+  onLinkNavigate,
   readOnly = false,
   isPrivateUnlocked,
   onPrivateUnlock,
@@ -225,15 +227,15 @@ const LinkSections: React.FC<LinkSectionsProps> = ({
 
   const hitokotoAuthor = React.useMemo(() => {
     if (!hitokoto) return '';
-    const from = hitokoto.from?.trim();
-    const fromWho = hitokoto.from_who?.trim();
+    const from = hitokoto.from && typeof hitokoto.from === 'string' ? hitokoto.from.trim() : '';
+    const fromWho = hitokoto.from_who && typeof hitokoto.from_who === 'string' ? hitokoto.from_who.trim() : '';
     if (from && fromWho) return `${from} · ${fromWho}`;
     if (from) return from;
     if (fromWho) return fromWho;
     return '佚名';
   }, [hitokoto]);
 
-  const hitokotoText = hitokoto?.hitokoto?.trim() || '';
+  const hitokotoText = (hitokoto?.hitokoto && typeof hitokoto.hitokoto === 'string') ? hitokoto.hitokoto.trim() : '';
   const activeCategory = React.useMemo(() => {
     if (isPrivateCategory) {
       return { name: '隐私分组', icon: 'Lock' };
@@ -394,6 +396,7 @@ const LinkSections: React.FC<LinkSectionsProps> = ({
                     onSelect={onLinkSelect}
                     onContextMenu={onLinkContextMenu}
                     onEdit={onLinkEdit}
+                    onNavigate={onLinkNavigate}
                   />
                 ))}
               </div>
@@ -579,6 +582,7 @@ const LinkSections: React.FC<LinkSectionsProps> = ({
                         onSelect={onLinkSelect}
                         onContextMenu={onLinkContextMenu}
                         onEdit={onLinkEdit}
+                        onNavigate={onLinkNavigate}
                       />
                     ))}
                   </div>

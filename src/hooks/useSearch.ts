@@ -49,7 +49,7 @@ export function useSearch() {
     const [isPopupHovered, setIsPopupHovered] = useState(false);
     const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
 
-    const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // 保存配置（全空值防护）
     const saveSearchConfig = useCallback((sources: ExternalSearchSource[], mode: SearchMode, selected?: ExternalSearchSource | null) => {
@@ -83,7 +83,7 @@ export function useSearch() {
     const handleSearchSourceSelect = useCallback((source: ExternalSearchSource) => {
         setSelectedSearchSource(source);
         saveSearchConfig(externalSearchSources, searchMode, source);
-        if (searchQuery.trim()) {
+        if (searchQuery && typeof searchQuery === 'string' && searchQuery.trim()) {
             const searchUrl = source.url.replace('{query}', encodeURIComponent(searchQuery));
             window.open(searchUrl, '_blank');
         }
@@ -93,7 +93,7 @@ export function useSearch() {
 
     // 执行搜索
     const handleExternalSearch = useCallback(() => {
-        if (searchQuery.trim() && searchMode === 'external') {
+        if (searchQuery && typeof searchQuery === 'string' && searchQuery.trim() && searchMode === 'external') {
             if (externalSearchSources.length === 0) {
                 const defaultSources = buildDefaultSearchSources();
                 saveSearchConfig(defaultSources, 'external', defaultSources[0]);

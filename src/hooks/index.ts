@@ -11,3 +11,5 @@ export { useSidebar } from './useSidebar';
 export { useSyncEngine, buildSyncData } from './useSyncEngine';
 export { useNotes } from './useNotes';
 export { useRouter } from './useRouter';
+export { useWidgets } from './useWidgets';
+export { useWebDAV } from './useWebDAV';

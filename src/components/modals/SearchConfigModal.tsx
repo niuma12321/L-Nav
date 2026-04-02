@@ -183,8 +183,8 @@ const SearchConfigModal: React.FC<SearchConfigModalProps> = ({
 
     const source: ExternalSearchSource = {
       id: Date.now().toString(),
-      name: newSource.name.trim(),
-      url: newSource.url.trim(),
+      name: (newSource.name && typeof newSource.name === 'string') ? newSource.name.trim() : '',
+      url: (newSource.url && typeof newSource.url === 'string') ? newSource.url.trim() : '',
       icon: 'Globe',
       enabled: true,
       createdAt: Date.now()

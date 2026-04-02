@@ -248,7 +248,7 @@ const ToastItemComponent: React.FC<{
   isPaused: boolean;
 }> = React.memo(({ toast, onClose, onAction, isPaused }) => {
   const [progress, setProgress] = useState(100);
-  const progressInterval = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const progressInterval = useRef<NodeJS.Timeout | null>(null);
   const startTime = useRef<number>(Date.now());
   const elapsedRef = useRef<number>(0);
   const Icon = getToastIcon(toast.variant);
@@ -395,7 +395,7 @@ export const DialogProvider: React.FC<{
     isPaused: false 
   });
   const [confirmState, setConfirmState] = useState<ConfirmState | null>(null);
-  const timers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const timers = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   // 合并配置
   const mergedConfig = useMemo(() => ({
