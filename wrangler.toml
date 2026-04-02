@@ -23,6 +23,10 @@ routes = [
 # ---------- 性能优化配置 ----------
 minify = true
 
+# ---------- Workers Sites 静态资源配置 ----------
+[site]
+bucket = "./dist"
+
 # ---------- KV 命名空间绑定 ----------
 [[kv_namespaces]]
 binding = "YNAV_WORKER_KV"
@@ -131,6 +135,10 @@ ENABLE_R2_STORAGE = "true"
 [env.production]
 name = "home"
 compatibility_date = "2025-03-01"
+
+# 生产环境静态资源配置
+[env.production.site]
+bucket = "./dist"
 
 [[env.production.kv_namespaces]]
 binding = "YNAV_WORKER_KV"

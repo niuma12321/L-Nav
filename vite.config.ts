@@ -9,6 +9,14 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 3000,
       host: '0.0.0.0',
+      proxy: {
+        // 代理 API 请求到线上服务
+        '/api': {
+          target: 'https://678870.xyz',
+          changeOrigin: true,
+          secure: true,
+        }
+      }
     },
     plugins: [react(), tailwindcss()],
     define: {
