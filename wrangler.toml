@@ -25,7 +25,7 @@ minify = true
 
 # ---------- 静态资源配置 (Workers Sites) ----------
 [site]
-bucket = "./dist"
+bucket = "./frontend/dist"
 
 # ---------- KV 命名空间绑定 ----------
 [[kv_namespaces]]
