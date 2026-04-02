@@ -26,7 +26,10 @@ import {
   List,
   Monitor,
   Bell,
-  User
+  User,
+  X,
+  Trash2,
+  Clock
 } from 'lucide-react';
 import { useWidgetSystem } from '../../hooks/useWidgetSystem';
 
@@ -288,49 +291,164 @@ const NotesWidget: React.FC = () => {
 
 // 搜索组件
 const SearchWidget: React.FC = () => {
-  const engines = ['Google', '百度', 'GitHub', '知乎'];
-  const [activeEngine, setActiveEngine] = useState('Google');
+  const defaultEngines = [
+    { name: 'Google', url: 'https://www.google.com/search?q=', icon: '🔍' },
+    { name: '百度', url: 'https://www.baidu.com/s?wd=', icon: '🇨🇳' },
+    { name: 'GitHub', url: 'https://github.com/search?q=', icon: '⚡' },
+    { name: '知乎', url: 'https://www.zhihu.com/search?q=', icon: '💡' }
+  ];
+  
+  const [engines, setEngines] = useState(() => {
+    const saved = localStorage.getItem('ynav_search_engines');
+    return saved ? JSON.parse(saved) : defaultEngines;
+  });
+  const [activeEngine, setActiveEngine] = useState(engines[0].name);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showEngineModal, setShowEngineModal] = useState(false);
+  const [newEngine, setNewEngine] = useState({ name: '', url: '', icon: '' });
+  const [searchHistory, setSearchHistory] = useState<string[]>(() => {
+    const saved = localStorage.getItem('ynav_search_history');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [showHistory, setShowHistory] = useState(false);
+
+  // 保存搜索历史
+  const saveSearchHistory = (query: string) => {
+    if (!query.trim()) return;
+    const newHistory = [query, ...searchHistory.filter(h => h !== query)].slice(0, 5);
+    setSearchHistory(newHistory);
+    localStorage.setItem('ynav_search_history', JSON.stringify(newHistory));
+  };
+
+  // 清除搜索历史
+  const clearSearchHistory = () => {
+    setSearchHistory([]);
+    localStorage.removeItem('ynav_search_history');
+  };
+
+  // 从历史记录搜索
+  const searchFromHistory = (query: string) => {
+    setSearchQuery(query);
+    setShowHistory(false);
+    const engine = engines.find(e => e.name === activeEngine);
+    if (engine) {
+      window.open(`${engine.url}${encodeURIComponent(query)}`, '_blank');
+      saveSearchHistory(query);
+    }
+  };
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
-      const urls: Record<string, string> = {
-        'Google': `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`,
-        '百度': `https://www.baidu.com/s?wd=${encodeURIComponent(searchQuery)}`,
-        'GitHub': `https://github.com/search?q=${encodeURIComponent(searchQuery)}`,
-        '知乎': `https://www.zhihu.com/search?q=${encodeURIComponent(searchQuery)}`,
-      };
-      window.open(urls[activeEngine] || urls['Google'], '_blank');
+      const engine = engines.find(e => e.name === activeEngine);
+      if (engine) {
+        window.open(`${engine.url}${encodeURIComponent(searchQuery)}`, '_blank');
+        saveSearchHistory(searchQuery);
+      }
+    }
+  };
+
+  // 保存引擎到 localStorage
+  const saveEngines = (newEngines: typeof engines) => {
+    setEngines(newEngines);
+    localStorage.setItem('ynav_search_engines', JSON.stringify(newEngines));
+  };
+
+  // 添加新引擎
+  const addEngine = () => {
+    if (newEngine.name && newEngine.url) {
+      const engine = { ...newEngine, icon: newEngine.icon || '🔍' };
+      const updated = [...engines, engine];
+      saveEngines(updated);
+      setNewEngine({ name: '', url: '', icon: '' });
+    }
+  };
+
+  // 删除引擎
+  const removeEngine = (name: string) => {
+    const updated = engines.filter(e => e.name !== name);
+    saveEngines(updated);
+    if (activeEngine === name && updated.length > 0) {
+      setActiveEngine(updated[0].name);
     }
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto">
-      <div className="flex items-center gap-2 mb-3 justify-center">
+    <div className="w-full max-w-2xl mx-auto relative">
+      {/* 搜索引擎选择 */}
+      <div className="flex items-center gap-2 mb-3 justify-center flex-wrap">
         {engines.map(engine => (
           <button
-            key={engine}
-            onClick={() => setActiveEngine(engine)}
-            className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-              activeEngine === engine ? 'bg-emerald-500 text-[#0d0e10]' : 'bg-white/5 text-slate-400 hover:text-white'
+            key={engine.name}
+            onClick={() => setActiveEngine(engine.name)}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+              activeEngine === engine.name ? 'bg-emerald-500 text-[#0d0e10]' : 'bg-white/5 text-slate-400 hover:text-white'
             }`}
           >
-            {engine}
+            <span>{engine.icon}</span>
+            <span>{engine.name}</span>
           </button>
         ))}
+        <button
+          onClick={() => setShowEngineModal(true)}
+          className="p-1.5 rounded-lg bg-white/5 text-slate-400 hover:text-emerald-400 transition-colors"
+          title="管理搜索引擎"
+        >
+          <Settings className="w-4 h-4" />
+        </button>
       </div>
-      <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[#181a1c] border border-white/10">
-        <Search className="w-5 h-5 text-slate-500" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-          placeholder={`在 ${activeEngine} 中搜索...`}
-          className="flex-1 bg-transparent text-white placeholder-slate-500 outline-none"
-        />
+
+      {/* 搜索框 */}
+      <div className="relative">
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[#181a1c] border border-white/10">
+          <Search className="w-5 h-5 text-slate-500" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+            onFocus={() => setShowHistory(true)}
+            placeholder={`在 ${activeEngine} 中搜索...`}
+            className="flex-1 bg-transparent text-white placeholder-slate-500 outline-none"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="p-1 rounded-full hover:bg-white/10 text-slate-400"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* 搜索历史下拉 */}
+        {showHistory && searchHistory.length > 0 && (
+          <div className="absolute top-full left-0 right-0 mt-2 bg-[#181a1c] border border-white/10 rounded-xl overflow-hidden z-50 shadow-xl">
+            <div className="flex items-center justify-between px-4 py-2 border-b border-white/5">
+              <span className="text-xs text-slate-500">搜索历史</span>
+              <button
+                onClick={clearSearchHistory}
+                className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1"
+              >
+                <Trash2 className="w-3 h-3" />
+                清除
+              </button>
+            </div>
+            {searchHistory.map((query, index) => (
+              <button
+                key={index}
+                onClick={() => searchFromHistory(query)}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-white/5 transition-colors"
+              >
+                <Clock className="w-4 h-4 text-slate-500" />
+                <span className="text-sm text-white">{query}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
-      <div className="mt-3 flex justify-center gap-2">
+
+      {/* 快捷标签 */}
+      <div className="mt-3 flex justify-center gap-2 flex-wrap">
         {['React 19', 'AI 编程', '美股行情', '前端面试'].map(tag => (
           <span
             key={tag}
@@ -341,6 +459,70 @@ const SearchWidget: React.FC = () => {
           </span>
         ))}
       </div>
+
+      {/* 搜索引擎管理弹窗 */}
+      {showEngineModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowEngineModal(false)}>
+          <div className="bg-[#181a1c] rounded-2xl border border-white/10 w-full max-w-md p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-white">管理搜索引擎</h3>
+              <button onClick={() => setShowEngineModal(false)} className="p-2 rounded-lg hover:bg-white/10 text-slate-400">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            {/* 现有引擎列表 */}
+            <div className="space-y-2 mb-4 max-h-48 overflow-y-auto">
+              {engines.map(engine => (
+                <div key={engine.name} className="flex items-center justify-between px-3 py-2 bg-[#0d0e10] rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <span>{engine.icon}</span>
+                    <span className="text-sm text-white">{engine.name}</span>
+                  </div>
+                  <button
+                    onClick={() => removeEngine(engine.name)}
+                    className="p-1 rounded hover:bg-white/10 text-red-400"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* 添加新引擎 */}
+            <div className="space-y-3 pt-4 border-t border-white/5">
+              <p className="text-sm text-slate-400">添加新引擎</p>
+              <input
+                type="text"
+                placeholder="名称 (如: Bing)"
+                value={newEngine.name}
+                onChange={(e) => setNewEngine({...newEngine, name: e.target.value})}
+                className="w-full px-3 py-2 bg-[#0d0e10] rounded-lg border border-white/5 text-white text-sm"
+              />
+              <input
+                type="text"
+                placeholder="搜索URL (如: https://bing.com/search?q=)"
+                value={newEngine.url}
+                onChange={(e) => setNewEngine({...newEngine, url: e.target.value})}
+                className="w-full px-3 py-2 bg-[#0d0e10] rounded-lg border border-white/5 text-white text-sm"
+              />
+              <input
+                type="text"
+                placeholder="图标 (emoji或留空)"
+                value={newEngine.icon}
+                onChange={(e) => setNewEngine({...newEngine, icon: e.target.value})}
+                className="w-full px-3 py-2 bg-[#0d0e10] rounded-lg border border-white/5 text-white text-sm"
+              />
+              <button
+                onClick={addEngine}
+                className="w-full py-2.5 rounded-xl bg-emerald-500 text-[#0d0e10] font-medium hover:bg-emerald-400 transition-colors text-sm"
+              >
+                添加引擎
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -678,15 +860,15 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
                 </div>
               </div>
 
-              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 auto-rows-min">
                 {/* API 数据组件动态渲染 */}
                 {enabledWidgets.filter(w => w.type === 'api-data').map(widget => (
-                  <div key={widget.id} className="relative bg-[#181a1c] rounded-2xl border border-white/10 shadow-sm hover:shadow-md transition-shadow overflow-hidden p-4 min-h-[200px]">
+                  <div key={widget.id} className="relative bg-[#181a1c] rounded-2xl border border-white/10 shadow-sm hover:shadow-md transition-shadow overflow-hidden p-4 min-h-[200px] resize-y overflow-y-auto" style={{ minHeight: '200px', maxHeight: '500px' }}>
                     <APIDataWidget config={widget.settings.api} />
                   </div>
                 ))}
                 {enabledWidgets.some(w => w.id === 'weather') && (
-                  <div className="relative bg-[#181a1c] rounded-2xl border border-white/10 shadow-sm hover:shadow-md transition-shadow overflow-hidden p-4 min-h-[200px]">
+                  <div className="relative bg-[#181a1c] rounded-2xl border border-white/10 shadow-sm hover:shadow-md transition-shadow overflow-hidden p-4 min-h-[200px] resize-y overflow-y-auto" style={{ minHeight: '200px', maxHeight: '500px' }}>
                     <div className="flex items-center gap-2 mb-2">
                       <Cloud className="w-4 h-4 text-emerald-400" />
                       <span className="text-sm font-medium text-slate-300">天气</span>
@@ -696,7 +878,7 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
                 )}
 
                 {enabledWidgets.some(w => w.id === 'custom-links') && (
-                  <div className="relative bg-[#181a1c] rounded-2xl border border-white/10 shadow-sm hover:shadow-md transition-shadow overflow-hidden p-4 min-h-[200px]">
+                  <div className="relative bg-[#181a1c] rounded-2xl border border-white/10 shadow-sm hover:shadow-md transition-shadow overflow-hidden p-4 min-h-[200px] resize-y overflow-y-auto" style={{ minHeight: '200px', maxHeight: '500px' }}>
                     <div className="flex items-center gap-2 mb-2">
                       <CheckSquare className="w-4 h-4 text-emerald-400" />
                       <span className="text-sm font-medium text-slate-300">待办事项</span>
@@ -706,7 +888,7 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
                 )}
 
                 {enabledWidgets.some(w => w.id === 'stock-widget') && (
-                  <div className="relative bg-[#181a1c] rounded-2xl border border-white/10 shadow-sm hover:shadow-md transition-shadow overflow-hidden p-4 min-h-[200px]">
+                  <div className="relative bg-[#181a1c] rounded-2xl border border-white/10 shadow-sm hover:shadow-md transition-shadow overflow-hidden p-4 min-h-[200px] resize-y overflow-y-auto" style={{ minHeight: '200px', maxHeight: '500px' }}>
                     <div className="flex items-center gap-2 mb-2">
                       <TrendingUp className="w-4 h-4 text-emerald-400" />
                       <span className="text-sm font-medium text-slate-300">热搜榜单</span>
@@ -716,7 +898,7 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
                 )}
 
                 {enabledWidgets.some(w => w.id === 'news-feed') && (
-                  <div className="relative bg-[#181a1c] rounded-2xl border border-white/10 shadow-sm hover:shadow-md transition-shadow overflow-hidden p-4 min-h-[200px] lg:col-span-2">
+                  <div className="relative bg-[#181a1c] rounded-2xl border border-white/10 shadow-sm hover:shadow-md transition-shadow overflow-hidden p-4 min-h-[200px] lg:col-span-2 resize-y overflow-y-auto" style={{ minHeight: '200px', maxHeight: '500px' }}>
                     <div className="flex items-center gap-2 mb-2">
                       <Pin className="w-4 h-4 text-emerald-400" />
                       <span className="text-sm font-medium text-slate-300">便签</span>
