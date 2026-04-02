@@ -33,9 +33,6 @@ import V9Dashboard from './components/v6/V9Dashboard';
 
 // Eagerly load frequently used components
 import ContextMenu from './components/layout/ContextMenu';
-import Sidebar from './components/layout/Sidebar';
-import MainHeader from './components/layout/MainHeader';
-import LinkSections from './components/layout/LinkSections';
 import SyncStatusIndicator from './components/ui/SyncStatusIndicator';
 import { useDialog } from './components/ui/DialogProvider';
 
@@ -1411,83 +1408,17 @@ function App() {
   // === Render ===
   return (
     <div className={`flex min-h-screen ${toneClasses.text}`}>
-      {/* Sidebar Navigation */}
-      <Sidebar
+      {/* Main Dashboard - V9Dashboard 自带完整的导航和侧边栏 */}
+      <V9Dashboard
+        links={displayedLinks}
         categories={visibleCategories}
-        selectedCategory={selectedCategory}
-        linkCounts={linkCounts}
-        privateCount={privateCount}
-        isOpen={sidebarOpen}
-        isCollapsed={isSidebarCollapsed}
-        onToggle={() => setSidebarOpen(!sidebarOpen)}
-        onToggleCollapse={toggleSidebarCollapsed}
-        onSelectCategory={(id) => {
-          if (id === PRIVATE_CATEGORY_ID) {
-            handleSelectPrivate();
-          } else if (id === 'notes') {
-            handleSelectNotes();
-          } else {
-            navigateToCategory(id);
-            setSidebarOpen(false);
-          }
-        }}
-        onSelectHome={navigateToHome}
-        onAddLink={handleAddLinkRequest}
+        pinnedLinks={pinnedLinks}
+        onAddResource={handleAddLinkRequest}
         onOpenSettings={() => setIsSettingsModalOpen(true)}
         onOpenImport={() => setIsImportModalOpen(true)}
-        onManageCategories={() => setIsCatManagerOpen(true)}
-        onLogout={isLoggedIn ? handleLogout : undefined}
-        onLogin={() => setShowLoginModal(true)}
-        isLoggedIn={isLoggedIn}
-        privacyGroupEnabled={privacyGroupEnabled}
-        isPrivateUnlocked={isPrivateUnlocked}
-        isPrivateView={isPrivateView}
-        onUnlockPrivate={handleUnlockPrivateVault}
-        privateUnlockHint={privateUnlockHint}
-        privateUnlockSubHint={privateUnlockSubHint}
+        onEditLink={handleLinkEdit}
+        onDeleteLink={handleDeleteLink}
       />
-
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
-        {/* Top Navigation Bar */}
-        <MainHeader
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          searchMode={searchMode}
-          onSearchModeChange={handleSearchModeChange}
-          selectedSearchSource={selectedSearchSource}
-          onSearchSourceSelect={handleSearchSourceSelect}
-          externalSearchSources={externalSearchSources}
-          showSearchSourcePopup={showSearchSourcePopup}
-          setShowSearchSourcePopup={setShowSearchSourcePopup}
-          hoveredSearchSource={hoveredSearchSource}
-          setHoveredSearchSource={setHoveredSearchSource}
-          setIsIconHovered={setIsIconHovered}
-          setIsPopupHovered={setIsPopupHovered}
-          onExternalSearch={handleExternalSearch}
-          navTitle={navTitleText}
-          onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
-          isSidebarOpen={sidebarOpen}
-          isMobile={isMobile}
-          onAddLink={handleAddLinkRequest}
-          onOpenSettings={() => setIsSettingsModalOpen(true)}
-          onToggleMobileSearch={() => setMobileSearchOpen(true)}
-        />
-
-        {/* Main Dashboard */}
-        <main className="flex-1 overflow-auto">
-          <V9Dashboard
-            links={displayedLinks}
-            categories={visibleCategories}
-            pinnedLinks={pinnedLinks}
-            onAddResource={handleAddLinkRequest}
-            onOpenSettings={() => setIsSettingsModalOpen(true)}
-            onOpenImport={() => setIsImportModalOpen(true)}
-            onEditLink={handleLinkEdit}
-            onDeleteLink={handleDeleteLink}
-          />
-        </main>
-      </div>
 
       {/* Modals - 同步导入，无需Suspense */}
       <CategoryManagerModal

@@ -652,7 +652,10 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
                   我的小组件
                 </h2>
                 <div className="flex items-center gap-2">
-                  <button className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-emerald-500 text-[#0d0e10] rounded-lg hover:bg-emerald-400 transition-colors">
+                  <button 
+                    onClick={() => { setActiveView('widgets'); setEditMode(false); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-emerald-500 text-[#0d0e10] rounded-lg hover:bg-emerald-400 transition-colors"
+                  >
                     <Plus className="w-4 h-4" />
                     添加
                   </button>
@@ -802,7 +805,7 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
               categories={categories}
             />
           </Suspense>
-        ) : activeView === 'lab' ? (
+        ) : activeView === 'labs' ? (
           <Suspense fallback={
             <div className="flex items-center justify-center h-64">
               <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
