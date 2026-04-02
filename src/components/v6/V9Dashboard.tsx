@@ -355,7 +355,8 @@ const LinkCard: React.FC<{
   onEdit?: () => void;
 }> = ({ id, title, url, icon, description, color = 'bg-indigo-500/20 text-indigo-400', isHidden, onEdit }) => {
   const domain = new URL(url).hostname;
-  const faviconUrl = `https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://${domain}&size=64`;
+  // 使用更可靠的 favicon 服务，添加错误处理
+  const faviconUrl = icon || `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
 
   const handleEdit = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -375,7 +376,16 @@ const LinkCard: React.FC<{
           {icon ? (
             <span className="text-xl">{icon}</span>
           ) : (
-            <img src={faviconUrl} alt="" className="w-6 h-6 rounded object-contain" />
+            <img 
+              src={faviconUrl} 
+              alt="" 
+              className="w-6 h-6 rounded object-contain"
+              onError={(e) => {
+                // 如果 favicon 加载失败，显示默认图标
+                (e.target as HTMLImageElement).style.display = 'none';
+                (e.target as HTMLImageElement).parentElement!.innerHTML = '<span class="text-xl">🔗</span>';
+              }}
+            />
           )}
         </div>
         <h3 className="font-medium truncate transition-colors text-base text-white group-hover:text-emerald-400" title={title}>

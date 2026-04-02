@@ -68,7 +68,9 @@ export const useDataStore = () => {
                 const validCategoryIds = new Set(loadedCategories.map((c: Category) => c.id));
                 const fallbackCategoryId = loadedCategories.find((c: Category) => c.id === 'common')?.id
                     || loadedCategories[0]?.id;
-                let loadedLinks = parsed.links || INITIAL_LINKS;
+                let loadedLinks = parsed.links && parsed.links.length > 0
+                    ? parsed.links
+                    : INITIAL_LINKS;
                 if (fallbackCategoryId) {
                     loadedLinks = loadedLinks.map((link: LinkItem) => {
                         if (!validCategoryIds.has(link.categoryId)) {
