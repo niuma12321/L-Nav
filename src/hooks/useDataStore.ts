@@ -70,12 +70,23 @@ export const useDataStore = () => {
 
     useEffect(() => {
         // 强制数据重置机制：检查是否需要重置数据
-        const resetFlag = localStorage.getItem('ynav_force_reset_v2');
+        const resetFlag = localStorage.getItem('ynav_force_reset_v3');
         if (!resetFlag) {
-            console.log('[DataStore] Force resetting data to defaults');
-            localStorage.setItem('ynav_force_reset_v2', '1');
-            // 清除旧数据
+            console.log('[DataStore] Force resetting ALL data to defaults');
+            localStorage.setItem('ynav_force_reset_v3', '1');
+            // 清除所有相关数据
             localStorage.removeItem(LOCAL_STORAGE_KEY);
+            localStorage.removeItem('ynav_force_reset_v2');
+            localStorage.removeItem('ynav_force_reset');
+            // 强制设置默认数据
+            setLinks(INITIAL_LINKS);
+            setCategories(DEFAULT_CATEGORIES);
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ 
+                links: INITIAL_LINKS, 
+                categories: DEFAULT_CATEGORIES 
+            }));
+            setIsLoaded(true);
+            return;
         }
         
         const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
