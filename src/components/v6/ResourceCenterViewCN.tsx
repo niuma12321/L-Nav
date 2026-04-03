@@ -179,20 +179,11 @@ const ResourceCenterViewCN: React.FC<ResourceCenterViewCNProps> = ({
   return (
     <div className="space-y-6">
       {/* Debug Panel - 可视化调试信息 */}
-      <div className="p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/30 space-y-2">
+      <div className="p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/30">
         <p className="text-xs text-yellow-400 font-mono">
           DEBUG: links={links?.length || 0}, categories={categories?.length || 0}, 
           resources={resources?.length || 0}, filtered={filteredResources?.length || 0}
         </p>
-        <button
-          onClick={() => {
-            localStorage.clear();
-            window.location.reload();
-          }}
-          className="px-3 py-1 text-xs bg-red-500/20 text-red-400 rounded hover:bg-red-500/30"
-        >
-          强制重置所有数据
-        </button>
       </div>
       
       {/* Header Section */}
