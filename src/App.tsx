@@ -356,7 +356,11 @@ function App() {
 
   const handleSyncComplete = useCallback((data: YNavSyncData) => {
     // 当从云端恢复数据时更新本地数据
-    if (data.links && data.categories) {
+    // 严格检查：数据必须存在且非空
+    const hasValidLinks = Array.isArray(data.links) && data.links.length > 0;
+    const hasValidCategories = Array.isArray(data.categories) && data.categories.length > 0;
+    
+    if (hasValidLinks && hasValidCategories) {
       updateData(data.links, data.categories);
       suppressNextAutoSyncRef.current = true;
     }
@@ -390,7 +394,11 @@ function App() {
       }
     }
 
-    if (data.links && data.categories) {
+    // 更新 prevSyncDataRef 时也检查数据有效性（使用不同的变量名）
+    const hasLinks = Array.isArray(data.links) && data.links.length > 0;
+    const hasCategories = Array.isArray(data.categories) && data.categories.length > 0;
+    
+    if (hasLinks && hasCategories) {
       prevSyncDataRef.current = JSON.stringify(buildSyncData(
         data.links,
         data.categories,
@@ -1160,7 +1168,12 @@ function App() {
       const localDeviceId = localMeta?.deviceId || getDeviceId();
       const cloudData = await pullFromCloud();
 
-      if (cloudData && cloudData.links && cloudData.categories) {
+      // 严格检查云端数据：必须是非空数组
+      const hasValidCloudData = cloudData && 
+        Array.isArray(cloudData.links) && cloudData.links.length > 0 &&
+        Array.isArray(cloudData.categories) && cloudData.categories.length > 0;
+      
+      if (hasValidCloudData) {
         // Webmaster mode: always use remote data for visitors (read-only public site)
         if ((cloudData as any).siteSettings?.siteMode === 'webmaster') {
           handleSyncComplete(cloudData);
@@ -1270,7 +1283,12 @@ function App() {
     const localUpdatedAt = typeof localMeta?.updatedAt === 'number' ? localMeta.updatedAt : 0;
     const localDeviceId = localMeta?.deviceId || getDeviceId();
     const cloudData = await pullFromCloud();
-    if (cloudData && cloudData.links && cloudData.categories) {
+    // 严格检查云端数据：必须是非空数组
+    const hasValidCloudData = cloudData && 
+      Array.isArray(cloudData.links) && cloudData.links.length > 0 &&
+      Array.isArray(cloudData.categories) && cloudData.categories.length > 0;
+    
+    if (hasValidCloudData) {
       if ((cloudData as any).siteSettings?.siteMode === 'webmaster') {
         handleSyncComplete(cloudData);
         return;
