@@ -1596,6 +1596,8 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
           <AutomationCenterView onBack={() => setActiveView('dashboard')} />
         ) : activeView === 'smart-home' ? (
           <SmartHomeView onBack={() => setActiveView('dashboard')} />
+        ) : activeView === 'notifications' ? (
+          <NotificationsViewCN onBack={() => setActiveView('dashboard')} />
         ) : activeView === 'labs' ? (
           <LabView />
         ) : (
