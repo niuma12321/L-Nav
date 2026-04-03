@@ -64,6 +64,14 @@ export function useWidgetSystem() {
     });
   }, []);
 
+  const addWidget = useCallback((widget: WidgetConfig) => {
+    setWidgets(prev => [...prev, widget]);
+  }, []);
+
+  const removeWidget = useCallback((id: string) => {
+    setWidgets(prev => prev.filter(w => w.id !== id));
+  }, []);
+
   const enabledWidgets = widgets.filter(w => w.enabled);
 
   return {
@@ -75,6 +83,8 @@ export function useWidgetSystem() {
     toggleWidget,
     updateWidgetPosition,
     updateWidgetSettings,
-    reorderWidgets
+    reorderWidgets,
+    addWidget,
+    removeWidget
   };
 }

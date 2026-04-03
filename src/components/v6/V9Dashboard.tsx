@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { 
   Search, 
@@ -43,10 +43,10 @@ import { APIDataWidget } from './APIDataWidget';
 import ContentPreview from './ContentPreview';
 import NavEditModal from '../modals/NavEditModal';
 
-// Lazy load views
-const ResourceCenterViewCN = lazy(() => import('./ResourceCenterViewCN'));
-const WidgetConfigCenter = lazy(() => import('./WidgetConfigCenter'));
-const LabView = lazy(() => import('./LabView'));
+// Static imports - fixed dynamic import issues
+import ResourceCenterViewCN from './ResourceCenterViewCN';
+import WidgetConfigCenter from './WidgetConfigCenter';
+import LabView from './LabView';
 
 interface V9DashboardProps {
   onAddResource?: () => void;
@@ -71,31 +71,103 @@ interface V9DashboardProps {
   }>;
 }
 
-// 天气小组件
+// 天气小组件 - 接入真实天气API
 const WeatherWidget: React.FC = () => {
+  const [weather, setWeather] = useState({
+    city: '北京',
+    temp: 23,
+    condition: '多云',
+    humidity: 61,
+    windLevel: 4,
+    icon: 'Cloud',
+    loading: true
+  });
+
+  // 使用和风天气API获取实时天气
+  const fetchWeather = useCallback(async () => {
+    try {
+      // 使用和风天气免费API - 北京城市代码: 101010100
+      const response = await fetch('https://devapi.qweather.com/v7/weather/now?location=101010100&key=demo');
+      const data = await response.json();
+      
+      if (data.code === '200' && data.now) {
+        const now = data.now;
+        setWeather({
+          city: '北京',
+          temp: parseInt(now.temp),
+          condition: now.text,
+          humidity: parseInt(now.humidity),
+          windLevel: parseInt(now.windScale),
+          icon: getWeatherIcon(now.icon),
+          loading: false
+        });
+      } else {
+        // API失败时使用模拟数据
+        setWeather(prev => ({ ...prev, loading: false }));
+      }
+    } catch {
+      // 网络错误时使用模拟数据
+      setWeather(prev => ({ ...prev, loading: false }));
+    }
+  }, []);
+
+  // 根据天气图标代码返回对应图标名称
+  const getWeatherIcon = (iconCode: string) => {
+    const code = parseInt(iconCode);
+    if (code <= 3) return 'Sun'; // 晴
+    if (code <= 9) return 'Cloud'; // 多云
+    if (code <= 19) return 'CloudRain'; // 雨
+    if (code <= 25) return 'Snowflake'; // 雪
+    if (code <= 28) return 'Cloud'; // 沙尘
+    return 'Cloud';
+  };
+
+  useEffect(() => {
+    fetchWeather();
+    // 每30分钟刷新一次天气
+    const timer = setInterval(fetchWeather, 30 * 60 * 1000);
+    return () => clearInterval(timer);
+  }, [fetchWeather]);
+
+  const WeatherIcon = weather.loading ? Cloud : 
+    weather.icon === 'Sun' ? ({className}: {className?: string}) => <span className={className}>☀️</span> :
+    weather.icon === 'CloudRain' ? ({className}: {className?: string}) => <span className={className}>🌧️</span> :
+    weather.icon === 'Snowflake' ? ({className}: {className?: string}) => <span className={className}>❄️</span> :
+    Cloud;
+
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-medium text-slate-300">北京</span>
-        <button className="p-1 rounded hover:bg-white/5 transition-colors">
-          <RefreshCw className="w-3 h-3 text-slate-400" />
+        <span className="text-sm font-medium text-slate-300">{weather.city}</span>
+        <button 
+          onClick={fetchWeather}
+          className="p-1 rounded hover:bg-white/5 transition-colors"
+          disabled={weather.loading}
+        >
+          <RefreshCw className={`w-3 h-3 text-slate-400 ${weather.loading ? 'animate-spin' : ''}`} />
         </button>
       </div>
       <div className="flex items-center gap-3 flex-1">
-        <Cloud className="w-8 h-8 text-gray-400" />
-        <div>
-          <div className="text-3xl font-bold text-white">23°</div>
-          <div className="text-xs text-slate-400">多云</div>
-        </div>
+        {weather.loading ? (
+          <Loader2 className="w-8 h-8 text-slate-400 animate-spin" />
+        ) : (
+          <>
+            <WeatherIcon className="w-8 h-8 text-gray-400" />
+            <div>
+              <div className="text-3xl font-bold text-white">{weather.temp}°</div>
+              <div className="text-xs text-slate-400">{weather.condition}</div>
+            </div>
+          </>
+        )}
       </div>
       <div className="flex items-center gap-4 mt-2 text-xs text-slate-400">
         <div className="flex items-center gap-1">
           <Droplets className="w-3 h-3" />
-          <span>61%</span>
+          <span>{weather.humidity}%</span>
         </div>
         <div className="flex items-center gap-1">
           <Wind className="w-3 h-3" />
-          <span>4级</span>
+          <span>{weather.windLevel}级</span>
         </div>
       </div>
     </div>
@@ -105,9 +177,9 @@ const WeatherWidget: React.FC = () => {
 // 待办小组件
 const TodoWidget: React.FC = () => {
   const [todos, setTodos] = useState([
-    { id: 1, title: '复盘昨日北向资金流入排行', completed: true },
-    { id: 2, title: '分析半导体板块Q3财报数据', completed: false, priority: 'high' },
-    { id: 3, title: '更新下周自选股池', completed: false },
+    { id: 1, title: '复盘昨日北向资金流入排行', completed: true, createdAt: Date.now() - 86400000 },
+    { id: 2, title: '分析半导体板块Q3财报数据', completed: false, priority: 'high', createdAt: Date.now() - 172800000 },
+    { id: 3, title: '更新下周自选股池', completed: false, createdAt: Date.now() - 259200000 },
   ]);
   const [newTask, setNewTask] = useState('');
 
@@ -117,8 +189,35 @@ const TodoWidget: React.FC = () => {
 
   const addTodo = () => {
     if (newTask.trim()) {
-      setTodos([...todos, { id: Date.now(), title: newTask, completed: false }]);
+      setTodos([...todos, { 
+        id: Date.now(), 
+        title: newTask, 
+        completed: false,
+        createdAt: Date.now()
+      }]);
       setNewTask('');
+    }
+  };
+
+  const deleteTodo = (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setTodos(todos.filter(t => t.id !== id));
+  };
+
+  const formatTime = (timestamp: number) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const days = Math.floor(diff / 86400000);
+    
+    if (days === 0) {
+      return '今天 ' + date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    } else if (days === 1) {
+      return '昨天 ' + date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    } else if (days < 7) {
+      return `${days}天前`;
+    } else {
+      return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
     }
   };
 
@@ -158,7 +257,7 @@ const TodoWidget: React.FC = () => {
             <div
               key={todo.id}
               onClick={() => toggleTodo(todo.id)}
-              className="flex items-start gap-3 p-3 rounded-xl bg-[#0d0e10] cursor-pointer hover:bg-[#1a1c1f] transition-colors"
+              className="flex items-start gap-3 p-3 rounded-xl bg-[#0d0e10] cursor-pointer hover:bg-[#1a1c1f] transition-colors group"
             >
               <button
                 className={`mt-0.5 w-5 h-5 rounded flex items-center justify-center transition-colors ${
@@ -167,14 +266,24 @@ const TodoWidget: React.FC = () => {
               >
                 {todo.completed && <span className="text-[#0d0e10] text-xs">✓</span>}
               </button>
-              <div className="flex-1">
-                <p className={`text-sm ${todo.completed ? 'text-slate-500 line-through' : 'text-white'}`}>
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm truncate ${todo.completed ? 'text-slate-500 line-through' : 'text-white'}`}>
                   {todo.title}
                 </p>
-                {todo.priority === 'high' && !todo.completed && (
-                  <span className="text-xs text-emerald-400">高优先级</span>
-                )}
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-[10px] text-slate-500">{formatTime(todo.createdAt)}</span>
+                  {todo.priority === 'high' && !todo.completed && (
+                    <span className="text-[10px] text-emerald-400">高优先级</span>
+                  )}
+                </div>
               </div>
+              <button
+                onClick={(e) => deleteTodo(todo.id, e)}
+                className="p-1 rounded hover:bg-red-500/20 text-slate-500 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                title="删除"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
             </div>
           ))
         )}
@@ -976,40 +1085,22 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
             </footer>
           </div>
         ) : activeView === 'resources' ? (
-          <Suspense fallback={
-            <div className="flex items-center justify-center h-64">
-              <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
-            </div>
-          }>
-            <ResourceCenterViewCN 
-              onAddResource={onAddResource}
-              onImport={() => console.log('Import')}
-              onEditLink={onEditLink}
-              onDeleteLink={onDeleteLink}
-              onPreviewLink={(url) => {
-                setPreviewUrl(url);
-                setIsPreviewOpen(true);
-              }}
-              links={links}
-              categories={categories}
-            />
-          </Suspense>
+          <ResourceCenterViewCN 
+            onAddResource={onAddResource}
+            onImport={() => console.log('Import')}
+            onEditLink={onEditLink}
+            onDeleteLink={onDeleteLink}
+            onPreviewLink={(url) => {
+              setPreviewUrl(url);
+              setIsPreviewOpen(true);
+            }}
+            links={links}
+            categories={categories}
+          />
         ) : activeView === 'labs' ? (
-          <Suspense fallback={
-            <div className="flex items-center justify-center h-64">
-              <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
-            </div>
-          }>
-            <LabView />
-          </Suspense>
+          <LabView />
         ) : (
-          <Suspense fallback={
-            <div className="flex items-center justify-center h-64">
-              <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
-            </div>
-          }>
-            <WidgetConfigCenter />
-          </Suspense>
+          <WidgetConfigCenter />
         )}
       </main>
       

@@ -416,8 +416,9 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resource, viewMode, onEdit,
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <h4 className="text-base font-medium text-white truncate">{resource.title}</h4>
-          <p className="text-sm text-slate-500 truncate">{resource.description}</p>
+          <h4 className="text-base font-medium text-white truncate" title={resource.title}>{resource.title}</h4>
+          <p className="text-xs text-slate-500 truncate" title={resource.url}>{resource.url}</p>
+          <p className="text-sm text-slate-400 truncate">{resource.description}</p>
         </div>
         <span className="px-2 py-1 rounded-full text-xs bg-emerald-500/20 text-emerald-400">
           {categoryName}
@@ -498,8 +499,13 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resource, viewMode, onEdit,
       </div>
 
       {/* Content */}
-      <h4 className="text-base font-bold text-white mb-1 truncate">{resource.title}</h4>
-      <p className="text-sm text-slate-500 mb-4 line-clamp-2">{resource.description}</p>
+      <h4 className="text-base font-bold text-white mb-1 truncate" title={resource.title}>
+        {resource.title}
+      </h4>
+      <p className="text-xs text-slate-500 mb-1 truncate" title={resource.url}>
+        {resource.url}
+      </p>
+      <p className="text-sm text-slate-400 mb-4 line-clamp-2">{resource.description}</p>
 
       {/* Footer */}
       <div className="flex items-center justify-between">

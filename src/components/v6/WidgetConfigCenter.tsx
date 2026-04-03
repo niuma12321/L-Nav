@@ -15,10 +15,19 @@ import {
   Save,
   Monitor,
   Smartphone,
-  Tablet
+  Tablet,
+  Database,
+  Globe,
+  Link2,
+  Type,
+  RefreshCw,
+  Code2,
+  Trash2,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { useWidgetSystem } from '../../hooks/useWidgetSystem';
-import { WidgetConfig, DEFAULT_WIDGETS } from './widgetTypes';
+import { WidgetConfig, DEFAULT_WIDGETS, createAPIWidget, APIDataConfig } from './widgetTypes';
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Search: LayoutDashboard,
@@ -127,12 +136,25 @@ const WidgetSettingsModal: React.FC<{
 };
 
 const WidgetConfigCenter: React.FC = () => {
-  const { widgets, toggleWidget, updateWidgetPosition } = useWidgetSystem();
+  const { widgets, toggleWidget, updateWidgetPosition, addWidget, removeWidget } = useWidgetSystem();
   const [previewMode, setPreviewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [showAddWidgetModal, setShowAddWidgetModal] = useState(false);
   const [settingsWidget, setSettingsWidget] = useState<WidgetConfig | null>(null);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Add widget form state
+  const [newWidgetType, setNewWidgetType] = useState<'api-data'>('api-data');
+  const [newWidgetTitle, setNewWidgetTitle] = useState('');
+  const [newWidgetDesc, setNewWidgetDesc] = useState('');
+  const [apiUrl, setApiUrl] = useState('');
+  const [apiMethod, setApiMethod] = useState<'GET' | 'POST'>('GET');
+  const [apiHeaders, setApiHeaders] = useState('');
+  const [apiBody, setApiBody] = useState('');
+  const [refreshInterval, setRefreshInterval] = useState(0);
+  const [dataPath, setDataPath] = useState('');
+  const [displayType, setDisplayType] = useState<'list' | 'table' | 'json' | 'cards'>('list');
+  const [addError, setAddError] = useState('');
 
   const enabledCount = widgets.filter(w => w.enabled).length;
 
@@ -141,6 +163,79 @@ const WidgetConfigCenter: React.FC = () => {
     localStorage.setItem('ynav-widgets-v9', JSON.stringify(widgets));
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2000);
+  };
+
+  const handleAddWidget = () => {
+    setAddError('');
+    
+    if (!newWidgetTitle.trim()) {
+      setAddError('请输入组件标题');
+      return;
+    }
+    
+    if (!apiUrl.trim()) {
+      setAddError('请输入API URL');
+      return;
+    }
+    
+    try {
+      // Parse headers if provided
+      let parsedHeaders: Record<string, string> = {};
+      if (apiHeaders.trim()) {
+        try {
+          parsedHeaders = JSON.parse(apiHeaders);
+        } catch {
+          setAddError('请求头格式错误，请输入有效的JSON');
+          return;
+        }
+      }
+      
+      // Parse body if provided
+      let parsedBody: any = undefined;
+      if (apiBody.trim()) {
+        try {
+          parsedBody = JSON.parse(apiBody);
+        } catch {
+          setAddError('请求体格式错误，请输入有效的JSON');
+          return;
+        }
+      }
+      
+      const apiConfig: APIDataConfig = {
+        id: `custom-${Date.now()}`,
+        name: newWidgetTitle,
+        apiUrl: apiUrl,
+        method: apiMethod,
+        headers: Object.keys(parsedHeaders).length > 0 ? parsedHeaders : undefined,
+        body: parsedBody,
+        refreshInterval: refreshInterval, // 秒
+        dataPath: dataPath || '',
+        displayType: displayType as any,
+        fields: {
+          title: 'title',
+          value: 'value'
+        },
+        maxItems: 10,
+        emptyText: '暂无数据'
+      };
+      
+      const newWidget = createAPIWidget(apiConfig);
+      addWidget(newWidget);
+      
+      // Reset form
+      setNewWidgetTitle('');
+      setNewWidgetDesc('');
+      setApiUrl('');
+      setApiMethod('GET');
+      setApiHeaders('');
+      setApiBody('');
+      setRefreshInterval(0);
+      setDataPath('');
+      setDisplayType('list');
+      setShowAddWidgetModal(false);
+    } catch (err) {
+      setAddError('创建组件失败');
+    }
   };
 
   return (
@@ -347,20 +442,179 @@ const WidgetConfigCenter: React.FC = () => {
       {/* Add Widget Modal */}
       {showAddWidgetModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#181a1c] rounded-2xl border border-white/10 w-full max-w-md p-6 shadow-2xl">
-            <div className="flex items-center justify-between mb-4">
+          <div className="bg-[#181a1c] rounded-2xl border border-white/10 w-full max-w-lg p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-bold text-white">添加组件</h3>
               <button onClick={() => setShowAddWidgetModal(false)} className="p-2 rounded-lg hover:bg-white/10 text-slate-400">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <p className="text-sm text-slate-400 mb-4">敬请期待更多组件...</p>
-            <button 
-              onClick={() => setShowAddWidgetModal(false)}
-              className="w-full px-4 py-2.5 rounded-xl bg-white/5 text-slate-300 hover:bg-white/10 transition-colors text-sm"
-            >
-              关闭
-            </button>
+            
+            {/* Widget Type Selection */}
+            <div className="mb-6">
+              <label className="block text-sm text-slate-400 mb-2">组件类型</label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setNewWidgetType('api-data')}
+                  className={`flex-1 p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${
+                    newWidgetType === 'api-data' 
+                      ? 'border-emerald-500 bg-emerald-500/10' 
+                      : 'border-white/10 hover:border-white/20'
+                  }`}
+                >
+                  <Database className={`w-5 h-5 ${newWidgetType === 'api-data' ? 'text-emerald-400' : 'text-slate-500'}`} />
+                  <span className={`text-sm ${newWidgetType === 'api-data' ? 'text-emerald-400' : 'text-slate-400'}`}>API数据</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Basic Info */}
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm text-slate-400 mb-2">组件标题 *</label>
+                <input
+                  type="text"
+                  value={newWidgetTitle}
+                  onChange={(e) => setNewWidgetTitle(e.target.value)}
+                  placeholder="例如：GitHub Trending"
+                  className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:border-emerald-500/50 focus:outline-none transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-slate-400 mb-2">描述</label>
+                <input
+                  type="text"
+                  value={newWidgetDesc}
+                  onChange={(e) => setNewWidgetDesc(e.target.value)}
+                  placeholder="可选，描述此组件的用途"
+                  className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:border-emerald-500/50 focus:outline-none transition-colors"
+                />
+              </div>
+            </div>
+
+            {/* API Configuration */}
+            <div className="space-y-4 mb-6">
+              <h4 className="text-sm font-medium text-white flex items-center gap-2">
+                <Globe className="w-4 h-4 text-emerald-400" />
+                API配置
+              </h4>
+              
+              <div>
+                <label className="block text-sm text-slate-400 mb-2">API URL *</label>
+                <input
+                  type="text"
+                  value={apiUrl}
+                  onChange={(e) => setApiUrl(e.target.value)}
+                  placeholder="https://api.example.com/data"
+                  className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:border-emerald-500/50 focus:outline-none transition-colors"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm text-slate-400 mb-2">请求方法</label>
+                  <select
+                    value={apiMethod}
+                    onChange={(e) => setApiMethod(e.target.value as 'GET' | 'POST')}
+                    className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white focus:border-emerald-500/50 focus:outline-none transition-colors"
+                  >
+                    <option value="GET">GET</option>
+                    <option value="POST">POST</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm text-slate-400 mb-2">刷新间隔(秒)</label>
+                  <input
+                    type="number"
+                    value={refreshInterval}
+                    onChange={(e) => setRefreshInterval(parseInt(e.target.value) || 0)}
+                    placeholder="0为不自动刷新"
+                    min="0"
+                    className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:border-emerald-500/50 focus:outline-none transition-colors"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm text-slate-400 mb-2">请求头 (JSON格式)</label>
+                <textarea
+                  value={apiHeaders}
+                  onChange={(e) => setApiHeaders(e.target.value)}
+                  placeholder='{"Authorization": "Bearer token", "Content-Type": "application/json"}'
+                  rows={2}
+                  className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:border-emerald-500/50 focus:outline-none transition-colors text-sm font-mono"
+                />
+              </div>
+
+              {apiMethod === 'POST' && (
+                <div>
+                  <label className="block text-sm text-slate-400 mb-2">请求体 (JSON格式)</label>
+                  <textarea
+                    value={apiBody}
+                    onChange={(e) => setApiBody(e.target.value)}
+                    placeholder='{"key": "value"}'
+                    rows={3}
+                    className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:border-emerald-500/50 focus:outline-none transition-colors text-sm font-mono"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm text-slate-400 mb-2">数据路径</label>
+                <input
+                  type="text"
+                  value={dataPath}
+                  onChange={(e) => setDataPath(e.target.value)}
+                  placeholder="例如：data.items 或 results (留空使用根数据)"
+                  className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:border-emerald-500/50 focus:outline-none transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-slate-400 mb-2">显示方式</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {(['list', 'table', 'card', 'text'] as const).map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => setDisplayType(type)}
+                      className={`px-3 py-2 rounded-lg text-sm border transition-all ${
+                        displayType === type 
+                          ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400' 
+                          : 'border-white/10 text-slate-400 hover:border-white/20'
+                      }`}
+                    >
+                      {type === 'list' && '列表'}
+                      {type === 'table' && '表格'}
+                      {type === 'card' && '卡片'}
+                      {type === 'text' && '文本'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Error Message */}
+            {addError && (
+              <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                {addError}
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setShowAddWidgetModal(false)}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 text-slate-300 hover:bg-white/10 transition-colors text-sm"
+              >
+                取消
+              </button>
+              <button 
+                onClick={handleAddWidget}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-emerald-500 text-[#0d0e10] hover:bg-emerald-400 transition-colors text-sm font-medium"
+              >
+                添加组件
+              </button>
+            </div>
           </div>
         </div>
       )}

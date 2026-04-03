@@ -222,33 +222,17 @@ const DataTab: React.FC<DataTabProps> = React.memo(({
   // 加载/错误状态
   const [isLoadingBackups, setIsLoadingBackups] = useState(false);
   const [isLoadingRemote, setIsLoadingRemote] = useState(false);
-  const [isCheckingAuth, setIsCheckingAuth] = useState(false);
   const [isCreatingBackup, setIsCreatingBackup] = useState(false);
-  const [isMigrating, setIsMigrating] = useState(false);
   const [restoringKey, setRestoringKey] = useState<string | null>(null);
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
-
-  // 隐私迁移状态
-  const [privacyTarget, setPrivacyTarget] = useState<'sync' | 'separate' | null>(null);
-  const [privacyOldPassword, setPrivacyOldPassword] = useState('');
-  const [privacyNewPassword, setPrivacyNewPassword] = useState('');
 
   // 错误状态
   const [backupError, setBackupError] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
   const [remoteError, setRemoteError] = useState<string | null>(null);
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [privacyError, setPrivacyError] = useState<string | null>(null);
 
-  // ==============================================
   // 计算属性（useMemo缓存，仅依赖变化时重计算）
   // ==============================================
-  const isWebmaster = useMemo(() => siteSettings.siteMode === 'webmaster', [siteSettings.siteMode]);
-  const canWrite = useMemo(() => authInfo?.canWrite ?? false, [authInfo]);
-  const isAdmin = useMemo(() => canWrite && (!isWebmaster || webmasterUnlocked), [canWrite, isWebmaster, webmasterUnlocked]);
-  const isSyncPasswordReady = useMemo(() => {
-    return (password && typeof password === 'string' && password.trim().length > 0);
-  }, [password]);
   const currentPrivacyMode = useMemo(() => useSeparatePrivacyPassword ? '独立密码' : '同步密码', [useSeparatePrivacyPassword]);
 
   // ==============================================
@@ -271,59 +255,11 @@ const DataTab: React.FC<DataTabProps> = React.memo(({
   // ==============================================
   // 核心回调（useCallback缓存，无重复创建）
   // ==============================================
-  const getAuthHeaders = useCallback((): Record<string, string> => {
-    const syncPwd = localStorage.getItem(SYNC_PASSWORD_KEY);
-    const viewPwd = localStorage.getItem(VIEW_PASSWORD_KEY);
-    return {
-      'Content-Type': 'application/json',
-      ...(syncPwd && { 'X-Sync-Password': syncPwd }),
-      ...(viewPwd && { 'X-View-Password': viewPwd })
-    };
-  }, []);
-
-  const handleSyncPasswordChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setPassword(val);
-    localStorage.setItem(SYNC_PASSWORD_KEY, val);
-    onSyncPasswordChange(val);
-  }, [onSyncPasswordChange]);
-
-  const handleViewPasswordChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setViewPassword(val);
-    localStorage.setItem(VIEW_PASSWORD_KEY, val);
-    onViewPasswordChange(val);
-  }, [onViewPasswordChange]);
-
-  const fetchAuthInfo = useCallback(async (): Promise<AuthInfo | null> => {
-    setIsCheckingAuth(true);
-    setAuthError(null);
-    try {
-      const res = await fetch(`${SYNC_API_ENDPOINT}?action=whoami`, { headers: getAuthHeaders() });
-      const result = await res.json();
-      if (!result.success) throw new Error(result.error);
-
-      const info: AuthInfo = {
-        passwordRequired: !!result.passwordRequired,
-        canWrite: !!result.canWrite,
-        viewPasswordRequired: !!result.viewPasswordRequired,
-        canView: !!result.canView
-      };
-      setAuthInfo(info);
-      return info;
-    } catch (err: any) {
-      setAuthError(err.message || '鉴权失败');
-      return null;
-    } finally {
-      setIsCheckingAuth(false);
-    }
-  }, [getAuthHeaders]);
-
   const fetchRemoteInfo = useCallback(async () => {
     setIsLoadingRemote(true);
     setRemoteError(null);
     try {
-      const res = await fetch(SYNC_API_ENDPOINT, { headers: getAuthHeaders() });
+      const res = await fetch(SYNC_API_ENDPOINT);
       const result = await res.json();
       if (!result.success) throw new Error(result.error);
 
@@ -337,14 +273,13 @@ const DataTab: React.FC<DataTabProps> = React.memo(({
     } finally {
       setIsLoadingRemote(false);
     }
-  }, [getAuthHeaders]);
+  }, []);
 
   const fetchBackups = useCallback(async () => {
-    if (!canWrite) return;
     setIsLoadingBackups(true);
     setBackupError(null);
     try {
-      const res = await fetch(`${SYNC_API_ENDPOINT}?action=backups`, { headers: getAuthHeaders() });
+      const res = await fetch(`${SYNC_API_ENDPOINT}?action=backups`);
       const result = await res.json();
       if (!result.success) throw new Error(result.error);
       setBackups(Array.isArray(result.backups) ? result.backups : []);
@@ -354,7 +289,7 @@ const DataTab: React.FC<DataTabProps> = React.memo(({
     } finally {
       setIsLoadingBackups(false);
     }
-  }, [canWrite, getAuthHeaders]);
+  }, []);
 
   const handleCreateBackup = useCallback(async () => {
     setIsCreatingBackup(true);
@@ -390,38 +325,11 @@ const DataTab: React.FC<DataTabProps> = React.memo(({
     }
   }, [fetchBackups, onDeleteBackup]);
 
-  const resetPrivacyMigration = useCallback(() => {
-    setPrivacyTarget(null);
-    setPrivacyOldPassword('');
-    setPrivacyNewPassword('');
-    setPrivacyError(null);
-  }, []);
-
-  const handleConfirmPrivacyMigration = useCallback(async () => {
-    if (!privacyTarget) return;
-    setIsMigrating(true);
-    setPrivacyError(null);
-    try {
-      const success = await onMigratePrivacyMode({
-        useSeparatePassword: privacyTarget === 'separate',
-        oldPassword: privacyOldPassword,
-        newPassword: privacyNewPassword
-      });
-      if (!success) throw new Error('迁移失败');
-      resetPrivacyMigration();
-    } catch (err: any) {
-      setPrivacyError(err.message);
-    } finally {
-      setIsMigrating(false);
-    }
-  }, [privacyTarget, privacyOldPassword, privacyNewPassword, onMigratePrivacyMode, resetPrivacyMigration]);
-
   // ==============================================
   // 依赖副作用（自动触发数据加载）
   // ==============================================
   useEffect(() => { fetchRemoteInfo(); }, [fetchRemoteInfo]);
-  useEffect(() => { fetchAuthInfo(); }, [fetchAuthInfo, password, viewPassword]);
-  useEffect(() => { if (canWrite) fetchBackups(); }, [fetchBackups, canWrite]);
+  useEffect(() => { fetchBackups(); }, [fetchBackups]);
 
   // ==============================================
   // 主渲染
@@ -434,7 +342,7 @@ const DataTab: React.FC<DataTabProps> = React.memo(({
           数据管理 (Data Management)
         </h4>
 
-        {/* 云端同步面板 */}
+        {/* 云端同步面板 - 简化版 */}
         <div className="mb-4 p-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
           <div className="flex items-center gap-3">
             <Cloud className="w-5 h-5 text-green-600 dark:text-green-400" />
@@ -445,35 +353,9 @@ const DataTab: React.FC<DataTabProps> = React.memo(({
               </div>
             </div>
           </div>
-
-          <div className="mt-4 space-y-3 border-t border-green-200 dark:border-green-800/50 pt-4">
-            <PasswordInput
-              value={password}
-              onChange={handleSyncPasswordChange}
-              placeholder="未设置密码"
-              label="API 访问密码 (可选)"
-              icon={<Lock size={12} />}
-              className="bg-white dark:bg-slate-900 border-green-200 dark:border-green-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
-            />
-            <p className="text-[10px] text-green-600/80 dark:text-green-400/80 leading-relaxed">
-              如需增强安全性，请在 Cloudflare Pages 后台设置 <code>SYNC_PASSWORD</code> 环境变量，并在此处输入相同密码。
-            </p>
-
-            <PasswordInput
-              value={viewPassword}
-              onChange={handleViewPasswordChange}
-              placeholder="未设置密码"
-              label="隐藏内容密码 (可选)"
-              icon={<EyeOff size={12} />}
-              className="bg-white dark:bg-slate-900 border-green-200 dark:border-green-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
-            />
-            <p className="text-[10px] text-green-600/80 dark:text-green-400/80 leading-relaxed">
-              站长模式下可用于“只读解锁隐藏内容”。在 Cloudflare 后台设置 <code>VIEW_PASSWORD</code> 环境变量后生效。
-            </p>
-          </div>
         </div>
 
-        {/* 同步状态面板 */}
+        {/* 同步状态面板 - 简化版 */}
         <div className="mb-4 p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/40 backdrop-blur-sm">
           <div className="flex items-center justify-between gap-2 mb-3">
             <div className="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-200">
@@ -488,37 +370,6 @@ const DataTab: React.FC<DataTabProps> = React.memo(({
               <RefreshCw size={12} className={isLoadingRemote ? 'animate-spin' : ''} />
               刷新
             </button>
-          </div>
-
-          {/* 权限信息 */}
-          <div className="mt-3 flex flex-wrap gap-2 text-xs mb-3">
-            <span className="px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-              站点模式：{isWebmaster ? '站长模式(只读)' : '个人模式'}
-            </span>
-            <span className="px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-              写权限：{canWrite ? '有' : '无'}
-            </span>
-            {authError && <span className="text-red-600 dark:text-red-400 text-xs">{authError}</span>}
-          </div>
-
-          {/* 站长操作区 */}
-          <div className="flex flex-wrap gap-2 mb-3">
-            {isWebmaster && !webmasterUnlocked && (
-              <button
-                onClick={async () => {
-                  const res = await fetchAuthInfo();
-                  if (res?.canWrite && onWebmasterUnlockedChange) onWebmasterUnlockedChange(true);
-                }}
-                disabled={isCheckingAuth}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-accent text-white hover:opacity-90 disabled:opacity-60"
-              >
-                {isCheckingAuth ? '验证中...' : '验证站长密码'}
-              </button>
-            )}
-            <button onClick={fetchAuthInfo} disabled={isCheckingAuth} className="px-3 py-1.5 rounded-lg text-xs border border-slate-200 dark:border-slate-700">
-              刷新鉴权
-            </button>
-            <span className="ml-auto text-[10px] text-slate-400">API：{SYNC_API_VERSION} / Schema：v{SYNC_DATA_SCHEMA_VERSION}</span>
           </div>
 
           {/* 本地/云端状态卡片 */}
@@ -550,60 +401,6 @@ const DataTab: React.FC<DataTabProps> = React.memo(({
               </div>
             </div>
           </div>
-
-          {/* 站长模式开关 */}
-          <div className="mt-4 pt-4 border-t">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold">站长模式（强只读）</span>
-              <ToggleSwitch
-                checked={isWebmaster}
-                onChange={() => onSiteSettingChange('siteMode', isWebmaster ? 'personal' : 'webmaster')}
-                disabled={!isAdmin}
-                label="切换站长模式"
-              />
-            </div>
-            <p className="mt-1 text-[10px] text-slate-500">开启后访客仅可浏览，无法编辑/写入数据</p>
-          </div>
-        </div>
-
-        {/* 隐私分组面板 */}
-        <div className="mb-4 p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/40">
-          <div className="flex items-center gap-2 text-sm font-bold mb-3">
-            <Lock size={14} className="text-slate-500" />
-            隐私分组
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-xs">启用隐私分组</span>
-              <ToggleSwitch checked={privacyGroupEnabled} onChange={() => onTogglePrivacyGroup(!privacyGroupEnabled)} label="启用隐私分组" />
-            </div>
-
-            <div className="flex justify-between items-center">
-              <span className="text-xs">自动解锁</span>
-              <ToggleSwitch checked={privacyAutoUnlockEnabled} onChange={() => onTogglePrivacyAutoUnlock(!privacyAutoUnlockEnabled)} disabled={!privacyGroupEnabled} label="自动解锁" />
-            </div>
-
-            <p className="text-xs text-slate-500">当前模式：{currentPrivacyMode}</p>
-
-            <div className="flex gap-2 flex-wrap">
-              <button onClick={() => setPrivacyTarget('separate')} disabled={useSeparatePrivacyPassword || !isSyncPasswordReady} className="px-3 py-1.5 text-xs border rounded-lg disabled:opacity-50">切换独立密码</button>
-              <button onClick={() => setPrivacyTarget('sync')} disabled={!useSeparatePrivacyPassword} className="px-3 py-1.5 text-xs border rounded-lg disabled:opacity-50">切换同步密码</button>
-            </div>
-
-            {/* 隐私迁移表单 */}
-            {privacyTarget && (
-              <div className="space-y-2 mt-3">
-                <input type="password" value={privacyOldPassword} onChange={(e) => setPrivacyOldPassword(e.target.value)} placeholder="旧密码" className="w-full p-2 text-xs border rounded-lg" />
-                <input type="password" value={privacyNewPassword} onChange={(e) => setPrivacyNewPassword(e.target.value)} placeholder="新密码" className="w-full p-2 text-xs border rounded-lg" />
-                {privacyError && <p className="text-xs text-red-600">{privacyError}</p>}
-                <div className="flex gap-2">
-                  <button onClick={handleConfirmPrivacyMigration} disabled={isMigrating} className="px-3 py-1.5 text-xs bg-accent text-white rounded-lg">确认迁移</button>
-                  <button onClick={resetPrivacyMigration} className="px-3 py-1.5 text-xs rounded-lg">取消</button>
-                </div>
-              </div>
-            )}
-          </div>
         </div>
 
         {/* 云端备份列表 */}
@@ -611,13 +408,12 @@ const DataTab: React.FC<DataTabProps> = React.memo(({
           <div className="flex justify-between items-center mb-3">
             <span className="text-sm font-bold">云端备份列表</span>
             <div className="flex gap-3">
-              <button onClick={handleCreateBackup} disabled={isCreatingBackup || !isAdmin} className="text-xs text-emerald-600 flex items-center gap-1">
+              <button onClick={handleCreateBackup} disabled={isCreatingBackup} className="text-xs text-emerald-600 flex items-center gap-1">
                 <CloudUpload size={12} className={isCreatingBackup ? 'animate-spin' : ''} />创建备份
               </button>
             </div>
           </div>
 
-          {!canWrite && <p className="text-xs text-slate-500">无写权限，无法查看备份</p>}
           {createError && <p className="text-xs text-red-600 mb-2">{createError}</p>}
 
           <div className="space-y-2">
@@ -626,8 +422,8 @@ const DataTab: React.FC<DataTabProps> = React.memo(({
                 <div className="flex justify-between items-center">
                   <span className="text-xs flex items-center gap-1"><Clock size={12} />{formatBackupTime(backup)}</span>
                   <div className="flex gap-2">
-                    <button onClick={() => handleRestoreBackup(backup.key)} disabled={!!restoringKey || !isAdmin} className="text-xs text-amber-600"><CloudDownload size={12} />恢复</button>
-                    <button onClick={() => handleDeleteBackup(backup.key)} disabled={!!deletingKey || !isAdmin} className="text-xs text-red-600"><Trash2 size={12} />删除</button>
+                    <button onClick={() => handleRestoreBackup(backup.key)} disabled={!!restoringKey} className="text-xs text-amber-600"><CloudDownload size={12} />恢复</button>
+                    <button onClick={() => handleDeleteBackup(backup.key)} disabled={!!deletingKey} className="text-xs text-red-600"><Trash2 size={12} />删除</button>
                   </div>
                 </div>
                 <p className="text-xs text-slate-500 mt-1 flex items-center gap-1"><Cpu size={12} />{formatDeviceLabel(backup.deviceId, backup.browser, backup.os)}</p>
@@ -639,8 +435,7 @@ const DataTab: React.FC<DataTabProps> = React.memo(({
         {/* 导入数据按钮 */}
         <button
           onClick={() => { onOpenImport(); onClose(); }}
-          disabled={!isAdmin}
-          className="flex flex-col items-center justify-center gap-3 p-6 rounded-xl border border-dashed hover:border-accent hover:bg-accent/5 transition-all disabled:opacity-60"
+          className="flex flex-col items-center justify-center gap-3 p-6 rounded-xl border border-dashed hover:border-accent hover:bg-accent/5 transition-all"
         >
           <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
             <Upload size={24} />

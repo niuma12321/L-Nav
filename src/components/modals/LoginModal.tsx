@@ -121,10 +121,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onLogin, onClose
             )}
           </button>
         </form>
-
-        <div className="mt-6 text-center text-xs text-slate-500">
-          默认账号: ljq | 密码: jk712732
-        </div>
       </div>
     </div>
   );
