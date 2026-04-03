@@ -49,7 +49,6 @@ import {
   useSyncEngine,
   useNotes,
   useRouter,
-  useWidgets,
   buildSyncData
 } from './hooks';
 
@@ -69,8 +68,6 @@ import {
   WEBMASTER_UNLOCKED_KEY,
   getDeviceId
 } from './utils/constants';
-// Widget components
-import WidgetGrid from './components/widgets/WidgetGrid';
 import { decryptPrivateVault, encryptPrivateVault } from './utils/privateVault';
 
 function App() {
@@ -96,14 +93,6 @@ function App() {
   const { notes, addNote, updateNote, deleteNote, importNotes } = useNotes();
 
   // === Widgets ===
-  const { 
-    widgets, 
-    addWidget, 
-    removeWidget, 
-    updateWidgetSettings, 
-    toggleWidget 
-  } = useWidgets();
-
   // === Private Vault ===
   const [privateVaultCipher, setPrivateVaultCipher] = useState<string | null>(null);
   const [privateLinks, setPrivateLinks] = useState<LinkItem[]>([]);
