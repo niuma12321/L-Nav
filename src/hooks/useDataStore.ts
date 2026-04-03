@@ -4,6 +4,9 @@ import { arrayMove } from '@dnd-kit/sortable';
 import { LOCAL_STORAGE_KEY, FAVICON_CACHE_KEY } from '../utils/constants';
 import { useDialog } from '../components/ui/DialogProvider';
 
+// 添加全局调试日志
+console.log('[App] Initializing, localStorage keys:', Object.keys(localStorage));
+
 export const useDataStore = () => {
     const [links, setLinks] = useState<LinkItem[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
@@ -12,9 +15,13 @@ export const useDataStore = () => {
 
     // 数据监控：确保数据永远不会为空
     useEffect(() => {
-        if (!isLoaded) return;
+        if (!isLoaded) {
+            console.log('[DataStore] Not loaded yet, skipping check');
+            return;
+        }
         
         console.log('[DataStore] Data check - links:', links?.length, 'categories:', categories?.length);
+        console.log('[DataStore] localStorage data:', localStorage.getItem(LOCAL_STORAGE_KEY)?.substring(0, 200));
         
         // 如果链接为空，恢复默认数据
         if (!links || links.length === 0) {
