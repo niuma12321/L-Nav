@@ -101,8 +101,9 @@ const parseHTMLTable = (html: string): any[] => {
 
 // 从数组项中获取字段值
 const getFieldValue = (item: any, fieldPath: string): string => {
-  if (!fieldPath) return '';
+  // 如果item是字符串，直接返回（用于字符串数组）
   if (typeof item === 'string') return item;
+  if (!fieldPath) return String(item);
   if (typeof item !== 'object') return String(item);
   const value = getNestedValue(item, fieldPath);
   if (value === null || value === undefined) return '';
