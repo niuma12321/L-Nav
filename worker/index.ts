@@ -140,50 +140,59 @@ async function handleSyncAPI(request: Request, env: Env): Promise<Response> {
         'SELECT * FROM user_settings WHERE user_id = ?'
       ).bind('default').first();
 
-      const syncData = {
-        links: links.results || [],
-        categories: categories.results || [],
-        settings: settings || {},
-        meta: { version: 1, updatedAt: Date.now(), deviceId: 'cloud' }
-      };
+      // 检查 D1 是否有有效数据
+      const hasD1Data = (links.results && links.results.length > 0) || 
+                        (categories.results && categories.results.length > 0);
 
-      return new Response(JSON.stringify({ success: true, data: syncData }), {
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
-    } catch (e) {
-      // D1 失败，回退到 KV (ynav:data:v1)
-      const kvData = await env.YNAV_WORKER_KV.get('ynav:data:v1', 'text');
-      if (!kvData) {
-        return new Response(JSON.stringify({ success: false, error: 'No data found' }), {
-          status: 404,
+      if (hasD1Data) {
+        const syncData = {
+          links: links.results || [],
+          categories: categories.results || [],
+          settings: settings || {},
+          meta: { version: 1, updatedAt: Date.now(), deviceId: 'cloud' }
+        };
+        return new Response(JSON.stringify({ success: true, data: syncData }), {
           headers: { 'Content-Type': 'application/json', ...corsHeaders }
         });
       }
-      const parsed = JSON.parse(kvData);
-      // KV 存储格式可能是: { links, categories, ... } 或 { data: { links, categories, ... }, expectedVersion: ... }
-      // 提取实际的同步数据
-      let responseData;
-      if (parsed.data && (parsed.data.links || parsed.data.categories)) {
-        // 格式: { data: { links, categories, ... }, expectedVersion: ... }
-        responseData = parsed.data;
-      } else if (parsed.links || parsed.categories) {
-        // 格式: { links, categories, ... }
-        responseData = parsed;
-      } else {
-        responseData = parsed;
-      }
-      return new Response(JSON.stringify({ success: true, data: responseData }), {
+      // D1 没有数据，继续执行 KV 回退逻辑
+    } catch (e) {
+      // D1 查询失败，继续执行 KV 回退逻辑
+      console.error('D1 query failed, falling back to KV:', e);
+    }
+    
+    // 回退到 KV (ynav:data:v1)
+    const kvData = await env.YNAV_WORKER_KV.get('ynav:data:v1', 'text');
+    if (!kvData) {
+      return new Response(JSON.stringify({ success: false, error: 'No data found' }), {
+        status: 404,
         headers: { 'Content-Type': 'application/json', ...corsHeaders }
       });
     }
+    const parsed = JSON.parse(kvData);
+    // KV 存储格式可能是: { links, categories, ... } 或 { data: { links, categories, ... }, expectedVersion: ... }
+    // 提取实际的同步数据
+    let responseData;
+    if (parsed.data && (parsed.data.links || parsed.data.categories)) {
+      // 格式: { data: { links, categories, ... }, expectedVersion: ... }
+      responseData = parsed.data;
+    } else if (parsed.links || parsed.categories) {
+      // 格式: { links, categories, ... }
+      responseData = parsed;
+    } else {
+      responseData = parsed;
+    }
+    return new Response(JSON.stringify({ success: true, data: responseData }), {
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
   }
 
   if (request.method === 'POST') {
     const body = await request.text();
     const data = JSON.parse(body);
 
-    // 保存到 KV（始终）
-    await env.YNAV_WORKER_KV.put('sync:data', body);
+    // 保存到 KV（始终使用 ynav:data:v1 保持一致性）
+    await env.YNAV_WORKER_KV.put('ynav:data:v1', body);
 
     // 尝试保存到 D1
     try {
@@ -332,17 +341,39 @@ async function handleBackupAPI(request: Request, env: Env): Promise<Response> {
   });
 }
 
-  // 链接管理 API
+  // 链接管理 API - D1 优先，KV 回退
 async function handleLinksAPI(request: Request, env: Env): Promise<Response> {
   if (request.method === 'GET') {
     try {
       const result = await env.YNAV_D1.prepare(
         'SELECT * FROM links WHERE user_id = ? ORDER BY order_index'
       ).bind('default').all();
+      
+      // 如果 D1 没有数据，回退到 KV
+      if (!result.results || result.results.length === 0) {
+        const kvData = await env.YNAV_WORKER_KV.get('ynav:data:v1', 'text');
+        if (kvData) {
+          const parsed = JSON.parse(kvData);
+          const links = parsed.links || parsed.data?.links || [];
+          return new Response(JSON.stringify({ success: true, links }), {
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+      }
+      
       return new Response(JSON.stringify({ success: true, links: result.results || [] }), {
         headers: { 'Content-Type': 'application/json', ...corsHeaders }
       });
     } catch (e) {
+      // D1 失败，回退到 KV
+      const kvData = await env.YNAV_WORKER_KV.get('ynav:data:v1', 'text');
+      if (kvData) {
+        const parsed = JSON.parse(kvData);
+        const links = parsed.links || parsed.data?.links || [];
+        return new Response(JSON.stringify({ success: true, links }), {
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
       return new Response(JSON.stringify({ error: 'Database error' }), {
         status: 500,
         headers: { 'Content-Type': 'application/json', ...corsHeaders }
@@ -352,6 +383,8 @@ async function handleLinksAPI(request: Request, env: Env): Promise<Response> {
 
   if (request.method === 'POST') {
     const link = await request.json() as any;
+    
+    // 先尝试保存到 D1
     try {
       await env.YNAV_D1.prepare(`
         INSERT OR REPLACE INTO links 
@@ -362,15 +395,32 @@ async function handleLinksAPI(request: Request, env: Env): Promise<Response> {
         link.icon || '', link.favicon || '', link.pinned ? 1 : 0, link.hidden ? 1 : 0,
         link.order || 0, link.createdAt || Date.now(), Date.now(), 'default'
       ).run();
-      return new Response(JSON.stringify({ success: true }), {
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
     } catch (e) {
-      return new Response(JSON.stringify({ error: 'Failed to save link' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+      console.error('D1 save failed:', e);
     }
+    
+    // 同时更新 KV 中的数据
+    try {
+      const kvData = await env.YNAV_WORKER_KV.get('ynav:data:v1', 'text');
+      let data = kvData ? JSON.parse(kvData) : { links: [], categories: [] };
+      if (data.data) data = data.data; // 解包嵌套
+      
+      // 更新或添加链接
+      const existingIndex = data.links.findIndex((l: any) => l.id === link.id);
+      if (existingIndex >= 0) {
+        data.links[existingIndex] = { ...data.links[existingIndex], ...link };
+      } else {
+        data.links.push(link);
+      }
+      
+      await env.YNAV_WORKER_KV.put('ynav:data:v1', JSON.stringify(data));
+    } catch (e) {
+      console.error('KV update failed:', e);
+    }
+    
+    return new Response(JSON.stringify({ success: true }), {
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
   }
 
   return new Response(JSON.stringify({ error: 'Method not allowed' }), {
@@ -379,17 +429,39 @@ async function handleLinksAPI(request: Request, env: Env): Promise<Response> {
   });
 }
 
-// 分类管理 API
+// 分类管理 API - D1 优先，KV 回退
 async function handleCategoriesAPI(request: Request, env: Env): Promise<Response> {
   if (request.method === 'GET') {
     try {
       const result = await env.YNAV_D1.prepare(
         'SELECT * FROM categories WHERE user_id = ? ORDER BY order_index'
       ).bind('default').all();
+      
+      // 如果 D1 没有数据，回退到 KV
+      if (!result.results || result.results.length === 0) {
+        const kvData = await env.YNAV_WORKER_KV.get('ynav:data:v1', 'text');
+        if (kvData) {
+          const parsed = JSON.parse(kvData);
+          const categories = parsed.categories || parsed.data?.categories || [];
+          return new Response(JSON.stringify({ success: true, categories }), {
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+      }
+      
       return new Response(JSON.stringify({ success: true, categories: result.results || [] }), {
         headers: { 'Content-Type': 'application/json', ...corsHeaders }
       });
     } catch (e) {
+      // D1 失败，回退到 KV
+      const kvData = await env.YNAV_WORKER_KV.get('ynav:data:v1', 'text');
+      if (kvData) {
+        const parsed = JSON.parse(kvData);
+        const categories = parsed.categories || parsed.data?.categories || [];
+        return new Response(JSON.stringify({ success: true, categories }), {
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
       return new Response(JSON.stringify({ error: 'Database error' }), {
         status: 500,
         headers: { 'Content-Type': 'application/json', ...corsHeaders }
@@ -399,6 +471,8 @@ async function handleCategoriesAPI(request: Request, env: Env): Promise<Response
 
   if (request.method === 'POST') {
     const cat = await request.json() as any;
+    
+    // 先尝试保存到 D1
     try {
       await env.YNAV_D1.prepare(`
         INSERT OR REPLACE INTO categories 
@@ -407,15 +481,32 @@ async function handleCategoriesAPI(request: Request, env: Env): Promise<Response
       `).bind(
         cat.id, cat.name, cat.icon || '', cat.hidden ? 1 : 0, cat.order || 0, 'default'
       ).run();
-      return new Response(JSON.stringify({ success: true }), {
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
     } catch (e) {
-      return new Response(JSON.stringify({ error: 'Failed to save category' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+      console.error('D1 save failed:', e);
     }
+    
+    // 同时更新 KV 中的数据
+    try {
+      const kvData = await env.YNAV_WORKER_KV.get('ynav:data:v1', 'text');
+      let data = kvData ? JSON.parse(kvData) : { links: [], categories: [] };
+      if (data.data) data = data.data; // 解包嵌套
+      
+      // 更新或添加分类
+      const existingIndex = data.categories.findIndex((c: any) => c.id === cat.id);
+      if (existingIndex >= 0) {
+        data.categories[existingIndex] = { ...data.categories[existingIndex], ...cat };
+      } else {
+        data.categories.push(cat);
+      }
+      
+      await env.YNAV_WORKER_KV.put('ynav:data:v1', JSON.stringify(data));
+    } catch (e) {
+      console.error('KV update failed:', e);
+    }
+    
+    return new Response(JSON.stringify({ success: true }), {
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
   }
 
   return new Response(JSON.stringify({ error: 'Method not allowed' }), {
