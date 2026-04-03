@@ -93,6 +93,8 @@ const ResourceCenterViewCN: React.FC<ResourceCenterViewCNProps> = ({
   links = [],
   categories = []
 }) => {
+  console.log('[ResourceCenter] Received links:', links?.length, 'categories:', categories?.length);
+  
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
