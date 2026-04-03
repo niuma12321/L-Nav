@@ -103,6 +103,12 @@ export function useWidgetSystem() {
     });
   }, []);
 
+  const updateWidget = useCallback((updatedWidget: WidgetConfig) => {
+    setWidgets(prev => prev.map(w => 
+      w.id === updatedWidget.id ? updatedWidget : w
+    ));
+  }, []);
+
   const enabledWidgets = widgets.filter(w => w.enabled);
 
   return {
@@ -116,6 +122,7 @@ export function useWidgetSystem() {
     updateWidgetSettings,
     reorderWidgets,
     addWidget,
-    removeWidget
+    removeWidget,
+    updateWidget
   };
 }

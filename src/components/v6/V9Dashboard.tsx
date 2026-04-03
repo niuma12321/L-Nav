@@ -186,23 +186,54 @@ const WeatherWidget: React.FC = () => {
       alert('您的浏览器不支持地理定位');
       return;
     }
+    // 检查是否HTTPS或localhost（地理定位需要安全上下文）
+    const isSecureContext = window.isSecureContext || 
+      window.location.hostname === 'localhost' || 
+      window.location.hostname === '127.0.0.1';
+    if (!isSecureContext) {
+      alert('地理定位需要在HTTPS或localhost环境下使用');
+      return;
+    }
     setIsLocating(true);
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
         try {
-          // 使用逆地理编码获取城市信息（这里简化处理，使用经纬度查询天气）
-          // 实际项目中应该调用城市查询API转换坐标到城市ID
-          // 这里暂时使用北京作为示例
-          await fetchWeather('101010100', '北京(定位)');
+          // 使用逆地理编码获取城市信息
+          const response = await fetch(`https://apis.map.qq.com/ws/geocoder/v1/?location=${latitude},${longitude}&key=OB4BZ-D4W3U-B7VVO-4PJWW-6TKDJ-WPB77&get_poi=0`);
+          const data = await response.json();
+          if (data.status === 0 && data.result?.ad_info?.city) {
+            const cityName = data.result.ad_info.city.replace(/市$/, '');
+            // 查找城市ID
+            const city = cities.find(c => cityName.includes(c.name) || c.name.includes(cityName));
+            if (city) {
+              await fetchWeather(city.id, city.name);
+            } else {
+              await fetchWeather('101010100', '北京(定位)');
+            }
+          } else {
+            await fetchWeather('101010100', '北京(定位)');
+          }
         } catch {
-          setWeather(prev => ({ ...prev, loading: false, error: true }));
+          await fetchWeather('101010100', '北京(定位)');
         }
         setIsLocating(false);
       },
       (error) => {
         setIsLocating(false);
-        alert('获取定位失败: ' + error.message);
+        let errorMsg = '获取定位失败';
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMsg = '定位权限被拒绝，请在浏览器设置中允许定位';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMsg = '位置信息不可用';
+            break;
+          case error.TIMEOUT:
+            errorMsg = '获取定位超时';
+            break;
+        }
+        alert(errorMsg);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
     );
@@ -1045,6 +1076,17 @@ const LinkCard: React.FC<{
   // 使用更可靠的 favicon 服务，添加错误处理
   const faviconUrl = icon || `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    // 如果点击的是编辑按钮，不处理
+    if ((e.target as HTMLElement).closest('button')) return;
+    
+    let finalUrl = url;
+    if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
+      finalUrl = 'https://' + finalUrl;
+    }
+    window.open(finalUrl, '_blank');
+  };
+
   const handleEdit = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -1056,6 +1098,7 @@ const LinkCard: React.FC<{
       href={url}
       target="_blank"
       rel="noopener noreferrer"
+      onClick={handleCardClick}
       className="group relative rounded-2xl transition-all duration-300 ease-out bg-[#181a1c] border overflow-hidden cursor-pointer shadow-sm hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-500/10 active:scale-98 border-white/5 hover:border-emerald-500/30 p-4 sm:p-5"
     >
       <div className="flex flex-col min-w-0 gap-3">

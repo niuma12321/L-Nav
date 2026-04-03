@@ -137,14 +137,15 @@ const WidgetSettingsModal: React.FC<{
 };
 
 const WidgetConfigCenter: React.FC = () => {
-  const { widgets, toggleWidget, updateWidgetPosition, addWidget, removeWidget } = useWidgetSystem();
+  const { widgets, toggleWidget, updateWidgetPosition, addWidget, removeWidget, updateWidget } = useWidgetSystem();
   const [previewMode, setPreviewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [showAddWidgetModal, setShowAddWidgetModal] = useState(false);
+  const [editingWidget, setEditingWidget] = useState<WidgetConfig | null>(null);
   const [settingsWidget, setSettingsWidget] = useState<WidgetConfig | null>(null);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Add widget form state
+  // Add/Edit widget form state
   const [newWidgetType, setNewWidgetType] = useState<'api-data'>('api-data');
   const [newWidgetTitle, setNewWidgetTitle] = useState('');
   const [newWidgetDesc, setNewWidgetDesc] = useState('');
@@ -161,6 +162,42 @@ const WidgetConfigCenter: React.FC = () => {
   const fixedWidgets = widgets.filter(w => w.isFixed);
   const customWidgets = widgets.filter(w => !w.isFixed);
   const enabledCount = widgets.filter(w => w.enabled).length;
+
+  // 打开编辑弹窗
+  const handleEditWidget = (widget: WidgetConfig) => {
+    setEditingWidget(widget);
+    // 填充表单数据
+    if (widget.settings?.api) {
+      const api = widget.settings.api;
+      setNewWidgetTitle(widget.title);
+      setNewWidgetDesc(widget.description);
+      setApiUrl(api.apiUrl || '');
+      setApiMethod(api.method || 'GET');
+      setApiHeaders(api.headers ? JSON.stringify(api.headers, null, 2) : '');
+      setApiBody(api.body ? JSON.stringify(api.body, null, 2) : '');
+      setRefreshInterval(api.refreshInterval || 0);
+      setDataPath(api.dataPath || '');
+      setDisplayType(api.displayType || 'list');
+    }
+    setShowAddWidgetModal(true);
+  };
+
+  // 关闭弹窗时重置表单
+  const handleCloseModal = () => {
+    setShowAddWidgetModal(false);
+    setEditingWidget(null);
+    // Reset form
+    setNewWidgetTitle('');
+    setNewWidgetDesc('');
+    setApiUrl('');
+    setApiMethod('GET');
+    setApiHeaders('');
+    setApiBody('');
+    setRefreshInterval(0);
+    setDataPath('');
+    setDisplayType('list');
+    setAddError('');
+  };
 
   const handleSaveLayout = () => {
     // Save current widget order and settings
@@ -206,13 +243,13 @@ const WidgetConfigCenter: React.FC = () => {
       }
       
       const apiConfig: APIDataConfig = {
-        id: `custom-${Date.now()}`,
+        id: editingWidget?.id || `custom-${Date.now()}`,
         name: newWidgetTitle,
         apiUrl: apiUrl,
         method: apiMethod,
         headers: Object.keys(parsedHeaders).length > 0 ? parsedHeaders : undefined,
         body: parsedBody,
-        refreshInterval: refreshInterval, // 秒
+        refreshInterval: refreshInterval,
         dataPath: dataPath || '',
         displayType: displayType as any,
         fields: {
@@ -223,22 +260,24 @@ const WidgetConfigCenter: React.FC = () => {
         emptyText: '暂无数据'
       };
       
-      const newWidget = createAPIWidget(apiConfig);
-      addWidget(newWidget);
+      if (editingWidget) {
+        // 更新现有组件
+        const updatedWidget = {
+          ...editingWidget,
+          title: newWidgetTitle,
+          description: newWidgetDesc,
+          settings: { api: apiConfig }
+        };
+        updateWidget(updatedWidget);
+      } else {
+        // 创建新组件
+        const newWidget = createAPIWidget(apiConfig);
+        addWidget(newWidget);
+      }
       
-      // Reset form
-      setNewWidgetTitle('');
-      setNewWidgetDesc('');
-      setApiUrl('');
-      setApiMethod('GET');
-      setApiHeaders('');
-      setApiBody('');
-      setRefreshInterval(0);
-      setDataPath('');
-      setDisplayType('list');
-      setShowAddWidgetModal(false);
+      handleCloseModal();
     } catch (err) {
-      setAddError('创建组件失败');
+      setAddError(editingWidget ? '更新组件失败' : '创建组件失败');
     }
   };
 
@@ -327,7 +366,7 @@ const WidgetConfigCenter: React.FC = () => {
               index={index}
               isFixed={false}
               onToggle={() => toggleWidget(widget.id)}
-              onEdit={() => {}}
+              onEdit={() => handleEditWidget(widget)}
               onSettings={() => {
                 setSettingsWidget(widget);
                 setShowSettingsModal(true);
@@ -478,13 +517,13 @@ const WidgetConfigCenter: React.FC = () => {
         </div>
       </div>
 
-      {/* Add Widget Modal */}
+      {/* Add/Edit Widget Modal */}
       {showAddWidgetModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-[#181a1c] rounded-2xl border border-white/10 w-full max-w-lg p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-white">添加组件</h3>
-              <button onClick={() => setShowAddWidgetModal(false)} className="p-2 rounded-lg hover:bg-white/10 text-slate-400">
+              <h3 className="text-lg font-bold text-white">{editingWidget ? '编辑组件' : '添加组件'}</h3>
+              <button onClick={handleCloseModal} className="p-2 rounded-lg hover:bg-white/10 text-slate-400">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -642,7 +681,7 @@ const WidgetConfigCenter: React.FC = () => {
             {/* Actions */}
             <div className="flex gap-3">
               <button 
-                onClick={() => setShowAddWidgetModal(false)}
+                onClick={handleCloseModal}
                 className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 text-slate-300 hover:bg-white/10 transition-colors text-sm"
               >
                 取消
@@ -651,7 +690,7 @@ const WidgetConfigCenter: React.FC = () => {
                 onClick={handleAddWidget}
                 className="flex-1 px-4 py-2.5 rounded-xl bg-emerald-500 text-[#0d0e10] hover:bg-emerald-400 transition-colors text-sm font-medium"
               >
-                添加组件
+                {editingWidget ? '保存修改' : '添加组件'}
               </button>
             </div>
           </div>
@@ -718,13 +757,16 @@ const WidgetConfigCard: React.FC<{
 
       {/* Footer */}
       <div className="flex items-center justify-between pt-4 border-t border-white/5">
-        <button 
-          onClick={onEdit}
-          className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 text-sm text-white hover:bg-white/10 transition-colors"
-        >
-          <Edit3 className="w-3.5 h-3.5" />
-          进入编辑
-        </button>
+        {!isFixed && (
+          <button 
+            onClick={onEdit}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 text-sm text-white hover:bg-white/10 transition-colors"
+          >
+            <Edit3 className="w-3.5 h-3.5" />
+            进入编辑
+          </button>
+        )}
+        {isFixed && <div />}
         <div className="flex items-center gap-1">
           <button 
             onClick={onSettings}
