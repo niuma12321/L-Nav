@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 const API_BASE = '/api/v1/notifications';
 
@@ -26,8 +26,8 @@ export interface NotificationSettings {
 }
 
 export function useNotifications() {
-  // 从localStorage获取用户ID并使用useMemo缓存，避免每次渲染重新创建
-  const userId = useMemo(() => localStorage.getItem('user_id') || 'default', []);
+  // 从localStorage获取用户ID或使用默认值
+  const userId = localStorage.getItem('user_id') || 'default';
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -152,22 +152,17 @@ export function useNotifications() {
 
   // 请求浏览器通知权限
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (!('Notification' in window)) return;
-    if (!('serviceWorker' in navigator)) return;
-    
-    Notification.requestPermission().then(permission => {
-      if (permission === 'granted') {
-        console.log('通知权限已获取');
-      }
-    });
+    if ('Notification' in window && 'serviceWorker' in navigator) {
+      Notification.requestPermission().then(permission => {
+        if (permission === 'granted') {
+          console.log('通知权限已获取');
+        }
+      });
+    }
   }, []);
 
   // 监听新通知并触发桌面推送
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (!('Notification' in window)) return;
-    if (!('permission' in Notification)) return;
     if (Notification.permission !== 'granted') return;
 
     const shownNotifications = new Set<number>();
@@ -175,15 +170,11 @@ export function useNotifications() {
     notifications.forEach(n => {
       if (!n.is_read && !shownNotifications.has(n.id)) {
         shownNotifications.add(n.id);
-        try {
-          new Notification(`【L-Nav】${n.title}`, {
-            body: n.content,
-            icon: '/favicon.ico',
-            tag: `notification-${n.id}`
-          });
-        } catch (e) {
-          console.error('桌面通知发送失败', e);
-        }
+        new Notification(`【L-Nav】${n.title}`, {
+          body: n.content,
+          icon: '/favicon.ico',
+          tag: `notification-${n.id}`
+        });
       }
     });
   }, [notifications]);
