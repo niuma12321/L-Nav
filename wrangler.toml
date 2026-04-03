@@ -1,17 +1,41 @@
-# Cloudflare Workers 部署配置
+# Cloudflare Workers 部署配置 (Workers + Assets + D1 + R2)
 name = "home"
 main = "worker/index.ts"
 compatibility_date = "2024-01-01"
 
-# KV 命名空间绑定 - 用于数据同步
+# ==========================================
+# 数据存储配置
+# ==========================================
+
+# KV 命名空间 - 快速缓存和同步
 [[kv_namespaces]]
 binding = "YNAV_WORKER_KV"
 id = "43e6854cf0354bf5970054b899dde7d9"
 
+# D1 数据库 - 结构化数据存储
+[[d1_databases]]
+binding = "YNAV_D1"
+database_name = "y-nav-db"
+database_id = ""  # 需要填入你的 D1 database ID
+
+# R2 存储桶 - 大文件存储（备份、图标等）
+[[r2_buckets]]
+binding = "YNAV_R2"
+bucket_name = "y-nav-storage"
+
 # 静态资源 - 前端构建文件
-[[assets]]
+[assets]
 directory = "dist"
 
+# ==========================================
 # 环境变量
+# ==========================================
 [vars]
 NODE_ENV = "production"
+API_VERSION = "v1"
+
+# 生产环境配置
+[env.production]
+[env.production.vars]
+NODE_ENV = "production"
+API_VERSION = "v1"
