@@ -158,4 +158,41 @@ async function syncScenesFromHA(userId: string, env: Env, baseUrl: string, token
   }
 }
 
+// ==========================================
+// 设备告警通知函数
+// ==========================================
+
+// 创建设备告警通知
+async function createDeviceAlert(
+  userId: string,
+  deviceName: string,
+  deviceId: string,
+  alertType: 'offline' | 'error' | 'battery_low',
+  message: string,
+  env: Env
+) {
+  try {
+    const titles: Record<string, string> = {
+      offline: `⚠️ 设备「${deviceName}」离线`,
+      error: `⚠️ 设备「${deviceName}」异常`,
+      battery_low: `🔋 设备「${deviceName}」电量不足`
+    };
+
+    await env.DB.prepare(`
+      INSERT INTO notifications (user_id, type, title, content, related_type, related_id)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).bind(
+      userId,
+      'device_alert',
+      titles[alertType],
+      message,
+      'device',
+      deviceId
+    ).run();
+  } catch (e) {
+    console.error('创建设备告警通知失败:', e);
+  }
+}
+
+export { createDeviceAlert };
 export default smartHome;

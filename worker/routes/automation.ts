@@ -101,6 +101,7 @@ async function executeTask(task: any, env: Env) {
   try {
     const config = typeof task.action_config === 'string' ? JSON.parse(task.action_config) : task.action_config;
 
+    let result;
     switch (task.action_type) {
       case 'http_request':
         // 通用HTTP请求
@@ -109,37 +110,100 @@ async function executeTask(task: any, env: Env) {
           headers: config.headers || {},
           body: config.body ? JSON.stringify(config.body) : undefined
         });
-        return {
+        result = {
           status: res.ok ? 'success' : 'failed',
           output: await res.text(),
           duration: Date.now() - startTime
         };
+        break;
 
       case 'send_notification':
         // 发送通知
-        return { status: 'success', output: '通知已发送', duration: Date.now() - startTime };
+        result = { status: 'success', output: '通知已发送', duration: Date.now() - startTime };
+        break;
 
       case 'rclone_sync':
         // Rclone同步
-        return { status: 'success', output: 'Rclone同步已触发', duration: Date.now() - startTime };
+        result = { status: 'success', output: 'Rclone同步已触发', duration: Date.now() - startTime };
+        break;
 
       case 'docker':
         // Docker操作
-        return { status: 'success', output: 'Docker操作已执行', duration: Date.now() - startTime };
+        result = { status: 'success', output: 'Docker操作已执行', duration: Date.now() - startTime };
+        break;
 
       case 'script':
         // 执行脚本
-        return { status: 'success', output: '脚本已执行', duration: Date.now() - startTime };
+        result = { status: 'success', output: '脚本已执行', duration: Date.now() - startTime };
+        break;
 
       default:
         throw new Error('不支持的动作类型');
     }
+
+    // 创建成功通知
+    if (result.status === 'success') {
+      await createNotification(
+        task.user_id,
+        'task_success',
+        `任务「${task.name}」执行成功`,
+        `执行时长：${result.duration}ms`,
+        'task',
+        String(task.id),
+        env
+      );
+    } else {
+      await createNotification(
+        task.user_id,
+        'task_failed',
+        `任务「${task.name}」执行失败`,
+        `状态码错误，请检查配置`,
+        'task',
+        String(task.id),
+        env
+      );
+    }
+
+    return result;
   } catch (e: any) {
-    return {
+    const result = {
       status: 'failed',
       output: e.message,
       duration: Date.now() - startTime
     };
+
+    // 创建失败通知（高优先级）
+    await createNotification(
+      task.user_id,
+      'task_failed',
+      `⚠️ 任务「${task.name}」执行失败`,
+      `错误信息：${e.message}`,
+      'task',
+      String(task.id),
+      env
+    );
+
+    return result;
+  }
+}
+
+// 创建通知的辅助函数
+async function createNotification(
+  userId: string,
+  type: string,
+  title: string,
+  content: string,
+  relatedType: string | undefined,
+  relatedId: string | undefined,
+  env: Env
+) {
+  try {
+    await env.DB.prepare(`
+      INSERT INTO notifications (user_id, type, title, content, related_type, related_id)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).bind(userId, type, title, content, relatedType, relatedId).run();
+  } catch (e) {
+    console.error('创建通知失败:', e);
   }
 }
 

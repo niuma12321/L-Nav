@@ -14,50 +14,44 @@
 #      - SYNC_PASSWORD: (可选) 同步密码
 # ============================================
 
-name: Deploy to Cloudflare Workers
+name: Deploy Y-Nav to Cloudflare
 
 on:
+  # 1. 推送到 main 分支自动部署
   push:
     branches:
       - main
+  # 2. 支持手动触发部署
   workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Deployment environment'
-        required: false
-        default: 'production'
-        type: choice
-        options:
-          - production
-          - preview
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    name: Deploy to Workers
+    name: Deploy to Cloudflare Workers
     
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+          cache: 'npm' # 自动缓存 node_modules
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci # 安装根目录依赖
 
-      - name: Build
-        run: npm run build
+      - name: Build frontend
+        run: npm run build # 构建前端，生成 dist 目录
 
-      - name: Deploy to Cloudflare Workers
+      - name: Deploy to Cloudflare
         uses: cloudflare/wrangler-action@v3
         with:
+          # 核心：不要加 --env，直接用 wrangler.toml 里的 name = "home"
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          # 如果设置了同步密码，通过环境变量注入
-          command: deploy --env production
+          command: deploy
         env:
+          # 注入你的环境变量（如果需要）
           SYNC_PASSWORD: ${{ secrets.SYNC_PASSWORD }}

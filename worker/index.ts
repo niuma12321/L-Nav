@@ -1,6 +1,7 @@
 import { getAssetFromKV, serveSinglePageApp } from '@cloudflare/kv-asset-handler';
 import automation, { automationScheduled } from './routes/automation';
 import smartHome from './routes/smart-home';
+import notifications from './routes/notifications';
 
 export interface Env {
   YNAV_WORKER_KV: KVNamespace;
@@ -139,6 +140,11 @@ async function handleAPI(request: Request, env: Env, ctx: ExecutionContext): Pro
   // 智能家居 API
   if (path.startsWith('/api/v1/smart-home')) {
     return smartHome.fetch(request, env, ctx);
+  }
+
+  // 通知中心 API
+  if (path.startsWith('/api/v1/notifications')) {
+    return notifications.fetch(request, env, ctx);
   }
 
   return new Response(JSON.stringify({ error: 'Not found' }), {

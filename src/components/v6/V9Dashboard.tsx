@@ -53,8 +53,11 @@ import RSSReaderViewCN from './RSSReaderViewCN';
 import WidgetConfigCenter from './WidgetConfigCenter';
 import { AutomationCenterView } from '../automation/AutomationCenterView';
 import { SmartHomeView } from '../smartHome/SmartHomeView';
+import { NotificationsViewCN } from './NotificationsViewCN';
 import LabView from './LabView';
 import EmojiPicker from '../ui/EmojiPicker';
+import { useNotifications } from '../../hooks/useNotifications';
+import { NotificationDropdown } from './NotificationDropdown';
 
 interface V9DashboardProps {
   onAddResource?: () => void;
@@ -1227,6 +1230,17 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
   const [navEditModalOpen, setNavEditModalOpen] = useState(false);
   const [editingNavItem, setEditingNavItem] = useState<{id: string, label: string, originalId: string} | null>(null);
 
+  // 通知中心
+  const {
+    unreadCount,
+    notifications,
+    fetchNotifications,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification
+  } = useNotifications();
+  const [showNotificationPanel, setShowNotificationPanel] = useState(false);
+
   if (!isLoaded || !dataLoaded) {
     return (
       <div className="min-h-screen bg-[#0d0e10] flex items-center justify-center">
@@ -1312,13 +1326,40 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
               </button>
 
               {/* 通知 */}
-              <button 
-                onClick={() => alert('通知功能即将上线')}
-                className="relative p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all"
-              >
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-emerald-500" />
-              </button>
+              <div className="relative">
+                <button 
+                  onClick={() => {
+                    setShowNotificationPanel(!showNotificationPanel);
+                    if (!showNotificationPanel) {
+                      fetchNotifications({ limit: 10 });
+                    }
+                  }}
+                  className="relative p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all"
+                >
+                  <Bell className={`w-5 h-5 ${unreadCount > 0 ? 'animate-pulse' : ''}`} />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+                
+                {/* 通知下拉面板 */}
+                {showNotificationPanel && (
+                  <NotificationDropdown
+                    notifications={notifications}
+                    unreadCount={unreadCount}
+                    onClose={() => setShowNotificationPanel(false)}
+                    onMarkAsRead={markAsRead}
+                    onMarkAllAsRead={markAllAsRead}
+                    onDelete={deleteNotification}
+                    onViewAll={() => {
+                      setShowNotificationPanel(false);
+                      setActiveView('notifications');
+                    }}
+                  />
+                )}
+              </div>
 
               {/* 用户头像 */}
               <button 

@@ -192,3 +192,40 @@ AFTER UPDATE ON automation_tasks
 BEGIN
     UPDATE automation_tasks SET updated_at = (strftime('%s', 'now') * 1000) WHERE id = NEW.id;
 END;
+
+-- ==========================================
+-- 通知中心模块表
+-- ==========================================
+
+-- 通知主表
+CREATE TABLE IF NOT EXISTS notifications (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('task_success', 'task_failed', 'device_alert', 'price_alert', 'system_notice', 'reminder')),
+  title TEXT NOT NULL,
+  content TEXT,
+  related_type TEXT, -- 关联类型：task/device/price
+  related_id TEXT,   -- 关联ID：任务ID/设备ID/标的代码
+  is_read BOOLEAN DEFAULT 0,
+  is_pushed BOOLEAN DEFAULT 0, -- 是否已推送
+  created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000)
+);
+
+-- 用户通知配置表
+CREATE TABLE IF NOT EXISTS notification_settings (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT NOT NULL,
+  type TEXT NOT NULL,
+  enabled BOOLEAN DEFAULT 1, -- 是否启用该类型通知
+  push_browser BOOLEAN DEFAULT 1, -- 浏览器推送
+  push_email BOOLEAN DEFAULT 0, -- 邮件推送
+  push_webhook BOOLEAN DEFAULT 0, -- Webhook推送（飞书/钉钉）
+  webhook_url TEXT, -- Webhook地址
+  email_address TEXT, -- 邮件地址
+  UNIQUE(user_id, type)
+);
+
+-- 创建索引
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(user_id, is_read);
+CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(user_id, created_at DESC);
