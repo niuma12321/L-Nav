@@ -76,74 +76,82 @@ export const useDataStore = () => {
     }, []);
 
     useEffect(() => {
-        // 强制数据重置机制：检查是否需要重置数据
-        const resetFlag = localStorage.getItem('ynav_force_reset_v3');
-        if (!resetFlag) {
-            console.log('[DataStore] Force resetting ALL data to defaults');
-            localStorage.setItem('ynav_force_reset_v3', '1');
-            // 清除所有相关数据
+        // 强制数据重置机制：每次加载都检查并确保数据有效
+        console.log('[DataStore] Checking data...');
+        
+        // 先尝试读取现有数据
+        const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+        let hasValidData = false;
+        
+        if (stored) {
+            try {
+                const parsed = JSON.parse(stored);
+                // 严格检查：必须是非空数组
+                hasValidData = Array.isArray(parsed.links) && parsed.links.length > 0 &&
+                               Array.isArray(parsed.categories) && parsed.categories.length > 0;
+                console.log('[DataStore] Parsed data - links:', parsed.links?.length, 'categories:', parsed.categories?.length, 'valid:', hasValidData);
+            } catch (e) {
+                console.error('[DataStore] Failed to parse stored data:', e);
+            }
+        }
+        
+        // 如果没有有效数据，强制重置
+        if (!hasValidData) {
+            console.log('[DataStore] No valid data found, forcing reset to defaults');
             localStorage.removeItem(LOCAL_STORAGE_KEY);
-            localStorage.removeItem('ynav_force_reset_v2');
-            localStorage.removeItem('ynav_force_reset');
-            // 强制设置默认数据
-            setLinks(INITIAL_LINKS);
-            setCategories(DEFAULT_CATEGORIES);
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ 
                 links: INITIAL_LINKS, 
                 categories: DEFAULT_CATEGORIES 
             }));
+            setLinks(INITIAL_LINKS);
+            setCategories(DEFAULT_CATEGORIES);
             setIsLoaded(true);
             return;
         }
         
-        const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-        if (stored) {
-            try {
-                const parsed = JSON.parse(stored);
-                let loadedCategories = parsed.categories && parsed.categories.length > 0
-                    ? parsed.categories
-                    : DEFAULT_CATEGORIES;
-
-                // 如果"常用推荐"分类存在，确保它是第一个分类
-                const commonIndex = loadedCategories.findIndex((c: Category) => c.id === 'common');
-                if (commonIndex > 0) {
-                    const commonCategory = loadedCategories[commonIndex];
-                    loadedCategories = [
-                        commonCategory,
-                        ...loadedCategories.slice(0, commonIndex),
-                        ...loadedCategories.slice(commonIndex + 1)
-                    ];
-                }
-
-                // 检查是否有链接的categoryId不存在于当前分类中，将这些链接移动到默认分类
-                const validCategoryIds = new Set(loadedCategories.map((c: Category) => c.id));
-                const fallbackCategoryId = loadedCategories.find((c: Category) => c.id === 'common')?.id
-                    || loadedCategories[0]?.id;
-                let loadedLinks = parsed.links && parsed.links.length > 0
-                    ? parsed.links
-                    : INITIAL_LINKS;
-                if (fallbackCategoryId) {
-                    loadedLinks = loadedLinks.map((link: LinkItem) => {
-                        if (!validCategoryIds.has(link.categoryId)) {
-                            return { ...link, categoryId: fallbackCategoryId };
-                        }
-                        return link;
-                    });
-                }
-
-                setLinks(loadedLinks);
-                setCategories(loadedCategories);
-                loadLinkIcons(loadedLinks);
-            } catch (e) {
-                setLinks(INITIAL_LINKS);
-                setCategories(DEFAULT_CATEGORIES);
+        // 有有效数据，正常加载
+        try {
+            const parsed = JSON.parse(stored!);
+            let loadedCategories = parsed.categories;
+            let loadedLinks = parsed.links;
+            
+            // 确保"常用推荐"分类存在且是第一个
+            const commonIndex = loadedCategories.findIndex((c: Category) => c.id === 'common');
+            if (commonIndex > 0) {
+                const commonCategory = loadedCategories[commonIndex];
+                loadedCategories = [
+                    commonCategory,
+                    ...loadedCategories.slice(0, commonIndex),
+                    ...loadedCategories.slice(commonIndex + 1)
+                ];
             }
-        } else {
+            
+            // 确保所有链接的 categoryId 有效
+            const validCategoryIds = new Set(loadedCategories.map((c: Category) => c.id));
+            const fallbackCategoryId = loadedCategories.find((c: Category) => c.id === 'common')?.id
+                || loadedCategories[0]?.id;
+            
+            if (fallbackCategoryId) {
+                loadedLinks = loadedLinks.map((link: LinkItem) => {
+                    if (!validCategoryIds.has(link.categoryId)) {
+                        return { ...link, categoryId: fallbackCategoryId };
+                    }
+                    return link;
+                });
+            }
+            
+            console.log('[DataStore] Loaded data - links:', loadedLinks?.length, 'categories:', loadedCategories?.length);
+            setLinks(loadedLinks);
+            setCategories(loadedCategories);
+            loadLinkIcons(loadedLinks);
+        } catch (e) {
+            console.error('[DataStore] Error loading data, using defaults:', e);
             setLinks(INITIAL_LINKS);
             setCategories(DEFAULT_CATEGORIES);
         }
+        
         setIsLoaded(true);
-    }, [loadLinkIcons]);
+    }, []);
 
     const updateData = useCallback((newLinks: LinkItem[], newCategories: Category[]) => {
         // 1. Optimistic UI Update
