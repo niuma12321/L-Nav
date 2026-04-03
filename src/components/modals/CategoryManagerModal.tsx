@@ -1,12 +1,13 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { 
   X, ArrowUp, ArrowDown, Trash2, Edit2, Plus, Check, 
-  Palette, Square, CheckSquare, Eye, EyeOff, Folder, Settings
+  Palette, Square, CheckSquare, Eye, EyeOff, Folder, Settings, Smile
 } from 'lucide-react';
 import { Category } from '../../types';
 import { useDialog } from '../ui/DialogProvider';
 import Icon from '../ui/Icon';
 import IconSelector from '../ui/IconSelector';
+import EmojiPicker from '../ui/EmojiPicker';
 
 interface CategoryManagerModalProps {
   isOpen: boolean;
@@ -43,6 +44,11 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = React.memo(({
   // 图标选择器
   const [isIconSelectorOpen, setIsIconSelectorOpen] = useState(false);
   const [iconSelectorTarget, setIconSelectorTarget] = useState<'edit' | 'new' | null>(null);
+
+  // Emoji选择器
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [emojiPickerTarget, setEmojiPickerTarget] = useState<'edit' | 'new' | null>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
 
   // 批量模式
   const [isBatchMode, setIsBatchMode] = useState(false);
@@ -217,6 +223,37 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = React.memo(({
     setIconSelectorTarget(null);
   }, []);
 
+  // ==============================================
+  // Emoji选择器逻辑
+  // ==============================================
+  const openEmojiPicker = useCallback((target: 'edit' | 'new') => {
+    setEmojiPickerTarget(target);
+    setShowEmojiPicker(true);
+  }, []);
+
+  const handleEmojiSelect = useCallback((emoji: string) => {
+    emojiPickerTarget === 'edit' && setEditIcon(emoji);
+    emojiPickerTarget === 'new' && setNewCatIcon(emoji);
+    setShowEmojiPicker(false);
+    setEmojiPickerTarget(null);
+  }, [emojiPickerTarget]);
+
+  // 点击外部关闭emoji选择器
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
+        setShowEmojiPicker(false);
+        setEmojiPickerTarget(null);
+      }
+    };
+    if (showEmojiPicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showEmojiPicker]);
+
   // 模态框关闭时重置所有状态
   const handleClose = useCallback(() => {
     onClose();
@@ -225,6 +262,8 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = React.memo(({
     setIsBatchMode(false);
     setSelectedCategories(new Set());
     setIsIconSelectorOpen(false);
+    setShowEmojiPicker(false);
+    setEmojiPickerTarget(null);
   }, [onClose]);
 
   // 空状态判断
@@ -336,7 +375,11 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = React.memo(({
                   <div className="flex-1 min-w-0">
                     {editingId === cat.id ? (
                       <div className="flex items-center gap-2">
-                        <Icon name={editIcon} size={16} />
+                        {editIcon && !editIcon.startsWith('http') && editIcon.length <= 4 ? (
+                          <span className="text-xl">{editIcon}</span>
+                        ) : (
+                          <Icon name={editIcon} size={16} />
+                        )}
                         <input
                           type="text"
                           value={editName}
@@ -345,7 +388,31 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = React.memo(({
                           placeholder="输入分类名称"
                           autoFocus
                         />
-                        <button onClick={() => openIconSelector('edit')} className="p-1 text-slate-400 hover:text-blue-600" title="选择图标">
+                        <div className="relative">
+                          <button 
+                            onClick={() => openEmojiPicker('edit')} 
+                            className="p-1 text-orange-500 hover:text-orange-600 hover:bg-orange-100 dark:hover:bg-orange-900/30 rounded-lg transition-colors" 
+                            title="选择Emoji"
+                          >
+                            <Smile size={16} />
+                          </button>
+                          {showEmojiPicker && emojiPickerTarget === 'edit' && (
+                            <div 
+                              ref={emojiPickerRef}
+                              className="absolute right-0 top-full mt-2 z-50 w-72 shadow-xl"
+                            >
+                              <EmojiPicker
+                                onSelect={handleEmojiSelect}
+                                onClose={() => {
+                                  setShowEmojiPicker(false);
+                                  setEmojiPickerTarget(null);
+                                }}
+                                selectedEmoji={editIcon}
+                              />
+                            </div>
+                          )}
+                        </div>
+                        <button onClick={() => openIconSelector('edit')} className="p-1 text-slate-400 hover:text-blue-600" title="选择Lucide图标">
                           <Palette size={16} />
                         </button>
                         <button onClick={() => setEditHidden(!editHidden)} className="p-1 text-slate-400 hover:text-slate-600" title={editHidden ? "取消隐藏" : "设为隐藏"}>
@@ -357,7 +424,11 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = React.memo(({
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <Icon name={cat.icon} size={16} />
+                        {cat.icon && !cat.icon.startsWith('http') && cat.icon.length <= 4 ? (
+                          <span className="text-xl">{cat.icon}</span>
+                        ) : (
+                          <Icon name={cat.icon} size={16} />
+                        )}
                         <span className="font-medium dark:text-slate-200 truncate">
                           {cat.name}
                           {cat.hidden && (
@@ -408,7 +479,11 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = React.memo(({
           <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-2 block">添加新分类</label>
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
-              <Icon name={newCatIcon} size={16} />
+              {newCatIcon && !newCatIcon.startsWith('http') && newCatIcon.length <= 4 ? (
+                <span className="text-xl">{newCatIcon}</span>
+              ) : (
+                <Icon name={newCatIcon} size={16} />
+              )}
               <input
                 type="text"
                 value={newCatName}
@@ -416,7 +491,31 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = React.memo(({
                 placeholder="输入分类名称"
                 className="flex-1 p-2 rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
               />
-              <button onClick={() => openIconSelector('new')} className="p-1 text-slate-400 hover:text-blue-600" title="选择图标">
+              <div className="relative">
+                <button 
+                  onClick={() => openEmojiPicker('new')} 
+                  className="p-1 text-orange-500 hover:text-orange-600 hover:bg-orange-100 dark:hover:bg-orange-900/30 rounded-lg transition-colors" 
+                  title="选择Emoji"
+                >
+                  <Smile size={16} />
+                </button>
+                {showEmojiPicker && emojiPickerTarget === 'new' && (
+                  <div 
+                    ref={emojiPickerRef}
+                    className="absolute right-0 top-full mt-2 z-50 w-72 shadow-xl"
+                  >
+                    <EmojiPicker
+                      onSelect={handleEmojiSelect}
+                      onClose={() => {
+                        setShowEmojiPicker(false);
+                        setEmojiPickerTarget(null);
+                      }}
+                      selectedEmoji={newCatIcon}
+                    />
+                  </div>
+                )}
+              </div>
+              <button onClick={() => openIconSelector('new')} className="p-1 text-slate-400 hover:text-blue-600" title="选择Lucide图标">
                 <Palette size={16} />
               </button>
               <button onClick={() => setNewCatHidden(!newCatHidden)} className="p-1 text-slate-400 hover:text-slate-600" title={newCatHidden ? "取消隐藏" : "设为隐藏"}>

@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Sparkles, Loader2, Pin, Wand2, Trash2, Upload, EyeOff } from 'lucide-react';
+import { X, Sparkles, Loader2, Pin, Wand2, Trash2, Upload, EyeOff, Smile } from 'lucide-react';
 import { LinkItem, Category, AIConfig } from '../../types';
 import { generateLinkDescription, suggestCategory } from '../../services/geminiService';
 import { useDialog } from '../ui/DialogProvider';
 import { getIconToneStyle, normalizeHexColor } from '../../utils/iconTone';
+import EmojiPicker from '../ui/EmojiPicker';
 
 const FAVICON_CACHE_KEY = 'ynav_favicon_cache';
 
@@ -44,7 +45,9 @@ const LinkModal: React.FC<LinkModalProps> = ({
   const [autoFetchIcon, setAutoFetchIcon] = useState(true);
   const [batchMode, setBatchMode] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
   const { notify } = useDialog();
 
   // 当模态框关闭时，重置批量模式为默认关闭状态
@@ -52,8 +55,24 @@ const LinkModal: React.FC<LinkModalProps> = ({
     if (!isOpen) {
       setBatchMode(false);
       setShowSuccessMessage(false);
+      setShowEmojiPicker(false);
     }
   }, [isOpen]);
+
+  // 点击外部关闭emoji选择器
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    };
+    if (showEmojiPicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showEmojiPicker]);
 
   // 成功提示1秒后自动消失
   useEffect(() => {
@@ -463,12 +482,16 @@ const LinkModal: React.FC<LinkModalProps> = ({
                 style={getIconToneStyle(iconTone)}
               >
                 {icon ? (
-                  <img
-                    src={icon}
-                    alt="Icon"
-                    className="w-full h-full object-contain"
-                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                  />
+                  icon.startsWith('http') || icon.startsWith('data:') ? (
+                    <img
+                      src={icon}
+                      alt="Icon"
+                      className="w-full h-full object-contain"
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    />
+                  ) : (
+                    <span className="text-2xl">{icon}</span>
+                  )
                 ) : (
                   <div className="text-slate-300 dark:text-slate-600">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
@@ -483,9 +506,32 @@ const LinkModal: React.FC<LinkModalProps> = ({
                     value={icon}
                     onChange={(e) => setIcon(e.target.value)}
                     className="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-600 dark:text-slate-300 placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-mono"
-                    placeholder="图标链接..."
+                    placeholder="图标链接或emoji..."
                   />
                   <div className="flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className="p-2 bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400 rounded-lg hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors relative"
+                      title="选择Emoji"
+                    >
+                      <Smile size={16} />
+                      {showEmojiPicker && (
+                        <div 
+                          ref={emojiPickerRef}
+                          className="absolute right-0 top-full mt-2 z-50 w-72 shadow-xl"
+                        >
+                          <EmojiPicker
+                            onSelect={(emoji) => {
+                              setIcon(emoji);
+                              setShowEmojiPicker(false);
+                            }}
+                            onClose={() => setShowEmojiPicker(false)}
+                            selectedEmoji={icon}
+                          />
+                        </div>
+                      )}
+                    </button>
                     <button
                       type="button"
                       onClick={handleFetchIcon}
