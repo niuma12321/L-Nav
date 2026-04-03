@@ -1414,8 +1414,8 @@ function App() {
     <div className={`flex min-h-screen ${toneClasses.text}`}>
       {/* Main Dashboard - V9Dashboard 自带完整的导航和侧边栏 */}
       <V9Dashboard
-        links={visibleLinks}
-        categories={visibleCategories}
+        links={links}
+        categories={categories}
         pinnedLinks={pinnedLinks}
         onAddResource={handleAddLinkRequest}
         onOpenSettings={() => setIsSettingsModalOpen(true)}
