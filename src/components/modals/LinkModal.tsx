@@ -133,8 +133,12 @@ const LinkModal: React.FC<LinkModalProps> = ({
     try {
       let domain = url;
       if (domain.startsWith('http://') || domain.startsWith('https://')) {
-        const urlObj = new URL(domain);
-        domain = urlObj.hostname;
+        try {
+          const urlObj = new URL(domain);
+          domain = urlObj.hostname;
+        } catch {
+          // Invalid URL, use original
+        }
       }
       const stored = localStorage.getItem(FAVICON_CACHE_KEY);
       const cache = stored ? JSON.parse(stored) : {};
@@ -236,8 +240,12 @@ const LinkModal: React.FC<LinkModalProps> = ({
       }
 
       if (domain.startsWith('http://') || domain.startsWith('https://')) {
-        const urlObj = new URL(domain);
-        domain = urlObj.hostname;
+        try {
+          const urlObj = new URL(domain);
+          domain = urlObj.hostname;
+        } catch {
+          // Invalid URL, continue with original domain
+        }
       }
 
       // 先尝试从本地缓存获取图标
