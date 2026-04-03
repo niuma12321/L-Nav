@@ -142,7 +142,11 @@ export const APIDataWidget: React.FC<APIDataWidgetProps> = ({ config }) => {
           : JSON.stringify(config.body);
       }
 
+      console.log('API Config:', { url: config.apiUrl, method: config.method, dataPath: config.dataPath, fields: config.fields });
+      
       const response = await fetch(config.apiUrl, fetchOptions);
+      
+      console.log('API Response status:', response.status);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -151,6 +155,8 @@ export const APIDataWidget: React.FC<APIDataWidgetProps> = ({ config }) => {
       const contentTypeHeader = response.headers.get('content-type') || '';
       const responseText = await response.text();
       
+      console.log('Response text length:', responseText.length, 'Content-Type:', contentTypeHeader);
+      
       let parsedData: any[] = [];
       
       if (contentTypeHeader.includes('application/json')) {
@@ -158,11 +164,14 @@ export const APIDataWidget: React.FC<APIDataWidgetProps> = ({ config }) => {
         setContentType('json');
         try {
           const jsonData = JSON.parse(responseText);
+          console.log('Parsed JSON keys:', Object.keys(jsonData));
           let extractedData = config.dataPath ? getNestedValue(jsonData, config.dataPath) : jsonData;
+          console.log('Extracted data type:', typeof extractedData, 'isArray:', Array.isArray(extractedData));
           if (!Array.isArray(extractedData)) {
             extractedData = extractedData ? [extractedData] : [];
           }
           parsedData = extractedData.slice(0, config.maxItems || 10);
+          console.log('Final parsed data:', parsedData.length, 'items, first item:', parsedData[0]);
         } catch (e) {
           throw new Error('JSON解析失败');
         }
