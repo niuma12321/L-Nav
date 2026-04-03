@@ -102,6 +102,8 @@ const parseHTMLTable = (html: string): any[] => {
 // 从数组项中获取字段值
 const getFieldValue = (item: any, fieldPath: string): string => {
   if (!fieldPath) return '';
+  if (typeof item === 'string') return item;
+  if (typeof item !== 'object') return String(item);
   const value = getNestedValue(item, fieldPath);
   if (value === null || value === undefined) return '';
   return String(value);
@@ -260,6 +262,13 @@ export const APIDataWidget: React.FC<APIDataWidgetProps> = ({ config }) => {
       );
     }
 
+// 获取项目显示文本
+const getItemDisplayText = (item: any, fieldPath?: string): string => {
+  if (typeof item === 'string') return item;
+  if (!fieldPath) return String(item);
+  return getFieldValue(item, fieldPath);
+};
+
     switch (config.displayType) {
       case 'list':
         return (
@@ -267,33 +276,12 @@ export const APIDataWidget: React.FC<APIDataWidgetProps> = ({ config }) => {
             {data.map((item, index) => (
               <div
                 key={index}
-                className="flex items-center gap-3 p-3 rounded-lg bg-[#0d0e10] hover:bg-[#1a1c1f] transition-colors"
+                className="flex items-start gap-3 p-3 rounded-lg bg-[#0d0e10] hover:bg-[#1a1c1f] transition-colors"
               >
-                {config.fields.image && getFieldValue(item, config.fields.image) && (
-                  <img
-                    src={getFieldValue(item, config.fields.image)}
-                    alt=""
-                    className="w-10 h-10 rounded-lg object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white truncate">
-                    {getFieldValue(item, config.fields.title) || `条目 ${index + 1}`}
-                  </p>
-                  {config.fields.subtitle && (
-                    <p className="text-xs text-slate-400 truncate">
-                      {getFieldValue(item, config.fields.subtitle)}
-                    </p>
-                  )}
-                </div>
-                {config.fields.value && (
-                  <span className="text-sm text-emerald-400">
-                    {getFieldValue(item, config.fields.value)}
-                  </span>
-                )}
+                <span className="text-xs text-slate-500 mt-0.5">{index + 1}</span>
+                <p className="text-sm text-slate-300 flex-1 leading-relaxed">
+                  {getItemDisplayText(item, config.fields.title)}
+                </p>
               </div>
             ))}
           </div>
