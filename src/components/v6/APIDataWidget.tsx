@@ -287,12 +287,13 @@ const getItemDisplayText = (item: any, fieldPath?: string): string => {
           </div>
         );
 
-      // ...
+      case 'table':
         return (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-xs text-slate-400 border-b border-white/10">
+                  <th className="text-left py-2 px-2">序号</th>
                   <th className="text-left py-2 px-2">{config.fields.title || '标题'}</th>
                   {config.fields.subtitle && (
                     <th className="text-left py-2 px-2">{config.fields.subtitle}</th>
@@ -307,16 +308,16 @@ const getItemDisplayText = (item: any, fieldPath?: string): string => {
                   <tr key={index} className="border-b border-white/5 hover:bg-[#0d0e10]">
                     <td className="py-2 px-2 text-slate-500">{index + 1}</td>
                     <td className="py-2 px-2 text-white">
-                      {getFieldValue(item, config.fields.title) || '-'}
+                      {typeof item === 'string' ? item : (getFieldValue(item, config.fields.title) || '-')}
                     </td>
                     {config.fields.subtitle && (
                       <td className="py-2 px-2 text-slate-400">
-                        {getFieldValue(item, config.fields.subtitle)}
+                        {typeof item === 'string' ? '' : getFieldValue(item, config.fields.subtitle)}
                       </td>
                     )}
                     {config.fields.value && (
                       <td className="py-2 px-2 text-right text-emerald-400">
-                        {getFieldValue(item, config.fields.value)}
+                        {typeof item === 'string' ? '' : getFieldValue(item, config.fields.value)}
                       </td>
                     )}
                   </tr>
