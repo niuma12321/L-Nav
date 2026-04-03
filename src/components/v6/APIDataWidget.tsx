@@ -287,43 +287,7 @@ const getItemDisplayText = (item: any, fieldPath?: string): string => {
           </div>
         );
 
-      case 'card':
-        return (
-          <div className="grid grid-cols-2 gap-3 overflow-y-auto max-h-[300px]">
-            {data.map((item, index) => (
-              <div
-                key={index}
-                className="p-4 rounded-xl bg-[#0d0e10] hover:bg-[#1a1c1f] transition-colors"
-              >
-                {config.fields.image && getFieldValue(item, config.fields.image) && (
-                  <img
-                    src={getFieldValue(item, config.fields.image)}
-                    alt=""
-                    className="w-full h-20 rounded-lg object-cover mb-2"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                )}
-                <p className="text-sm font-medium text-white truncate">
-                  {getFieldValue(item, config.fields.title) || `条目 ${index + 1}`}
-                </p>
-                {config.fields.subtitle && (
-                  <p className="text-xs text-slate-400 truncate mt-1">
-                    {getFieldValue(item, config.fields.subtitle)}
-                  </p>
-                )}
-                {config.fields.value && (
-                  <p className="text-lg font-bold text-emerald-400 mt-2">
-                    {getFieldValue(item, config.fields.value)}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-        );
-
-      case 'table':
+      // ...
         return (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
