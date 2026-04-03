@@ -169,7 +169,7 @@ export interface APIDataConfig {
   displayType: 'list' | 'table' | 'card' | 'text';
   fields: {
     title: string;
-    value: string;
+    value?: string;
     subtitle?: string;
     image?: string;
     link?: string;
@@ -208,3 +208,576 @@ export const DEFAULT_SEARCH_ENGINES: SearchEngine[] = [
   { id: 'zhihu', name: '知乎', url: 'https://www.zhihu.com/search', queryParam: 'q' },
   { id: 'bilibili', name: 'Bilibili', url: 'https://search.bilibili.com/all', queryParam: 'keyword' }
 ];
+
+// ==========================================
+// 60s API 预设组件配置
+// ==========================================
+
+export type API60sCategory = 'periodic' | 'utility' | 'trending' | 'entertainment';
+
+export interface API60sPreset {
+  id: string;
+  name: string;
+  description: string;
+  category: API60sCategory;
+  categoryLabel: string;
+  icon: string;
+  config: APIDataConfig;
+}
+
+// 60s API 基础URL
+const API_60S_BASE = 'https://60s-api.viki.moe';
+
+// 周期资讯类 API (日更/周更/实时)
+export const API_60S_PERIODIC: API60sPreset[] = [
+  {
+    id: '60s-news',
+    name: '60秒读懂世界',
+    description: '每天60秒，读懂世界新闻',
+    category: 'periodic',
+    categoryLabel: '周期资讯',
+    icon: 'Clock',
+    config: {
+      id: '60s-news',
+      name: '60秒读懂世界',
+      apiUrl: `${API_60S_BASE}/v2/60s`,
+      method: 'GET',
+      refreshInterval: 3600, // 1小时刷新一次
+      dataPath: 'data',
+      displayType: 'text',
+      fields: { title: 'title', value: 'value' },
+      maxItems: 1,
+      emptyText: '今日资讯加载中...'
+    }
+  },
+  {
+    id: 'ai-news',
+    name: 'AI资讯快报',
+    description: 'AI、大模型领域最新资讯',
+    category: 'periodic',
+    categoryLabel: '周期资讯',
+    icon: 'Zap',
+    config: {
+      id: 'ai-news',
+      name: 'AI资讯快报',
+      apiUrl: `${API_60S_BASE}/v2/ai`,
+      method: 'GET',
+      refreshInterval: 3600,
+      dataPath: 'data',
+      displayType: 'list',
+      fields: { title: 'title', subtitle: 'summary', value: 'time' },
+      maxItems: 5,
+      emptyText: '暂无AI资讯'
+    }
+  },
+  {
+    id: 'bing-wallpaper',
+    name: '必应每日壁纸',
+    description: '必应每日精美壁纸',
+    category: 'periodic',
+    categoryLabel: '周期资讯',
+    icon: 'Image',
+    config: {
+      id: 'bing-wallpaper',
+      name: '必应每日壁纸',
+      apiUrl: `${API_60S_BASE}/v2/bing`,
+      method: 'GET',
+      refreshInterval: 7200,
+      dataPath: 'data',
+      displayType: 'card',
+      fields: { title: 'title', image: 'url', subtitle: 'date' },
+      maxItems: 1,
+      emptyText: '壁纸加载中...'
+    }
+  },
+  {
+    id: 'exchange-rate',
+    name: '当日货币汇率',
+    description: '实时货币汇率查询',
+    category: 'periodic',
+    categoryLabel: '周期资讯',
+    icon: 'Coins',
+    config: {
+      id: 'exchange-rate',
+      name: '当日货币汇率',
+      apiUrl: `${API_60S_BASE}/v2/exchange`,
+      method: 'GET',
+      refreshInterval: 1800,
+      dataPath: 'data.rates',
+      displayType: 'table',
+      fields: { title: 'currency', value: 'rate' },
+      maxItems: 10,
+      emptyText: '汇率数据加载中...'
+    }
+  },
+  {
+    id: 'history-today',
+    name: '历史上的今天',
+    description: '历史上的今天大事记',
+    category: 'periodic',
+    categoryLabel: '周期资讯',
+    icon: 'History',
+    config: {
+      id: 'history-today',
+      name: '历史上的今天',
+      apiUrl: `${API_60S_BASE}/v2/history`,
+      method: 'GET',
+      refreshInterval: 3600,
+      dataPath: 'data',
+      displayType: 'list',
+      fields: { title: 'title', subtitle: 'year' },
+      maxItems: 5,
+      emptyText: '历史事件加载中...'
+    }
+  },
+  {
+    id: 'epic-games',
+    name: 'Epic免费游戏',
+    description: 'Epic Games每周免费游戏',
+    category: 'periodic',
+    categoryLabel: '周期资讯',
+    icon: 'Gamepad2',
+    config: {
+      id: 'epic-games',
+      name: 'Epic免费游戏',
+      apiUrl: `${API_60S_BASE}/v2/epic`,
+      method: 'GET',
+      refreshInterval: 86400, // 每天刷新
+      dataPath: 'data',
+      displayType: 'card',
+      fields: { title: 'title', image: 'cover', subtitle: 'endDate' },
+      maxItems: 2,
+      emptyText: '暂无免费游戏'
+    }
+  },
+  {
+    id: 'it-news',
+    name: '实时IT资讯',
+    description: 'IT之家实时资讯',
+    category: 'periodic',
+    categoryLabel: '周期资讯',
+    icon: 'Zap',
+    config: {
+      id: 'it-news',
+      name: '实时IT资讯',
+      apiUrl: `${API_60S_BASE}/v2/it`,
+      method: 'GET',
+      refreshInterval: 600, // 10分钟刷新
+      dataPath: 'data',
+      displayType: 'list',
+      fields: { title: 'title', subtitle: 'time' },
+      maxItems: 8,
+      emptyText: 'IT资讯加载中...'
+    }
+  }
+];
+
+// 实用功能类 API
+export const API_60S_UTILITY: API60sPreset[] = [
+  {
+    id: 'olympic-medals',
+    name: '奥运奖牌榜',
+    description: '奥运会实时奖牌榜',
+    category: 'utility',
+    categoryLabel: '实用功能',
+    icon: 'Medal',
+    config: {
+      id: 'olympic-medals',
+      name: '奥运奖牌榜',
+      apiUrl: `${API_60S_BASE}/v2/olympic`,
+      method: 'GET',
+      refreshInterval: 1800,
+      dataPath: 'data',
+      displayType: 'table',
+      fields: { title: 'country', value: 'total', subtitle: 'gold' },
+      maxItems: 10,
+      emptyText: '奖牌榜加载中...'
+    }
+  },
+  {
+    id: 'gold-price',
+    name: '黄金价格',
+    description: '实时黄金价格',
+    category: 'utility',
+    categoryLabel: '实用功能',
+    icon: 'Coins',
+    config: {
+      id: 'gold-price',
+      name: '黄金价格',
+      apiUrl: `${API_60S_BASE}/v2/gold`,
+      method: 'GET',
+      refreshInterval: 1800,
+      dataPath: 'data',
+      displayType: 'list',
+      fields: { title: 'type', value: 'price', subtitle: 'change' },
+      maxItems: 5,
+      emptyText: '金价加载中...'
+    }
+  },
+  {
+    id: 'gas-price',
+    name: '汽油价格',
+    description: '各地汽油价格查询',
+    category: 'utility',
+    categoryLabel: '实用功能',
+    icon: 'Droplets',
+    config: {
+      id: 'gas-price',
+      name: '汽油价格',
+      apiUrl: `${API_60S_BASE}/v2/oil`,
+      method: 'GET',
+      refreshInterval: 3600,
+      dataPath: 'data',
+      displayType: 'table',
+      fields: { title: 'province', value: 'price92', subtitle: 'price95' },
+      maxItems: 10,
+      emptyText: '油价加载中...'
+    }
+  },
+  {
+    id: 'weather-now',
+    name: '实时天气',
+    description: '腾讯天气实时数据',
+    category: 'utility',
+    categoryLabel: '实用功能',
+    icon: 'CloudRain',
+    config: {
+      id: 'weather-now',
+      name: '实时天气',
+      apiUrl: `${API_60S_BASE}/v2/weather/now`,
+      method: 'GET',
+      refreshInterval: 1800,
+      dataPath: 'data',
+      displayType: 'text',
+      fields: { title: 'city', value: 'temperature', subtitle: 'weather' },
+      maxItems: 1,
+      emptyText: '天气加载中...'
+    }
+  },
+  {
+    id: 'moyu-paper',
+    name: '摸鱼日报',
+    description: '程序员摸鱼日报',
+    category: 'utility',
+    categoryLabel: '实用功能',
+    icon: 'Coffee',
+    config: {
+      id: 'moyu-paper',
+      name: '摸鱼日报',
+      apiUrl: `${API_60S_BASE}/v2/moyu`,
+      method: 'GET',
+      refreshInterval: 3600,
+      dataPath: 'data',
+      displayType: 'text',
+      fields: { title: 'content' },
+      maxItems: 1,
+      emptyText: '日报加载中...'
+    }
+  },
+  {
+    id: 'public-ip',
+    name: '公网IP地址',
+    description: '查询当前公网IP',
+    category: 'utility',
+    categoryLabel: '实用功能',
+    icon: 'MapPin',
+    config: {
+      id: 'public-ip',
+      name: '公网IP地址',
+      apiUrl: `${API_60S_BASE}/v2/ip`,
+      method: 'GET',
+      refreshInterval: 0, // 不自动刷新
+      dataPath: 'data',
+      displayType: 'text',
+      fields: { title: 'ip', subtitle: 'location' },
+      maxItems: 1,
+      emptyText: 'IP查询中...'
+    }
+  }
+];
+
+// 热门榜单类 API
+export const API_60S_TRENDING: API60sPreset[] = [
+  {
+    id: 'douyin-hot',
+    name: '抖音热搜',
+    description: '抖音实时热搜榜',
+    category: 'trending',
+    categoryLabel: '热门榜单',
+    icon: 'Flame',
+    config: {
+      id: 'douyin-hot',
+      name: '抖音热搜',
+      apiUrl: `${API_60S_BASE}/v2/douyin`,
+      method: 'GET',
+      refreshInterval: 600,
+      dataPath: 'data',
+      displayType: 'list',
+      fields: { title: 'title', value: 'hot', subtitle: 'rank' },
+      maxItems: 10,
+      emptyText: '热搜加载中...'
+    }
+  },
+  {
+    id: 'xiaohongshu-hot',
+    name: '小红书热点',
+    description: '小红书实时热点',
+    category: 'trending',
+    categoryLabel: '热门榜单',
+    icon: 'Flame',
+    config: {
+      id: 'xiaohongshu-hot',
+      name: '小红书热点',
+      apiUrl: `${API_60S_BASE}/v2/xiaohongshu`,
+      method: 'GET',
+      refreshInterval: 600,
+      dataPath: 'data',
+      displayType: 'list',
+      fields: { title: 'title', value: 'hot' },
+      maxItems: 10,
+      emptyText: '热点加载中...'
+    }
+  },
+  {
+    id: 'bilibili-hot',
+    name: '哔哩哔哩热搜',
+    description: 'B站实时热搜榜',
+    category: 'trending',
+    categoryLabel: '热门榜单',
+    icon: 'Flame',
+    config: {
+      id: 'bilibili-hot',
+      name: '哔哩哔哩热搜',
+      apiUrl: `${API_60S_BASE}/v2/bilibili`,
+      method: 'GET',
+      refreshInterval: 600,
+      dataPath: 'data',
+      displayType: 'list',
+      fields: { title: 'title', value: 'hot', subtitle: 'rank' },
+      maxItems: 10,
+      emptyText: '热搜加载中...'
+    }
+  },
+  {
+    id: 'weibo-hot',
+    name: '微博热搜',
+    description: '微博实时热搜榜',
+    category: 'trending',
+    categoryLabel: '热门榜单',
+    icon: 'Flame',
+    config: {
+      id: 'weibo-hot',
+      name: '微博热搜',
+      apiUrl: `${API_60S_BASE}/v2/weibo`,
+      method: 'GET',
+      refreshInterval: 300,
+      dataPath: 'data',
+      displayType: 'list',
+      fields: { title: 'title', value: 'hot', subtitle: 'rank' },
+      maxItems: 10,
+      emptyText: '热搜加载中...'
+    }
+  },
+  {
+    id: 'baidu-hot',
+    name: '百度实时热搜',
+    description: '百度实时热搜榜',
+    category: 'trending',
+    categoryLabel: '热门榜单',
+    icon: 'Flame',
+    config: {
+      id: 'baidu-hot',
+      name: '百度实时热搜',
+      apiUrl: `${API_60S_BASE}/v2/baidu`,
+      method: 'GET',
+      refreshInterval: 300,
+      dataPath: 'data',
+      displayType: 'list',
+      fields: { title: 'title', value: 'hot', subtitle: 'rank' },
+      maxItems: 10,
+      emptyText: '热搜加载中...'
+    }
+  },
+  {
+    id: 'zhihu-hot',
+    name: '知乎话题榜',
+    description: '知乎实时话题榜',
+    category: 'trending',
+    categoryLabel: '热门榜单',
+    icon: 'MessageCircle',
+    config: {
+      id: 'zhihu-hot',
+      name: '知乎话题榜',
+      apiUrl: `${API_60S_BASE}/v2/zhihu`,
+      method: 'GET',
+      refreshInterval: 600,
+      dataPath: 'data',
+      displayType: 'list',
+      fields: { title: 'title', value: 'hot', subtitle: 'excerpt' },
+      maxItems: 10,
+      emptyText: '话题加载中...'
+    }
+  },
+  {
+    id: 'hackernews',
+    name: 'Hacker News',
+    description: 'Hacker News热帖',
+    category: 'trending',
+    categoryLabel: '热门榜单',
+    icon: 'Globe',
+    config: {
+      id: 'hackernews',
+      name: 'Hacker News',
+      apiUrl: `${API_60S_BASE}/v2/hackernews`,
+      method: 'GET',
+      refreshInterval: 600,
+      dataPath: 'data',
+      displayType: 'list',
+      fields: { title: 'title', value: 'points', subtitle: 'comments' },
+      maxItems: 10,
+      emptyText: '热帖加载中...'
+    }
+  },
+  {
+    id: 'netease-music',
+    name: '网易云榜单',
+    description: '网易云音乐榜单',
+    category: 'trending',
+    categoryLabel: '热门榜单',
+    icon: 'Music',
+    config: {
+      id: 'netease-music',
+      name: '网易云榜单',
+      apiUrl: `${API_60S_BASE}/v2/netease`,
+      method: 'GET',
+      refreshInterval: 1800,
+      dataPath: 'data',
+      displayType: 'list',
+      fields: { title: 'name', subtitle: 'artist' },
+      maxItems: 10,
+      emptyText: '榜单加载中...'
+    }
+  }
+];
+
+// 消遣娱乐类 API
+export const API_60S_ENTERTAINMENT: API60sPreset[] = [
+  {
+    id: 'random-quote',
+    name: '随机一言',
+    description: '随机一句名言',
+    category: 'entertainment',
+    categoryLabel: '消遣娱乐',
+    icon: 'MessageCircle',
+    config: {
+      id: 'random-quote',
+      name: '随机一言',
+      apiUrl: `${API_60S_BASE}/v2/one`,
+      method: 'GET',
+      refreshInterval: 0,
+      dataPath: 'data',
+      displayType: 'text',
+      fields: { title: 'content', subtitle: 'author' },
+      maxItems: 1,
+      emptyText: '名言加载中...'
+    }
+  },
+  {
+    id: 'random-fortune',
+    name: '随机运势',
+    description: '今日运势测试',
+    category: 'entertainment',
+    categoryLabel: '消遣娱乐',
+    icon: 'HelpCircle',
+    config: {
+      id: 'random-fortune',
+      name: '随机运势',
+      apiUrl: `${API_60S_BASE}/v2/fortune`,
+      method: 'GET',
+      refreshInterval: 0,
+      dataPath: 'data',
+      displayType: 'text',
+      fields: { title: 'fortune', subtitle: 'stars' },
+      maxItems: 1,
+      emptyText: '运势加载中...'
+    }
+  },
+  {
+    id: 'random-joke',
+    name: '随机搞笑段子',
+    description: '每日一笑',
+    category: 'entertainment',
+    categoryLabel: '消遣娱乐',
+    icon: 'Laugh',
+    config: {
+      id: 'random-joke',
+      name: '随机搞笑段子',
+      apiUrl: `${API_60S_BASE}/v2/joke`,
+      method: 'GET',
+      refreshInterval: 0,
+      dataPath: 'data',
+      displayType: 'text',
+      fields: { title: 'content' },
+      maxItems: 1,
+      emptyText: '段子加载中...'
+    }
+  },
+  {
+    id: 'random-answer',
+    name: '答案之书',
+    description: '为你心中的问题寻找答案',
+    category: 'entertainment',
+    categoryLabel: '消遣娱乐',
+    icon: 'HelpCircle',
+    config: {
+      id: 'random-answer',
+      name: '答案之书',
+      apiUrl: `${API_60S_BASE}/v2/answer`,
+      method: 'GET',
+      refreshInterval: 0,
+      dataPath: 'data',
+      displayType: 'text',
+      fields: { title: 'answer' },
+      maxItems: 1,
+      emptyText: '答案加载中...'
+    }
+  },
+  {
+    id: 'random-kfc',
+    name: 'KFC文案',
+    description: '疯狂星期四文案',
+    category: 'entertainment',
+    categoryLabel: '消遣娱乐',
+    icon: 'Utensils',
+    config: {
+      id: 'random-kfc',
+      name: 'KFC文案',
+      apiUrl: `${API_60S_BASE}/v2/kfc`,
+      method: 'GET',
+      refreshInterval: 0,
+      dataPath: 'data',
+      displayType: 'text',
+      fields: { title: 'content' },
+      maxItems: 1,
+      emptyText: '文案加载中...'
+    }
+  }
+];
+
+// 所有60s API预设
+export const ALL_API_60S_PRESETS: API60sPreset[] = [
+  ...API_60S_PERIODIC,
+  ...API_60S_UTILITY,
+  ...API_60S_TRENDING,
+  ...API_60S_ENTERTAINMENT
+];
+
+// 根据ID获取预设
+export const getAPI60sPresetById = (id: string): API60sPreset | undefined => {
+  return ALL_API_60S_PRESETS.find(preset => preset.id === id);
+};
+
+// 根据分类获取预设
+export const getAPI60sPresetsByCategory = (category: API60sCategory): API60sPreset[] => {
+  return ALL_API_60S_PRESETS.filter(preset => preset.category === category);
+};

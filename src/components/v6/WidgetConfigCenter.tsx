@@ -25,10 +25,40 @@ import {
   Trash2,
   Eye,
   EyeOff,
-  Pin
+  Pin,
+  Clock,
+  Zap,
+  Image as ImageIcon,
+  Coins,
+  History,
+  Gamepad2,
+  Medal,
+  Droplets,
+  CloudRain,
+  Coffee,
+  Music,
+  MessageCircle,
+  Laugh,
+  HelpCircle,
+  Utensils,
+  Flame,
+  Sparkles,
+  Search
 } from 'lucide-react';
 import { useWidgetSystem } from '../../hooks/useWidgetSystem';
-import { WidgetConfig, DEFAULT_WIDGETS, createAPIWidget, APIDataConfig } from './widgetTypes';
+import { 
+  WidgetConfig, 
+  DEFAULT_WIDGETS, 
+  createAPIWidget, 
+  APIDataConfig,
+  ALL_API_60S_PRESETS,
+  API_60S_PERIODIC,
+  API_60S_UTILITY,
+  API_60S_TRENDING,
+  API_60S_ENTERTAINMENT,
+  API60sPreset,
+  API60sCategory
+} from './widgetTypes';
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Search: LayoutDashboard,
@@ -39,7 +69,24 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   TrendingUp,
   CheckSquare,
   Newspaper,
-  Grid3X3
+  Grid3X3,
+  Clock,
+  Zap,
+  Image: ImageIcon,
+  Coins,
+  History,
+  Gamepad2,
+  Medal,
+  Droplets,
+  CloudRain,
+  Coffee,
+  Music,
+  MessageCircle,
+  Laugh,
+  HelpCircle,
+  Utensils,
+  Flame,
+  Sparkles
 };
 
 // Widget settings modal
@@ -140,10 +187,12 @@ const WidgetConfigCenter: React.FC = () => {
   const { widgets, toggleWidget, updateWidgetPosition, addWidget, removeWidget, updateWidget } = useWidgetSystem();
   const [previewMode, setPreviewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [showAddWidgetModal, setShowAddWidgetModal] = useState(false);
+  const [show60sAPIModal, setShow60sAPIModal] = useState(false);
   const [editingWidget, setEditingWidget] = useState<WidgetConfig | null>(null);
   const [settingsWidget, setSettingsWidget] = useState<WidgetConfig | null>(null);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [activeCategory, setActiveCategory] = useState<API60sCategory | 'all'>('all');
 
   // Add/Edit widget form state
   const [newWidgetType, setNewWidgetType] = useState<'api-data'>('api-data');
@@ -383,7 +432,19 @@ const WidgetConfigCenter: React.FC = () => {
             <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center">
               <Plus className="w-6 h-6" />
             </div>
-            <span className="text-sm font-medium">添加更多组件</span>
+            <span className="text-sm font-medium">自定义API组件</span>
+          </button>
+
+          {/* 60s API快速添加 */}
+          <button 
+            onClick={() => setShow60sAPIModal(true)}
+            className="p-6 rounded-3xl border-2 border-dashed border-orange-500/20 flex flex-col items-center justify-center gap-4 text-slate-500 hover:border-orange-500/50 hover:text-orange-400 transition-all min-h-[200px]"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-orange-500/10 flex items-center justify-center">
+              <Sparkles className="w-6 h-6 text-orange-400" />
+            </div>
+            <span className="text-sm font-medium">60s API组件</span>
+            <span className="text-xs text-slate-600">{ALL_API_60S_PRESETS.length} 个预设接口</span>
           </button>
         </div>
       </div>
@@ -707,6 +768,106 @@ const WidgetConfigCenter: React.FC = () => {
         }}
         onSave={updateWidgetPosition}
       />
+
+      {/* 60s API选择弹窗 */}
+      {show60sAPIModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-[#181a1c] rounded-2xl border border-white/10 w-full max-w-4xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto my-auto">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-lg font-bold text-white">60s API 组件库</h3>
+                <p className="text-sm text-slate-400 mt-1">点击添加预设API组件到您的仪表盘</p>
+              </div>
+              <button 
+                onClick={() => setShow60sAPIModal(false)} 
+                className="p-2 rounded-lg hover:bg-white/10 text-slate-400"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* 分类筛选 */}
+            <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+              {[
+                { key: 'all', label: '全部', icon: Grid3X3 },
+                { key: 'periodic', label: '周期资讯', icon: Clock },
+                { key: 'utility', label: '实用功能', icon: Zap },
+                { key: 'trending', label: '热门榜单', icon: Flame },
+                { key: 'entertainment', label: '消遣娱乐', icon: Laugh }
+              ].map(({ key, label, icon: Icon }) => (
+                <button
+                  key={key}
+                  onClick={() => setActiveCategory(key as API60sCategory | 'all')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap ${
+                    activeCategory === key
+                      ? 'bg-orange-500 text-[#0d0e10]'
+                      : 'bg-white/5 text-slate-400 hover:bg-white/10'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* API列表 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {(activeCategory === 'all' 
+                ? ALL_API_60S_PRESETS 
+                : ALL_API_60S_PRESETS.filter(p => p.category === activeCategory)
+              ).map((preset) => {
+                const PresetIcon = iconMap[preset.icon] || Globe;
+                const isAdded = widgets.some(w => w.settings?.api?.id === preset.id);
+                
+                return (
+                  <div
+                    key={preset.id}
+                    className={`p-4 rounded-2xl border transition-all ${
+                      isAdded 
+                        ? 'border-emerald-500/30 bg-emerald-500/5' 
+                        : 'border-white/10 hover:border-orange-500/30 bg-[#0d0e10]'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center shrink-0">
+                        <PresetIcon className="w-5 h-5 text-orange-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-bold text-white truncate">{preset.name}</h4>
+                        <p className="text-xs text-slate-500">{preset.categoryLabel}</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-400 mb-4 line-clamp-2">{preset.description}</p>
+                    <button
+                      onClick={() => {
+                        if (!isAdded) {
+                          const widget = createAPIWidget(preset.config);
+                          addWidget(widget);
+                        }
+                      }}
+                      disabled={isAdded}
+                      className={`w-full py-2 rounded-xl text-sm font-medium transition-colors ${
+                        isAdded
+                          ? 'bg-emerald-500/20 text-emerald-400 cursor-default'
+                          : 'bg-orange-500 text-[#0d0e10] hover:bg-orange-400'
+                      }`}
+                    >
+                      {isAdded ? '已添加' : '添加组件'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            {activeCategory !== 'all' && 
+              ALL_API_60S_PRESETS.filter(p => p.category === activeCategory).length === 0 && (
+              <div className="text-center py-12 text-slate-500">
+                <p>该分类下暂无API组件</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
