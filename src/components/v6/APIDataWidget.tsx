@@ -109,6 +109,13 @@ const getFieldValue = (item: any, fieldPath: string): string => {
   return String(value);
 };
 
+// 获取项目显示文本（处理字符串和对象）
+const getItemDisplayText = (item: any, fieldPath?: string): string => {
+  if (typeof item === 'string') return item;
+  if (!fieldPath) return String(item);
+  return getFieldValue(item, fieldPath);
+};
+
 export const APIDataWidget: React.FC<APIDataWidgetProps> = ({ config }) => {
   const [data, setData] = useState<any[]>([]);
   const [rawContent, setRawContent] = useState<string>('');
@@ -261,13 +268,6 @@ export const APIDataWidget: React.FC<APIDataWidgetProps> = ({ config }) => {
       );
     }
 
-// 获取项目显示文本
-const getItemDisplayText = (item: any, fieldPath?: string): string => {
-  if (typeof item === 'string') return item;
-  if (!fieldPath) return String(item);
-  return getFieldValue(item, fieldPath);
-};
-
     switch (config.displayType) {
       case 'list':
         return (
@@ -335,7 +335,7 @@ const getItemDisplayText = (item: any, fieldPath?: string): string => {
                 key={index}
                 className="p-3 rounded-lg bg-[#0d0e10] text-sm text-slate-300"
               >
-                {getFieldValue(item, config.fields.title) || String(item)}
+                {getItemDisplayText(item, config.fields.title)}
               </div>
             ))}
           </div>
