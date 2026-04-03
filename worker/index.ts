@@ -117,6 +117,11 @@ async function handleAPI(request: Request, env: Env): Promise<Response> {
     return handleCategoriesAPI(request, env);
   }
 
+  // RSS 代理 API - 解决跨域问题
+  if (path === '/api/v1/rss') {
+    return handleRSSAPI(request);
+  }
+
   return new Response(JSON.stringify({ error: 'Not found' }), {
     status: 404,
     headers: { 'Content-Type': 'application/json', ...corsHeaders }
@@ -513,6 +518,120 @@ async function handleCategoriesAPI(request: Request, env: Env): Promise<Response
     status: 405,
     headers: { 'Content-Type': 'application/json', ...corsHeaders }
   });
+}
+
+// RSS 代理 API - 解决跨域问题
+async function handleRSSAPI(request: Request): Promise<Response> {
+  const url = new URL(request.url);
+  const rssUrl = url.searchParams.get('url');
+
+  if (!rssUrl) {
+    return new Response(JSON.stringify({ error: 'Missing URL parameter' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+
+  // 验证 URL 格式
+  try {
+    new URL(rssUrl);
+  } catch {
+    return new Response(JSON.stringify({ error: 'Invalid URL format' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+
+  // 允许的 RSS 域名白名单（可选安全措施）
+  const allowedDomains = [
+    'feeds.feedburner.com',
+    'www.v2ex.com',
+    'v2ex.com',
+    'rsshub.app',
+    'github.com',
+    'api.github.com',
+    'www.reddit.com',
+    'reddit.com',
+    'hn.algolia.com',
+    'news.ycombinator.com',
+    'www.youtube.com',
+    'youtube.com',
+    'medium.com',
+    'www.medium.com',
+    'dev.to',
+    'www.producthunt.com',
+    'producthunt.com',
+    'techcrunch.com',
+    'www.techcrunch.com',
+    'theverge.com',
+    'www.theverge.com',
+    'arstechnica.com',
+    'www.arstechnica.com',
+    'wired.com',
+    'www.wired.com'
+  ];
+
+  try {
+    const targetUrl = new URL(rssUrl);
+    // 可选：检查域名白名单
+    // if (!allowedDomains.some(domain => targetUrl.hostname.includes(domain))) {
+    //   return new Response(JSON.stringify({ error: 'Domain not allowed' }), {
+    //     status: 403,
+    //     headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    //   });
+    // }
+
+    // 设置请求头模拟浏览器
+    const headers = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'application/rss+xml, application/atom+xml, application/xml, text/xml, */*',
+      'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+      'Referer': targetUrl.origin,
+      'Cache-Control': 'no-cache'
+    };
+
+    // 获取 RSS 内容
+    const response = await fetch(rssUrl, {
+      method: 'GET',
+      headers,
+      // Cloudflare Workers 自动处理 CORS
+    });
+
+    if (!response.ok) {
+      return new Response(JSON.stringify({ 
+        error: `Failed to fetch RSS: HTTP ${response.status}` 
+      }), {
+        status: response.status,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
+    // 获取内容类型
+    const contentType = response.headers.get('content-type') || 'application/xml';
+    
+    // 获取文本内容
+    const xmlText = await response.text();
+
+    // 返回 XML 内容
+    return new Response(xmlText, {
+      status: 200,
+      headers: {
+        'Content-Type': contentType.includes('xml') ? contentType : 'application/xml',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Cache-Control': 'public, max-age=300' // 缓存5分钟
+      }
+    });
+  } catch (error) {
+    console.error('RSS proxy error:', error);
+    return new Response(JSON.stringify({ 
+      error: error instanceof Error ? error.message : 'Failed to fetch RSS feed'
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
 }
 
 export default {

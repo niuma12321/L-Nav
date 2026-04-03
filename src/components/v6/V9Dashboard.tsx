@@ -32,7 +32,8 @@ import {
   Clock,
   MapPin,
   Navigation,
-  Newspaper
+  Newspaper,
+  Rss
 } from 'lucide-react';
 import { useWidgetSystem } from '../../hooks/useWidgetSystem';
 
@@ -50,6 +51,7 @@ import NavEditModal from '../modals/NavEditModal';
 import ResourceCenterViewCN from './ResourceCenterViewCN';
 import WidgetConfigCenter from './WidgetConfigCenter';
 import LabView from './LabView';
+import RSSReaderViewCN from './RSSReaderViewCN';
 
 interface V9DashboardProps {
   onAddResource?: () => void;
@@ -1216,6 +1218,7 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
   const [navItems, setNavItems] = useState([
     { id: 'dashboard', label: '控制台', icon: LayoutDashboard },
     { id: 'resources', label: '资源中心', icon: FolderOpen },
+    { id: 'rss', label: 'RSS阅读', icon: Rss },
     { id: 'widgets', label: '组件配置', icon: Grid3X3 },
     { id: 'labs', label: '实验室', icon: FlaskConical },
   ]);
@@ -1545,6 +1548,8 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
             links={links}
             categories={categories}
           />
+        ) : activeView === 'rss' ? (
+          <RSSReaderViewCN />
         ) : activeView === 'labs' ? (
           <LabView />
         ) : (
