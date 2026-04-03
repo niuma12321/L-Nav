@@ -154,12 +154,25 @@ export const useDataStore = () => {
     }, []);
 
     const updateData = useCallback((newLinks: LinkItem[], newCategories: Category[]) => {
+        // 严格验证：禁止保存空数据
+        const hasValidLinks = Array.isArray(newLinks) && newLinks.length > 0;
+        const hasValidCategories = Array.isArray(newCategories) && newCategories.length > 0;
+        
+        if (!hasValidLinks || !hasValidCategories) {
+            console.error('[DataStore] Refusing to save empty data:', { 
+                links: newLinks?.length, 
+                categories: newCategories?.length 
+            });
+            return;
+        }
+        
         // 1. Optimistic UI Update
         setLinks(newLinks);
         setCategories(newCategories);
 
         // 2. Save to Local Cache
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ links: newLinks, categories: newCategories }));
+        console.log('[DataStore] Data saved:', { links: newLinks.length, categories: newCategories.length });
     }, []);
 
     const addLink = useCallback((data: Omit<LinkItem, 'id' | 'createdAt'>) => {
