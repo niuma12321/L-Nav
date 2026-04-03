@@ -357,6 +357,11 @@ function App() {
   const handleSyncComplete = useCallback((data: YNavSyncData) => {
     // 当从云端恢复数据时更新本地数据
     // 严格检查：数据必须存在且非空
+    if (!data) {
+      console.warn('[Sync] Received undefined data, skipping sync');
+      return;
+    }
+    
     const hasValidLinks = Array.isArray(data.links) && data.links.length > 0;
     const hasValidCategories = Array.isArray(data.categories) && data.categories.length > 0;
     

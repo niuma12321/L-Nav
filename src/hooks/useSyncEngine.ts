@@ -139,6 +139,12 @@ export function useSyncEngine(options: UseSyncEngineOptions = {}): UseSyncEngine
         force: boolean = false
     ): Promise<boolean> => {
         // 严格检查：禁止推送空数据
+        if (!data) {
+            console.warn('[SyncEngine] Data is undefined, skipping push');
+            onError?.('数据为空，无法同步');
+            return false;
+        }
+        
         const hasValidLinks = Array.isArray(data.links) && data.links.length > 0;
         const hasValidCategories = Array.isArray(data.categories) && data.categories.length > 0;
         
@@ -214,6 +220,12 @@ export function useSyncEngine(options: UseSyncEngineOptions = {}): UseSyncEngine
 
     // 带 debounce 的推送调度
     const schedulePush = useCallback((data: Omit<YNavSyncData, 'meta'>) => {
+        // 检查数据有效性
+        if (!data || !Array.isArray(data.links) || !Array.isArray(data.categories)) {
+            console.warn('[SyncEngine] Invalid data for schedulePush, skipping');
+            return;
+        }
+        
         // 存储待推送数据
         pendingData.current = data;
         setSyncStatus('pending');
