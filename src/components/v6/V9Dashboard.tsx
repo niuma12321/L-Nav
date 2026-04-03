@@ -129,8 +129,17 @@ const WeatherWidget: React.FC = () => {
     setWeather(prev => ({ ...prev, loading: true, error: false }));
     try {
       // 使用和风天气免费API - 需要替换为真实API Key
-      // 这里使用备用API服务
-      const response = await fetch(`https://devapi.qweather.com/v7/weather/now?location=${cityId}&key=demo`);
+      const response = await fetch(`https://devapi.qweather.com/v7/weather/now?location=${cityId}&key=demo`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Weather API error: ${response.status}`);
+      }
+      
       const data = await response.json();
       
       if (data.code === '200' && data.now) {
@@ -146,14 +155,12 @@ const WeatherWidget: React.FC = () => {
           loading: false,
           error: false
         });
-        // 保存到本地存储
         localStorage.setItem('ynav_weather_city', JSON.stringify({ name: cityName, id: cityId }));
       } else {
-        // API返回错误时使用模拟数据
         throw new Error('Weather API error');
       }
     } catch {
-      // 备用：使用模拟数据（实际项目中应使用有效的API）
+      // 备用：使用模拟数据
       const mockData: Record<string, { temp: number; condition: string; humidity: number; windLevel: number }> = {
         '101010100': { temp: 22, condition: '晴', humidity: 45, windLevel: 3 },
         '101020100': { temp: 23, condition: '多云', humidity: 60, windLevel: 4 },
@@ -503,97 +510,32 @@ const NewsWidget: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // 获取微博热搜
+  // 获取微博热搜 - 已禁用外部API，使用模拟数据
   const fetchWeiboHot = async () => {
-    try {
-      // 使用微博热搜API
-      const response = await fetch('https://weibo.com/ajax/side/hotSearch', {
-        headers: {
-          'Referer': 'https://weibo.com/',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
-      });
-      if (!response.ok) throw new Error('Failed to fetch');
-      const data = await response.json();
-      
-      if (data.data && data.data.realtime) {
-        const hotSearch = data.data.realtime.slice(0, 10).map((item: any, index: number) => ({
-          id: index + 1,
-          title: item.word,
-          hot: item.raw_hot ? `${(item.raw_hot / 10000).toFixed(1)}万` : '热',
-          rank: index + 1,
-          url: `https://s.weibo.com/weibo?q=${encodeURIComponent(item.word)}`
-        }));
-        setHotList(hotSearch);
-        setError('');
-      }
-    } catch {
-      // 使用备用API
-      try {
-        const backupResponse = await fetch('https://api-hot.imsyy.top/weibo');
-        const backupData = await backupResponse.json();
-        if (backupData.data) {
-          const hotSearch = backupData.data.slice(0, 10).map((item: any, index: number) => ({
-            id: index + 1,
-            title: item.title,
-            hot: item.hot || '热',
-            rank: index + 1,
-            url: item.url || `https://s.weibo.com/weibo?q=${encodeURIComponent(item.title)}`
-          }));
-          setHotList(hotSearch);
-          setError('');
-        }
-      } catch {
-        setError('获取失败');
-        // 使用默认数据
-        setHotList([
-          { id: 1, title: '微博热搜加载中...', hot: '...', rank: 1 },
-          { id: 2, title: '请检查网络连接', hot: '...', rank: 2 },
-        ]);
-      }
-    }
+    // 禁用外部API调用，直接使用模拟数据
+    setHotList([
+      { id: 1, title: '科技发展新动态', hot: '450万', rank: 1, url: '#' },
+      { id: 2, title: '今日热门话题讨论', hot: '320万', rank: 2, url: '#' },
+      { id: 3, title: '娱乐圈最新消息', hot: '280万', rank: 3, url: '#' },
+    ]);
   };
 
-  // 获取知乎热榜
+  // 获取知乎热榜 - 已禁用外部API
   const fetchZhihuHot = async () => {
-    try {
-      const response = await fetch('https://api-hot.imsyy.top/zhihu');
-      const data = await response.json();
-      if (data.data) {
-        const hotSearch = data.data.slice(0, 10).map((item: any, index: number) => ({
-          id: index + 1,
-          title: item.title,
-          hot: item.hot || `${(Math.random() * 1000 + 500).toFixed(0)}万`,
-          rank: index + 1,
-          url: item.url
-        }));
-        setHotList(hotSearch);
-        setError('');
-      }
-    } catch {
-      setError('获取失败');
-    }
+    setHotList([
+      { id: 1, title: '如何评价最新技术突破？', hot: '8900', rank: 1, url: '#' },
+      { id: 2, title: '有哪些值得收藏的学习资源？', hot: '6500', rank: 2, url: '#' },
+      { id: 3, title: '职场新人应该注意什么？', hot: '5200', rank: 3, url: '#' },
+    ]);
   };
 
-  // 获取百度热搜
+  // 获取百度热搜 - 已禁用外部API
   const fetchBaiduHot = async () => {
-    try {
-      const response = await fetch('https://api-hot.imsyy.top/baidu');
-      const data = await response.json();
-      if (data.data) {
-        const hotSearch = data.data.slice(0, 10).map((item: any, index: number) => ({
-          id: index + 1,
-          title: item.title,
-          hot: item.hot || `${(Math.random() * 1000 + 500).toFixed(0)}万`,
-          rank: index + 1,
-          url: item.url
-        }));
-        setHotList(hotSearch);
-        setError('');
-      }
-    } catch {
-      setError('获取失败');
-    }
+    setHotList([
+      { id: 1, title: '最新新闻资讯', hot: '热', rank: 1, url: '#' },
+      { id: 2, title: '热门搜索关键词', hot: '热', rank: 2, url: '#' },
+      { id: 3, title: '今日焦点事件', hot: '热', rank: 3, url: '#' },
+    ]);
   };
 
   const refreshHot = async () => {
@@ -705,36 +647,11 @@ const NewsFeedWidget: React.FC = () => {
 
   const fetchNews = async () => {
     setLoading(true);
-    try {
-      // 使用NewsAPI或类似服务获取新闻
-      // 这里使用一个免费的API示例
-      const apiUrl = category === 'tech' 
-        ? 'https://api-hot.imsyy.top/36kr'
-        : category === 'finance'
-        ? 'https://api-hot.imsyy.top/wallstreetcn'
-        : 'https://api-hot.imsyy.top/toutiao';
-      
-      const response = await fetch(apiUrl);
-      const data = await response.json();
-      
-      if (data.data) {
-        const newsList = data.data.slice(0, 8).map((item: any, index: number) => ({
-          id: index + 1,
-          title: item.title,
-          source: item.source || category === 'tech' ? '36氪' : category === 'finance' ? '华尔街见闻' : '今日头条',
-          time: item.time || '刚刚',
-          url: item.url || '#',
-          summary: item.desc || item.summary
-        }));
-        setNews(newsList);
-      }
-    } catch {
-      // 如果API失败，显示默认数据
-      setNews([
-        { id: 1, title: '资讯加载中，请稍后...', source: '系统', time: '刚刚', url: '#' },
-        { id: 2, title: '如长时间未加载，请检查网络连接', source: '系统', time: '刚刚', url: '#' }
-      ]);
-    }
+    // 禁用外部API，使用模拟数据
+    setNews([
+      { id: 1, title: '科技新闻示例标题一', source: '科技', time: '刚刚', url: '#', summary: '这是一条科技新闻摘要...' },
+      { id: 2, title: '财经新闻示例标题二', source: '财经', time: '5分钟前', url: '#', summary: '这是一条财经新闻摘要...' },
+    ]);
     setLoading(false);
   };
 
