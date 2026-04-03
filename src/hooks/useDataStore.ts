@@ -69,6 +69,15 @@ export const useDataStore = () => {
     }, []);
 
     useEffect(() => {
+        // 强制数据重置机制：检查是否需要重置数据
+        const resetFlag = localStorage.getItem('ynav_force_reset_v2');
+        if (!resetFlag) {
+            console.log('[DataStore] Force resetting data to defaults');
+            localStorage.setItem('ynav_force_reset_v2', '1');
+            // 清除旧数据
+            localStorage.removeItem(LOCAL_STORAGE_KEY);
+        }
+        
         const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
         if (stored) {
             try {
