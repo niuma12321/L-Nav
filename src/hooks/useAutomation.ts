@@ -31,7 +31,7 @@ export interface AutomationLog {
 
 export function useAutomation() {
   // 从localStorage获取用户ID并使用useMemo缓存
-  const userId = useMemo(() => localStorage.getItem('user_id') || 'default', []);
+  const userId = useMemo(() => localStorage.getItem('user_id') || 'default', [localStorage.getItem('user_id')]);
   const [tasks, setTasks] = useState<AutomationTask[]>([]);
   const [logs, setLogs] = useState<AutomationLog[]>([]);
   const [loading, setLoading] = useState(false);

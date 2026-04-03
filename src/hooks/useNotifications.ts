@@ -152,17 +152,22 @@ export function useNotifications() {
 
   // 请求浏览器通知权限
   useEffect(() => {
-    if ('Notification' in window && 'serviceWorker' in navigator) {
-      Notification.requestPermission().then(permission => {
-        if (permission === 'granted') {
-          console.log('通知权限已获取');
-        }
-      });
-    }
+    if (typeof window === 'undefined') return;
+    if (!('Notification' in window)) return;
+    if (!('serviceWorker' in navigator)) return;
+    
+    Notification.requestPermission().then(permission => {
+      if (permission === 'granted') {
+        console.log('通知权限已获取');
+      }
+    });
   }, []);
 
   // 监听新通知并触发桌面推送
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!('Notification' in window)) return;
+    if (!('permission' in Notification)) return;
     if (Notification.permission !== 'granted') return;
 
     const shownNotifications = new Set<number>();
@@ -170,11 +175,15 @@ export function useNotifications() {
     notifications.forEach(n => {
       if (!n.is_read && !shownNotifications.has(n.id)) {
         shownNotifications.add(n.id);
-        new Notification(`【L-Nav】${n.title}`, {
-          body: n.content,
-          icon: '/favicon.ico',
-          tag: `notification-${n.id}`
-        });
+        try {
+          new Notification(`【L-Nav】${n.title}`, {
+            body: n.content,
+            icon: '/favicon.ico',
+            tag: `notification-${n.id}`
+          });
+        } catch (e) {
+          console.error('桌面通知发送失败', e);
+        }
       }
     });
   }, [notifications]);
