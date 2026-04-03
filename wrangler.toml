@@ -60,8 +60,6 @@ directory = "dist"
 # ==========================================
 
 [vars]
-# 环境标识
-NODE_ENV = "production"
 # API 版本
 API_VERSION = "v1"
 # 应用名称
