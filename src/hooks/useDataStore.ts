@@ -10,6 +10,28 @@ export const useDataStore = () => {
     const [isLoaded, setIsLoaded] = useState(false);
     const { notify } = useDialog();
 
+    // 数据监控：确保数据永远不会为空
+    useEffect(() => {
+        if (!isLoaded) return;
+        
+        // 如果链接为空，恢复默认数据
+        if (!links || links.length === 0) {
+            console.warn('[DataStore] Links empty, restoring defaults');
+            setLinks(INITIAL_LINKS);
+            setCategories(DEFAULT_CATEGORIES);
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ 
+                links: INITIAL_LINKS, 
+                categories: DEFAULT_CATEGORIES 
+            }));
+        }
+        
+        // 如果分类为空，恢复默认分类
+        if (!categories || categories.length === 0) {
+            console.warn('[DataStore] Categories empty, restoring defaults');
+            setCategories(DEFAULT_CATEGORIES);
+        }
+    }, [links, categories, isLoaded]);
+
     // 加载本地图标缓存
     const loadLinkIcons = useCallback((linksToLoad: LinkItem[]) => {
         let cache: Record<string, string> = {};
