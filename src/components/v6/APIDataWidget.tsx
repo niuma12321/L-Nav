@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Loader2, RefreshCw, Database, Globe, AlertCircle } from 'lucide-react';
+import { Loader2, RefreshCw, Globe, AlertCircle, FileText } from 'lucide-react';
 import type { APIDataConfig } from './widgetTypes';
 
 interface APIDataWidgetProps {
@@ -8,10 +8,95 @@ interface APIDataWidgetProps {
 
 // 从嵌套对象中获取值
 const getNestedValue = (obj: any, path: string): any => {
+  if (!path) return obj;
   return path.split('.').reduce((acc, part) => {
     if (acc === null || acc === undefined) return null;
     return acc[part];
   }, obj);
+};
+
+// 从HTML中提取文本内容
+const extractTextFromHTML = (html: string): string => {
+  if (!html || typeof html !== 'string') return '';
+  // 移除script和style标签及其内容
+  let text = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+  text = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+  // 移除所有HTML标签
+  text = text.replace(/<[^>]+>/g, ' ');
+  // 解码HTML实体
+  text = text.replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+  // 规范化空白
+  text = text.replace(/\s+/g, ' ').trim();
+  return text;
+};
+
+// 解析HTML表格数据
+const parseHTMLTable = (html: string): any[] => {
+  const results: any[] = [];
+  if (!html || typeof html !== 'string') return results;
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  
+  // 尝试找到表格
+  const tables = doc.querySelectorAll('table');
+  tables.forEach((table) => {
+    const rows = table.querySelectorAll('tr');
+    rows.forEach((row, rowIndex) => {
+      if (rowIndex === 0) return; // 跳过表头
+      const cells = row.querySelectorAll('td, th');
+      const rowData: any = {};
+      cells.forEach((cell, cellIndex) => {
+        rowData[`col${cellIndex}`] = cell.textContent?.trim() || '';
+        if (cellIndex === 0) rowData.title = cell.textContent?.trim() || '';
+        if (cellIndex === 1) rowData.value = cell.textContent?.trim() || '';
+        if (cellIndex === 2) rowData.subtitle = cell.textContent?.trim() || '';
+      });
+      if (Object.keys(rowData).length > 0) {
+        results.push(rowData);
+      }
+    });
+  });
+  
+  // 如果没有表格，尝试解析列表
+  if (results.length === 0) {
+    const lists = doc.querySelectorAll('ul, ol');
+    lists.forEach((list) => {
+      const items = list.querySelectorAll('li');
+      items.forEach((item, index) => {
+        const text = item.textContent?.trim() || '';
+        if (text) {
+          results.push({
+            title: text,
+            value: '',
+            index: index + 1
+          });
+        }
+      });
+    });
+  }
+  
+  // 如果还没有，按段落分割
+  if (results.length === 0) {
+    const paragraphs = doc.querySelectorAll('p, div, h1, h2, h3, h4, h5, h6');
+    paragraphs.forEach((p, index) => {
+      const text = p.textContent?.trim() || '';
+      if (text && text.length > 5) {
+        results.push({
+          title: text,
+          value: '',
+          index: index + 1
+        });
+      }
+    });
+  }
+  
+  return results;
 };
 
 // 从数组项中获取字段值
@@ -24,6 +109,8 @@ const getFieldValue = (item: any, fieldPath: string): string => {
 
 export const APIDataWidget: React.FC<APIDataWidgetProps> = ({ config }) => {
   const [data, setData] = useState<any[]>([]);
+  const [rawContent, setRawContent] = useState<string>('');
+  const [contentType, setContentType] = useState<'json' | 'html' | 'text'>('json');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
@@ -33,49 +120,65 @@ export const APIDataWidget: React.FC<APIDataWidgetProps> = ({ config }) => {
     setError(null);
     
     try {
-      const options: RequestInit = {
-        method: config.method,
+      // 使用代理服务器转发请求
+      const proxyUrl = '/api/v1/proxy';
+      const response = await fetch(proxyUrl, {
+        method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          ...config.headers
-        }
-      };
-
-      if (config.method === 'POST' && config.body) {
-        options.body = config.body;
-      }
-
-      const response = await fetch(config.apiUrl, options);
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          url: config.apiUrl,
+          method: config.method,
+          headers: config.headers || {},
+          body: config.method === 'POST' ? config.body : undefined
+        })
+      });
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      // 检查响应类型，确保是 JSON
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const text = await response.text();
-        // 如果返回的是 HTML，显示友好的错误信息
-        if (text.trim().startsWith('<')) {
-          throw new Error('API 返回了 HTML 页面而非 JSON 数据，请检查 API 地址是否正确');
+      const contentTypeHeader = response.headers.get('content-type') || '';
+      const responseText = await response.text();
+      
+      let parsedData: any[] = [];
+      
+      if (contentTypeHeader.includes('application/json')) {
+        // JSON响应
+        setContentType('json');
+        try {
+          const jsonData = JSON.parse(responseText);
+          let extractedData = config.dataPath ? getNestedValue(jsonData, config.dataPath) : jsonData;
+          if (!Array.isArray(extractedData)) {
+            extractedData = extractedData ? [extractedData] : [];
+          }
+          parsedData = extractedData.slice(0, config.maxItems || 10);
+        } catch (e) {
+          throw new Error('JSON解析失败');
         }
-        throw new Error('API 返回格式错误，期望 JSON 数据');
+      } else if (contentTypeHeader.includes('text/html') || responseText.trim().startsWith('<')) {
+        // HTML响应
+        setContentType('html');
+        setRawContent(responseText);
+        
+        // 尝试从HTML解析数据
+        if (config.dataPath === 'text' || config.displayType === 'text') {
+          // 纯文本显示模式
+          const text = extractTextFromHTML(responseText);
+          parsedData = [{ title: text.substring(0, 1000) }];
+        } else {
+          // 尝试解析表格或列表
+          parsedData = parseHTMLTable(responseText).slice(0, config.maxItems || 10);
+        }
+      } else {
+        // 纯文本响应
+        setContentType('text');
+        setRawContent(responseText);
+        parsedData = [{ title: responseText.substring(0, 1000) }];
       }
-
-      const result = await response.json();
       
-      // 根据 dataPath 提取数据
-      let extractedData = result;
-      if (config.dataPath) {
-        extractedData = getNestedValue(result, config.dataPath);
-      }
-      
-      // 确保数据是数组
-      if (!Array.isArray(extractedData)) {
-        extractedData = extractedData ? [extractedData] : [];
-      }
-      
-      setData(extractedData.slice(0, config.maxItems || 10));
+      setData(parsedData);
       setLastUpdate(new Date());
     } catch (err: any) {
       setError(err.message || '获取数据失败');
@@ -126,10 +229,33 @@ export const APIDataWidget: React.FC<APIDataWidgetProps> = ({ config }) => {
       );
     }
 
-    if (data.length === 0) {
+    if (data.length === 0 && !rawContent) {
       return (
         <div className="flex items-center justify-center h-full min-h-[150px] text-slate-500">
           {config.emptyText || '暂无数据'}
+        </div>
+      );
+    }
+
+    // HTML纯文本显示
+    if (contentType === 'html' && config.displayType === 'text' && rawContent) {
+      const text = extractTextFromHTML(rawContent);
+      return (
+        <div className="overflow-y-auto max-h-[300px]">
+          <div className="p-3 rounded-lg bg-[#0d0e10] text-sm text-slate-300 whitespace-pre-wrap leading-relaxed">
+            {text}
+          </div>
+        </div>
+      );
+    }
+
+    // 纯文本显示
+    if (contentType === 'text' && rawContent) {
+      return (
+        <div className="overflow-y-auto max-h-[300px]">
+          <div className="p-3 rounded-lg bg-[#0d0e10] text-sm text-slate-300 whitespace-pre-wrap leading-relaxed font-mono">
+            {rawContent.substring(0, 2000)}
+          </div>
         </div>
       );
     }
@@ -155,7 +281,7 @@ export const APIDataWidget: React.FC<APIDataWidgetProps> = ({ config }) => {
                 )}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-white truncate">
-                    {getFieldValue(item, config.fields.title)}
+                    {getFieldValue(item, config.fields.title) || `条目 ${index + 1}`}
                   </p>
                   {config.fields.subtitle && (
                     <p className="text-xs text-slate-400 truncate">
@@ -192,7 +318,7 @@ export const APIDataWidget: React.FC<APIDataWidgetProps> = ({ config }) => {
                   />
                 )}
                 <p className="text-sm font-medium text-white truncate">
-                  {getFieldValue(item, config.fields.title)}
+                  {getFieldValue(item, config.fields.title) || `条目 ${index + 1}`}
                 </p>
                 {config.fields.subtitle && (
                   <p className="text-xs text-slate-400 truncate mt-1">
@@ -227,8 +353,9 @@ export const APIDataWidget: React.FC<APIDataWidgetProps> = ({ config }) => {
               <tbody>
                 {data.map((item, index) => (
                   <tr key={index} className="border-b border-white/5 hover:bg-[#0d0e10]">
+                    <td className="py-2 px-2 text-slate-500">{index + 1}</td>
                     <td className="py-2 px-2 text-white">
-                      {getFieldValue(item, config.fields.title)}
+                      {getFieldValue(item, config.fields.title) || '-'}
                     </td>
                     {config.fields.subtitle && (
                       <td className="py-2 px-2 text-slate-400">
@@ -256,7 +383,7 @@ export const APIDataWidget: React.FC<APIDataWidgetProps> = ({ config }) => {
                 key={index}
                 className="p-3 rounded-lg bg-[#0d0e10] text-sm text-slate-300"
               >
-                {getFieldValue(item, config.fields.title)}
+                {getFieldValue(item, config.fields.title) || String(item)}
               </div>
             ))}
           </div>
@@ -269,8 +396,13 @@ export const APIDataWidget: React.FC<APIDataWidgetProps> = ({ config }) => {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Globe className="w-4 h-4 text-emerald-400" />
+          {contentType === 'html' ? <FileText className="w-4 h-4 text-blue-400" /> : <Globe className="w-4 h-4 text-emerald-400" />}
           <span className="text-sm font-medium text-slate-300">{config.name}</span>
+          {contentType !== 'json' && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 uppercase">
+              {contentType}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-1">
           {lastUpdate && (

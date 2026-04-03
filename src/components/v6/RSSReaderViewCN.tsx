@@ -258,7 +258,7 @@ const RSSReaderViewCN: React.FC = () => {
     return feeds;
   };
 
-  // 处理 OPML 文件导入
+  // 处理 OPML 文件导入 - 一键立即导入，不逐个验证
   const handleOPMLImport = async (file: File) => {
     setOpmlImporting(true);
     setAddError('');
@@ -274,90 +274,51 @@ const RSSReaderViewCN: React.FC = () => {
 
       let successCount = 0;
       let failedCount = 0;
+      let skippedCount = 0;
       const newSources: RSSSource[] = [];
-      const newItems: RSSItem[] = [];
 
       for (const feed of feeds) {
-        try {
-          // 检查是否已存在
-          const exists = sources.some(s => s.url === feed.url);
-          if (exists) {
-            continue;
-          }
-
-          // 尝试获取 RSS 验证
-          const response = await fetch(`${RSS_PROXY_API}?url=${encodeURIComponent(feed.url)}`);
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-          }
-
-          const xmlText = await response.text();
-          const parser = new DOMParser();
-          const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
-          
-          // 提取标题
-          const channelTitle = xmlDoc.querySelector('channel > title, feed > title')?.textContent || 
-                              feed.title || 
-                              '未命名源';
-
-          const newSource: RSSSource = {
-            id: `source-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            title: channelTitle,
-            url: feed.url,
-            addedAt: Date.now(),
-            lastFetched: Date.now()
-          };
-
-          newSources.push(newSource);
-
-          // 解析条目
-          const entries = xmlDoc.querySelectorAll('item, entry');
-          entries.forEach((entry, index) => {
-            const title = entry.querySelector('title')?.textContent || '无标题';
-            const link = entry.querySelector('link')?.textContent || 
-                        entry.querySelector('link')?.getAttribute('href') || '';
-            const description = entry.querySelector('description, summary, content')?.textContent || '';
-            const pubDate = entry.querySelector('pubDate, published, updated')?.textContent || '';
-            const author = entry.querySelector('author, creator')?.textContent || '';
-            
-            newItems.push({
-              id: `${newSource.id}-${index}-${Date.now()}`,
-              title: title.trim(),
-              link: link.trim(),
-              description: description.trim().substring(0, 500),
-              pubDate,
-              author: author.trim(),
-              sourceId: newSource.id,
-              sourceTitle: newSource.title
-            });
-          });
-
-          successCount++;
-          // 延迟避免请求过快
-          await new Promise(resolve => setTimeout(resolve, 300));
-        } catch {
-          failedCount++;
+        // 检查是否已存在
+        const exists = sources.some(s => s.url === feed.url);
+        if (exists) {
+          skippedCount++;
+          continue;
         }
+
+        // 直接添加，不等待网络验证
+        const newSource: RSSSource = {
+          id: `source-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          title: feed.title,
+          url: feed.url,
+          addedAt: Date.now(),
+          lastFetched: Date.now()
+        };
+
+        newSources.push(newSource);
+        successCount++;
       }
 
       if (newSources.length > 0) {
         const allSources = [...newSources, ...sources];
         saveSources(allSources);
-        
-        const existingLinks = new Set(items.map(i => i.link));
-        const uniqueNewItems = newItems.filter(item => !existingLinks.has(item.link));
-        const allItems = [...uniqueNewItems, ...items].slice(0, 200);
-        saveItems(allItems);
       }
 
-      setOpmlStats({ total: feeds.length, success: successCount, failed: failedCount });
+      setOpmlStats({ 
+        total: feeds.length, 
+        success: successCount, 
+        failed: failedCount,
+        skipped: skippedCount 
+      });
       
+      // 立即关闭弹窗
       if (successCount > 0) {
         setTimeout(() => {
           setShowAddModal(false);
           setAddMode('manual');
           setOpmlStats(null);
-        }, 2000);
+          // 后台异步获取文章
+          fetchAllSources();
+        }, 500);
       }
     } catch (error) {
       setAddError(error instanceof Error ? error.message : '导入失败');
@@ -874,7 +835,7 @@ const RSSReaderViewCN: React.FC = () => {
                         <span className="text-sm font-medium text-green-400">导入完成</span>
                       </div>
                       <p className="text-xs text-slate-400">
-                        总计: {opmlStats.total} | 成功: {opmlStats.success} | 失败: {opmlStats.failed}
+                        总计: {opmlStats.total} | 成功: {opmlStats.success} | 跳过: {opmlStats.skipped || 0} | 失败: {opmlStats.failed}
                       </p>
                     </div>
                   )}
