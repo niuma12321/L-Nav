@@ -31,7 +31,8 @@ import {
   Trash2,
   Clock,
   MapPin,
-  Navigation
+  Navigation,
+  Newspaper
 } from 'lucide-react';
 import { useWidgetSystem } from '../../hooks/useWidgetSystem';
 
@@ -437,20 +438,124 @@ const TodoWidget: React.FC = () => {
   );
 };
 
-// 热搜小组件
+// 热搜小组件 - 接入真实微博热搜API
 const NewsWidget: React.FC = () => {
-  const [hotList, setHotList] = useState([
-    { id: 1, title: '科技发展新动态', hot: '450.0万', rank: 1 },
-    { id: 2, title: '今日热门话题讨论', hot: '320.0万', rank: 2 },
-    { id: 3, title: '娱乐圈最新消息', hot: '280.0万', rank: 3 },
-    { id: 4, title: '社会民生关注点', hot: '210.0万', rank: 4 },
-    { id: 5, title: '体育赛事直播', hot: '180.0万', rank: 5 },
-  ]);
-  const [source, setSource] = useState<'weibo' | 'zhihu'>('weibo');
+  const [hotList, setHotList] = useState<Array<{id: number; title: string; hot: string; rank: number; url?: string}>>([]);
+  const [source, setSource] = useState<'weibo' | 'zhihu' | 'baidu'>('weibo');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const refreshHot = () => {
-    setHotList(prev => prev.map(item => ({ ...item, hot: (parseFloat(item.hot) + Math.random() * 10).toFixed(1) + '万' })));
+  // 获取微博热搜
+  const fetchWeiboHot = async () => {
+    try {
+      // 使用微博热搜API
+      const response = await fetch('https://weibo.com/ajax/side/hotSearch', {
+        headers: {
+          'Referer': 'https://weibo.com/',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+      });
+      if (!response.ok) throw new Error('Failed to fetch');
+      const data = await response.json();
+      
+      if (data.data && data.data.realtime) {
+        const hotSearch = data.data.realtime.slice(0, 10).map((item: any, index: number) => ({
+          id: index + 1,
+          title: item.word,
+          hot: item.raw_hot ? `${(item.raw_hot / 10000).toFixed(1)}万` : '热',
+          rank: index + 1,
+          url: `https://s.weibo.com/weibo?q=${encodeURIComponent(item.word)}`
+        }));
+        setHotList(hotSearch);
+        setError('');
+      }
+    } catch {
+      // 使用备用API
+      try {
+        const backupResponse = await fetch('https://api-hot.imsyy.top/weibo');
+        const backupData = await backupResponse.json();
+        if (backupData.data) {
+          const hotSearch = backupData.data.slice(0, 10).map((item: any, index: number) => ({
+            id: index + 1,
+            title: item.title,
+            hot: item.hot || '热',
+            rank: index + 1,
+            url: item.url || `https://s.weibo.com/weibo?q=${encodeURIComponent(item.title)}`
+          }));
+          setHotList(hotSearch);
+          setError('');
+        }
+      } catch {
+        setError('获取失败');
+        // 使用默认数据
+        setHotList([
+          { id: 1, title: '微博热搜加载中...', hot: '...', rank: 1 },
+          { id: 2, title: '请检查网络连接', hot: '...', rank: 2 },
+        ]);
+      }
+    }
   };
+
+  // 获取知乎热榜
+  const fetchZhihuHot = async () => {
+    try {
+      const response = await fetch('https://api-hot.imsyy.top/zhihu');
+      const data = await response.json();
+      if (data.data) {
+        const hotSearch = data.data.slice(0, 10).map((item: any, index: number) => ({
+          id: index + 1,
+          title: item.title,
+          hot: item.hot || `${(Math.random() * 1000 + 500).toFixed(0)}万`,
+          rank: index + 1,
+          url: item.url
+        }));
+        setHotList(hotSearch);
+        setError('');
+      }
+    } catch {
+      setError('获取失败');
+    }
+  };
+
+  // 获取百度热搜
+  const fetchBaiduHot = async () => {
+    try {
+      const response = await fetch('https://api-hot.imsyy.top/baidu');
+      const data = await response.json();
+      if (data.data) {
+        const hotSearch = data.data.slice(0, 10).map((item: any, index: number) => ({
+          id: index + 1,
+          title: item.title,
+          hot: item.hot || `${(Math.random() * 1000 + 500).toFixed(0)}万`,
+          rank: index + 1,
+          url: item.url
+        }));
+        setHotList(hotSearch);
+        setError('');
+      }
+    } catch {
+      setError('获取失败');
+    }
+  };
+
+  const refreshHot = async () => {
+    setLoading(true);
+    if (source === 'weibo') {
+      await fetchWeiboHot();
+    } else if (source === 'zhihu') {
+      await fetchZhihuHot();
+    } else {
+      await fetchBaiduHot();
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    refreshHot();
+    // 每5分钟自动刷新
+    const timer = setInterval(refreshHot, 5 * 60 * 1000);
+    return () => clearInterval(timer);
+  }, [source]);
 
   return (
     <div className="h-full flex flex-col">
@@ -458,8 +563,9 @@ const NewsWidget: React.FC = () => {
         <div className="flex items-center gap-2">
           <Flame className="w-4 h-4 text-red-500" />
           <span className="text-sm font-medium text-slate-300">
-            {source === 'weibo' ? '微博热搜' : '知乎热榜'}
+            {source === 'weibo' ? '微博热搜' : source === 'zhihu' ? '知乎热榜' : '百度热搜'}
           </span>
+          {loading && <RefreshCw className="w-3 h-3 text-slate-500 animate-spin" />}
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -478,67 +584,190 @@ const NewsWidget: React.FC = () => {
           >
             知乎
           </button>
+          <button
+            onClick={() => setSource('baidu')}
+            className={`px-2 py-0.5 text-xs rounded transition-colors ${
+              source === 'baidu' ? 'bg-emerald-500 text-[#0d0e10]' : 'bg-white/5 text-slate-400'
+            }`}
+          >
+            百度
+          </button>
         </div>
       </div>
       <div className="flex-1 overflow-y-auto space-y-1.5">
-        {hotList.map((item) => (
-          <a
-            key={item.id}
-            href={`https://s.weibo.com/weibo?q=${encodeURIComponent(item.title)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 p-2 rounded-lg cursor-pointer hover:bg-white/5 transition-colors duration-200 group"
-          >
-            <span className={`w-5 h-5 flex items-center justify-center rounded text-xs font-bold ${
-              item.rank <= 3
-                ? 'bg-red-500/20 text-red-400'
-                : 'bg-white/5 text-slate-400'
-            }`}>
-              {item.rank}
-            </span>
-            <span className="flex-1 text-sm text-slate-300 truncate">{item.title}</span>
-            <span className="text-xs text-slate-500 flex items-center gap-1">
-              <Flame className="w-3 h-3" />
-              {item.hot}
-            </span>
-            <ExternalLink className="w-3 h-3 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-          </a>
-        ))}
+        {hotList.length === 0 ? (
+          <div className="flex items-center justify-center h-full text-slate-500">
+            <Loader2 className="w-5 h-5 animate-spin" />
+          </div>
+        ) : (
+          hotList.map((item) => (
+            <a
+              key={item.id}
+              href={item.url || '#'}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 p-2 rounded-lg cursor-pointer hover:bg-white/5 transition-colors duration-200 group"
+            >
+              <span className={`w-5 h-5 flex items-center justify-center rounded text-xs font-bold ${
+                item.rank <= 3
+                  ? 'bg-red-500/20 text-red-400'
+                  : 'bg-white/5 text-slate-400'
+              }`}>
+                {item.rank}
+              </span>
+              <span className="flex-1 text-sm text-slate-300 truncate">{item.title}</span>
+              <span className="text-xs text-slate-500 flex items-center gap-1">
+                <Flame className="w-3 h-3" />
+                {item.hot}
+              </span>
+              <ExternalLink className="w-3 h-3 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </a>
+          ))
+        )}
       </div>
       <div className="mt-2 pt-2 border-t border-white/5">
         <button
           onClick={refreshHot}
+          disabled={loading}
           className="w-full py-1.5 text-xs text-slate-500 hover:text-emerald-400 flex items-center justify-center gap-1 transition-colors"
         >
-          <RefreshCw className="w-3 h-3" />
-          刷新热搜
+          <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+          {loading ? '刷新中...' : '刷新热搜'}
         </button>
       </div>
     </div>
   );
 };
 
-// 便签小组件
-const NotesWidget: React.FC = () => {
-  const [notes] = useState([
-    { id: 1, content: '记得复盘昨日行情', color: 'bg-yellow-500/20' },
-    { id: 2, content: '查看季度财报数据', color: 'bg-blue-500/20' },
-    { id: 3, content: '更新投资组合', color: 'bg-green-500/20' },
-  ]);
+// 资讯流中心组件
+const NewsFeedWidget: React.FC = () => {
+  const [news, setNews] = useState<Array<{id: number; title: string; source: string; time: string; url: string; summary?: string}>>([]);
+  const [loading, setLoading] = useState(false);
+  const [category, setCategory] = useState<'tech' | 'finance' | 'general'>('tech');
+
+  const fetchNews = async () => {
+    setLoading(true);
+    try {
+      // 使用NewsAPI或类似服务获取新闻
+      // 这里使用一个免费的API示例
+      const apiUrl = category === 'tech' 
+        ? 'https://api-hot.imsyy.top/36kr'
+        : category === 'finance'
+        ? 'https://api-hot.imsyy.top/wallstreetcn'
+        : 'https://api-hot.imsyy.top/toutiao';
+      
+      const response = await fetch(apiUrl);
+      const data = await response.json();
+      
+      if (data.data) {
+        const newsList = data.data.slice(0, 8).map((item: any, index: number) => ({
+          id: index + 1,
+          title: item.title,
+          source: item.source || category === 'tech' ? '36氪' : category === 'finance' ? '华尔街见闻' : '今日头条',
+          time: item.time || '刚刚',
+          url: item.url || '#',
+          summary: item.desc || item.summary
+        }));
+        setNews(newsList);
+      }
+    } catch {
+      // 如果API失败，显示默认数据
+      setNews([
+        { id: 1, title: '资讯加载中，请稍后...', source: '系统', time: '刚刚', url: '#' },
+        { id: 2, title: '如长时间未加载，请检查网络连接', source: '系统', time: '刚刚', url: '#' }
+      ]);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchNews();
+    // 每10分钟刷新一次
+    const timer = setInterval(fetchNews, 10 * 60 * 1000);
+    return () => clearInterval(timer);
+  }, [category]);
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex-1 overflow-y-auto space-y-2">
-        {notes.map(note => (
-          <div key={note.id} className={`p-2 rounded-lg ${note.color} text-white/80 text-sm`}>
-            {note.content}
-          </div>
-        ))}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Newspaper className="w-4 h-4 text-emerald-400" />
+          <span className="text-sm font-medium text-slate-300">资讯流中心</span>
+          {loading && <Loader2 className="w-3 h-3 text-slate-500 animate-spin" />}
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setCategory('tech')}
+            className={`px-2 py-0.5 text-xs rounded transition-colors ${
+              category === 'tech' ? 'bg-emerald-500 text-[#0d0e10]' : 'bg-white/5 text-slate-400'
+            }`}
+          >
+            科技
+          </button>
+          <button
+            onClick={() => setCategory('finance')}
+            className={`px-2 py-0.5 text-xs rounded transition-colors ${
+              category === 'finance' ? 'bg-emerald-500 text-[#0d0e10]' : 'bg-white/5 text-slate-400'
+            }`}
+          >
+            财经
+          </button>
+          <button
+            onClick={() => setCategory('general')}
+            className={`px-2 py-0.5 text-xs rounded transition-colors ${
+              category === 'general' ? 'bg-emerald-500 text-[#0d0e10]' : 'bg-white/5 text-slate-400'
+            }`}
+          >
+            综合
+          </button>
+        </div>
       </div>
-      <button className="mt-2 text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1">
-        <Plus className="w-3 h-3" />
-        添加便签
-      </button>
+      
+      <div className="flex-1 overflow-y-auto space-y-2">
+        {news.length === 0 ? (
+          <div className="flex items-center justify-center h-full text-slate-500">
+            <Loader2 className="w-5 h-5 animate-spin" />
+          </div>
+        ) : (
+          news.map((item) => (
+            <a
+              key={item.id}
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block p-3 rounded-xl bg-[#0d0e10] hover:bg-[#1a1c1f] transition-colors group"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-sm text-white font-medium truncate group-hover:text-emerald-400 transition-colors">
+                    {item.title}
+                  </h4>
+                  {item.summary && (
+                    <p className="text-xs text-slate-500 mt-1 line-clamp-2">{item.summary}</p>
+                  )}
+                  <div className="flex items-center gap-2 mt-1.5 text-xs text-slate-500">
+                    <span className="text-emerald-500/80">{item.source}</span>
+                    <span>·</span>
+                    <span>{item.time}</span>
+                  </div>
+                </div>
+                <ExternalLink className="w-3.5 h-3.5 text-slate-600 group-hover:text-slate-400 shrink-0 mt-0.5" />
+              </div>
+            </a>
+          ))
+        )}
+      </div>
+      
+      <div className="mt-2 pt-2 border-t border-white/5">
+        <button
+          onClick={fetchNews}
+          disabled={loading}
+          className="w-full py-1.5 text-xs text-slate-500 hover:text-emerald-400 flex items-center justify-center gap-1 transition-colors"
+        >
+          <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+          {loading ? '刷新中...' : '刷新资讯'}
+        </button>
+      </div>
     </div>
   );
 };
@@ -564,7 +793,6 @@ const SearchWidget: React.FC = () => {
     const saved = localStorage.getItem('ynav_search_history');
     return saved ? JSON.parse(saved) : [];
   });
-  const [showHistory, setShowHistory] = useState(false);
 
   // 保存搜索历史
   const saveSearchHistory = (query: string) => {
@@ -583,7 +811,6 @@ const SearchWidget: React.FC = () => {
   // 从历史记录搜索
   const searchFromHistory = (query: string) => {
     setSearchQuery(query);
-    setShowHistory(false);
     const engine = engines.find(e => e.name === activeEngine);
     if (engine) {
       window.open(`${engine.url}${encodeURIComponent(query)}`, '_blank');
@@ -660,7 +887,6 @@ const SearchWidget: React.FC = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-            onFocus={() => setShowHistory(true)}
             placeholder={`在 ${activeEngine} 中搜索...`}
             className="flex-1 bg-transparent text-white placeholder-slate-500 outline-none"
           />
@@ -673,36 +899,34 @@ const SearchWidget: React.FC = () => {
             </button>
           )}
         </div>
-
-        {/* 搜索历史下拉 */}
-        {showHistory && searchHistory.length > 0 && (
-          <div className="absolute top-full left-0 right-0 mt-2 bg-[#181a1c] border border-white/10 rounded-xl overflow-hidden z-50 shadow-xl">
-            <div className="flex items-center justify-between px-4 py-2 border-b border-white/5">
-              <span className="text-xs text-slate-500">搜索历史</span>
-              <button
-                onClick={clearSearchHistory}
-                className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1"
-              >
-                <Trash2 className="w-3 h-3" />
-                清除
-              </button>
-            </div>
-            {searchHistory.map((query, index) => (
-              <button
-                key={index}
-                onClick={() => searchFromHistory(query)}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-white/5 transition-colors"
-              >
-                <Clock className="w-4 h-4 text-slate-500" />
-                <span className="text-sm text-white">{query}</span>
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
-      {/* 快捷标签 */}
-      <div className="mt-3 flex justify-center gap-2 flex-wrap">
+      {/* 快捷标签 + 搜索历史 横向显示 */}
+      <div className="mt-3 flex justify-center gap-2 flex-wrap items-center">
+        {/* 搜索历史标签 */}
+        {searchHistory.length > 0 && (
+          <>
+            {searchHistory.map((query, index) => (
+              <span
+                key={index}
+                onClick={() => searchFromHistory(query)}
+                className="px-3 py-1 rounded-full bg-white/10 text-sm text-slate-300 hover:text-white hover:bg-white/20 cursor-pointer transition-colors flex items-center gap-1"
+              >
+                <Clock className="w-3 h-3" />
+                {query}
+              </span>
+            ))}
+            <button
+              onClick={clearSearchHistory}
+              className="p-1 rounded-full hover:bg-red-500/20 text-slate-500 hover:text-red-400 transition-colors"
+              title="清除历史"
+            >
+              <Trash2 className="w-3 h-3" />
+            </button>
+            <span className="text-slate-600">|</span>
+          </>
+        )}
+        {/* 默认快捷标签 */}
         {['React 19', 'AI 编程', '美股行情', '前端面试'].map(tag => (
           <span
             key={tag}
@@ -1159,7 +1383,7 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
                       <Pin className="w-4 h-4 text-emerald-400" />
                       <span className="text-sm font-medium text-slate-300">便签</span>
                     </div>
-                    <NotesWidget />
+                    <NewsFeedWidget />
                   </div>
                 )}
               </div>
