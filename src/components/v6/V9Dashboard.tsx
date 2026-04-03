@@ -104,6 +104,24 @@ const WeatherWidget: React.FC = () => {
   const [showCitySelector, setShowCitySelector] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
 
+  // 根据天气条件返回对应图标名称
+  const getWeatherIconByCondition = (condition: string) => {
+    if (condition.includes('晴')) return 'Sun';
+    if (condition.includes('雨')) return 'CloudRain';
+    if (condition.includes('雪')) return 'Snowflake';
+    return 'Cloud';
+  };
+
+  // 根据天气图标代码返回对应图标名称
+  const getWeatherIcon = (iconCode: string) => {
+    const code = parseInt(iconCode);
+    if (code <= 3) return 'Sun';
+    if (code <= 9) return 'Cloud';
+    if (code <= 19) return 'CloudRain';
+    if (code <= 25) return 'Snowflake';
+    return 'Cloud';
+  };
+
   // 获取天气数据
   const fetchWeather = useCallback(async (cityId: string, cityName: string) => {
     setWeather(prev => ({ ...prev, loading: true, error: false }));
@@ -162,14 +180,6 @@ const WeatherWidget: React.FC = () => {
     }
   }, []);
 
-  // 根据天气条件返回对应图标名称
-  const getWeatherIconByCondition = (condition: string) => {
-    if (condition.includes('晴')) return 'Sun';
-    if (condition.includes('雨')) return 'CloudRain';
-    if (condition.includes('雪')) return 'Snowflake';
-    return 'Cloud';
-  };
-
   // 获取当前定位
   const getCurrentLocation = useCallback(() => {
     if (!navigator.geolocation) {
@@ -197,16 +207,6 @@ const WeatherWidget: React.FC = () => {
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
     );
   }, [fetchWeather]);
-
-  // 根据天气图标代码返回对应图标名称
-  const getWeatherIcon = (iconCode: string) => {
-    const code = parseInt(iconCode);
-    if (code <= 3) return 'Sun';
-    if (code <= 9) return 'Cloud';
-    if (code <= 19) return 'CloudRain';
-    if (code <= 25) return 'Snowflake';
-    return 'Cloud';
-  };
 
   // 加载保存的城市
   useEffect(() => {
