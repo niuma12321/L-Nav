@@ -242,11 +242,11 @@ export const API_60S_PERIODIC: API60sPreset[] = [
       name: '60秒读懂世界',
       apiUrl: `${API_60S_BASE}/v2/60s`,
       method: 'GET',
-      refreshInterval: 3600, // 1小时刷新一次
-      dataPath: 'data',
-      displayType: 'text',
-      fields: { title: 'title', value: 'value' },
-      maxItems: 1,
+      refreshInterval: 3600,
+      dataPath: 'data.news',
+      displayType: 'list',
+      fields: { title: 'news' },
+      maxItems: 15,
       emptyText: '今日资讯加载中...'
     }
   },
