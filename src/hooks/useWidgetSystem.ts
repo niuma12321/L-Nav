@@ -1,12 +1,36 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { WidgetConfig, DEFAULT_WIDGETS } from '../components/v6/widgetTypes';
 
 const WIDGETS_STORAGE_KEY = 'ynav-widgets-v9';
+const WIDGETS_SYNC_CHANNEL = 'ynav-widgets-sync';
 
 export function useWidgetSystem() {
   const [widgets, setWidgets] = useState<WidgetConfig[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const bcRef = useRef<BroadcastChannel | null>(null);
+
+  // Initialize BroadcastChannel for cross-tab sync
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      bcRef.current = new BroadcastChannel(WIDGETS_SYNC_CHANNEL);
+      bcRef.current.onmessage = (event) => {
+        if (event.data.type === 'WIDGETS_UPDATED') {
+          setWidgets(event.data.widgets);
+        }
+      };
+    }
+    return () => {
+      bcRef.current?.close();
+    };
+  }, []);
+
+  // Sync widgets to other tabs
+  const syncWidgets = useCallback((newWidgets: WidgetConfig[]) => {
+    if (bcRef.current) {
+      bcRef.current.postMessage({ type: 'WIDGETS_UPDATED', widgets: newWidgets });
+    }
+  }, []);
 
   // Load widgets from localStorage
   useEffect(() => {
@@ -24,12 +48,13 @@ export function useWidgetSystem() {
     setIsLoaded(true);
   }, []);
 
-  // Save widgets to localStorage
+  // Save widgets to localStorage and sync
   useEffect(() => {
     if (isLoaded) {
       localStorage.setItem(WIDGETS_STORAGE_KEY, JSON.stringify(widgets));
+      syncWidgets(widgets);
     }
-  }, [widgets, isLoaded]);
+  }, [widgets, isLoaded, syncWidgets]);
 
   const toggleWidget = useCallback((id: string) => {
     setWidgets(prev => prev.map(w => 
@@ -69,7 +94,13 @@ export function useWidgetSystem() {
   }, []);
 
   const removeWidget = useCallback((id: string) => {
-    setWidgets(prev => prev.filter(w => w.id !== id));
+    setWidgets(prev => {
+      const widget = prev.find(w => w.id === id);
+      if (widget?.isFixed) {
+        return prev; // 固定组件不可删除
+      }
+      return prev.filter(w => w.id !== id);
+    });
   }, []);
 
   const enabledWidgets = widgets.filter(w => w.enabled);

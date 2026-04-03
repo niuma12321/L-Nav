@@ -24,7 +24,8 @@ import {
   Code2,
   Trash2,
   Eye,
-  EyeOff
+  EyeOff,
+  Pin
 } from 'lucide-react';
 import { useWidgetSystem } from '../../hooks/useWidgetSystem';
 import { WidgetConfig, DEFAULT_WIDGETS, createAPIWidget, APIDataConfig } from './widgetTypes';
@@ -156,6 +157,9 @@ const WidgetConfigCenter: React.FC = () => {
   const [displayType, setDisplayType] = useState<'list' | 'table' | 'json' | 'cards'>('list');
   const [addError, setAddError] = useState('');
 
+  // 分离固定组件和自定义组件
+  const fixedWidgets = widgets.filter(w => w.isFixed);
+  const customWidgets = widgets.filter(w => !w.isFixed);
   const enabledCount = widgets.filter(w => w.enabled).length;
 
   const handleSaveLayout = () => {
@@ -282,32 +286,67 @@ const WidgetConfigCenter: React.FC = () => {
         </div>
       </div>
 
-      {/* Component Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {widgets.map((widget, index) => (
-          <WidgetConfigCard 
-            key={widget.id} 
-            widget={widget} 
-            index={index}
-            onToggle={() => toggleWidget(widget.id)}
-            onEdit={() => {}}
-            onSettings={() => {
-              setSettingsWidget(widget);
-              setShowSettingsModal(true);
-            }}
-          />
-        ))}
+      {/* 固定组件区域 */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Pin className="w-4 h-4 text-emerald-400" />
+          <h3 className="text-lg font-bold text-white">固定组件</h3>
+          <span className="text-xs text-slate-500">(不可删除)</span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {fixedWidgets.map((widget, index) => (
+            <WidgetConfigCard 
+              key={widget.id} 
+              widget={widget} 
+              index={index}
+              isFixed={true}
+              onToggle={() => toggleWidget(widget.id)}
+              onEdit={() => {}}
+              onSettings={() => {
+                setSettingsWidget(widget);
+                setShowSettingsModal(true);
+              }}
+              onDelete={() => {}}
+            />
+          ))}
+        </div>
+      </div>
 
-        {/* Add More Placeholder */}
-        <button 
-          onClick={() => setShowAddWidgetModal(true)}
-          className="p-6 rounded-3xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-4 text-slate-500 hover:border-emerald-500/30 hover:text-emerald-400 transition-all min-h-[200px]"
-        >
-          <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center">
-            <Plus className="w-6 h-6" />
-          </div>
-          <span className="text-sm font-medium">添加更多组件</span>
-        </button>
+      {/* 自定义组件区域 */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Settings className="w-4 h-4 text-emerald-400" />
+          <h3 className="text-lg font-bold text-white">自定义组件</h3>
+          <span className="text-xs text-slate-500">(可修改删除)</span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {customWidgets.map((widget, index) => (
+            <WidgetConfigCard 
+              key={widget.id} 
+              widget={widget} 
+              index={index}
+              isFixed={false}
+              onToggle={() => toggleWidget(widget.id)}
+              onEdit={() => {}}
+              onSettings={() => {
+                setSettingsWidget(widget);
+                setShowSettingsModal(true);
+              }}
+              onDelete={() => removeWidget(widget.id)}
+            />
+          ))}
+
+          {/* Add More Placeholder */}
+          <button 
+            onClick={() => setShowAddWidgetModal(true)}
+            className="p-6 rounded-3xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-4 text-slate-500 hover:border-emerald-500/30 hover:text-emerald-400 transition-all min-h-[200px]"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center">
+              <Plus className="w-6 h-6" />
+            </div>
+            <span className="text-sm font-medium">添加更多组件</span>
+          </button>
+        </div>
       </div>
 
       {/* Layout Preview */}
@@ -636,10 +675,12 @@ const WidgetConfigCenter: React.FC = () => {
 const WidgetConfigCard: React.FC<{
   widget: WidgetConfig;
   index: number;
+  isFixed: boolean;
   onToggle: () => void;
   onEdit: () => void;
   onSettings: () => void;
-}> = ({ widget, index, onToggle, onEdit, onSettings }) => {
+  onDelete: () => void;
+}> = ({ widget, index, isFixed, onToggle, onEdit, onSettings, onDelete }) => {
   const Icon = iconMap[widget.icon] || Grid3X3;
 
   return (
@@ -651,7 +692,12 @@ const WidgetConfigCard: React.FC<{
             <Icon className={`w-5 h-5 ${widget.enabled ? 'text-emerald-400' : 'text-slate-500'}`} />
           </div>
           <div>
-            <h3 className="text-base font-bold text-white">{widget.title}</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-base font-bold text-white">{widget.title}</h3>
+              {isFixed && (
+                <span className="px-1.5 py-0.5 rounded bg-slate-700 text-slate-400 text-[10px]">固定</span>
+              )}
+            </div>
             <p className="text-xs text-slate-500">{widget.position.desktop.w}×{widget.position.desktop.h} 栅格</p>
           </div>
         </div>
@@ -687,6 +733,15 @@ const WidgetConfigCard: React.FC<{
           >
             <Settings className="w-4 h-4" />
           </button>
+          {!isFixed && (
+            <button 
+              onClick={onDelete}
+              className="p-2 rounded-xl text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+              title="删除组件"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
     </div>

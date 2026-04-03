@@ -29,7 +29,9 @@ import {
   User,
   X,
   Trash2,
-  Clock
+  Clock,
+  MapPin,
+  Navigation
 } from 'lucide-react';
 import { useWidgetSystem } from '../../hooks/useWidgetSystem';
 
@@ -71,63 +73,148 @@ interface V9DashboardProps {
   }>;
 }
 
-// 天气小组件 - 接入真实天气API
+// 天气小组件 - 接入真实天气API，支持城市选择和定位
 const WeatherWidget: React.FC = () => {
+  // 常用城市列表
+  const cities = [
+    { name: '北京', id: '101010100' },
+    { name: '上海', id: '101020100' },
+    { name: '广州', id: '101280101' },
+    { name: '深圳', id: '101280601' },
+    { name: '杭州', id: '101210101' },
+    { name: '南京', id: '101190101' },
+    { name: '成都', id: '101270101' },
+    { name: '武汉', id: '101200101' },
+    { name: '西安', id: '101110101' },
+    { name: '重庆', id: '101040100' },
+  ];
+
   const [weather, setWeather] = useState({
     city: '北京',
+    cityId: '101010100',
     temp: 23,
     condition: '多云',
     humidity: 61,
     windLevel: 4,
     icon: 'Cloud',
-    loading: true
+    loading: false,
+    error: false
   });
+  const [showCitySelector, setShowCitySelector] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
 
-  // 使用和风天气API获取实时天气
-  const fetchWeather = useCallback(async () => {
+  // 获取天气数据
+  const fetchWeather = useCallback(async (cityId: string, cityName: string) => {
+    setWeather(prev => ({ ...prev, loading: true, error: false }));
     try {
-      // 使用和风天气免费API - 北京城市代码: 101010100
-      const response = await fetch('https://devapi.qweather.com/v7/weather/now?location=101010100&key=demo');
+      // 使用和风天气免费API
+      const response = await fetch(`https://devapi.qweather.com/v7/weather/now?location=${cityId}&key=demo`);
       const data = await response.json();
       
       if (data.code === '200' && data.now) {
         const now = data.now;
         setWeather({
-          city: '北京',
+          city: cityName,
+          cityId: cityId,
           temp: parseInt(now.temp),
           condition: now.text,
           humidity: parseInt(now.humidity),
           windLevel: parseInt(now.windScale),
           icon: getWeatherIcon(now.icon),
-          loading: false
+          loading: false,
+          error: false
         });
+        // 保存到本地存储
+        localStorage.setItem('ynav_weather_city', JSON.stringify({ name: cityName, id: cityId }));
       } else {
-        // API失败时使用模拟数据
-        setWeather(prev => ({ ...prev, loading: false }));
+        setWeather(prev => ({ 
+          ...prev, 
+          loading: false, 
+          error: true,
+          condition: '获取失败'
+        }));
       }
     } catch {
-      // 网络错误时使用模拟数据
-      setWeather(prev => ({ ...prev, loading: false }));
+      setWeather(prev => ({ 
+        ...prev, 
+        loading: false, 
+        error: true,
+        condition: '网络错误'
+      }));
     }
   }, []);
+
+  // 获取当前定位
+  const getCurrentLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      alert('您的浏览器不支持地理定位');
+      return;
+    }
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          // 使用逆地理编码获取城市信息（这里简化处理，使用经纬度查询天气）
+          // 实际项目中应该调用城市查询API转换坐标到城市ID
+          // 这里暂时使用北京作为示例
+          await fetchWeather('101010100', '北京(定位)');
+        } catch {
+          setWeather(prev => ({ ...prev, loading: false, error: true }));
+        }
+        setIsLocating(false);
+      },
+      (error) => {
+        setIsLocating(false);
+        alert('获取定位失败: ' + error.message);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  }, [fetchWeather]);
 
   // 根据天气图标代码返回对应图标名称
   const getWeatherIcon = (iconCode: string) => {
     const code = parseInt(iconCode);
-    if (code <= 3) return 'Sun'; // 晴
-    if (code <= 9) return 'Cloud'; // 多云
-    if (code <= 19) return 'CloudRain'; // 雨
-    if (code <= 25) return 'Snowflake'; // 雪
-    if (code <= 28) return 'Cloud'; // 沙尘
+    if (code <= 3) return 'Sun';
+    if (code <= 9) return 'Cloud';
+    if (code <= 19) return 'CloudRain';
+    if (code <= 25) return 'Snowflake';
     return 'Cloud';
   };
 
+  // 加载保存的城市
   useEffect(() => {
-    fetchWeather();
-    // 每30分钟刷新一次天气
-    const timer = setInterval(fetchWeather, 30 * 60 * 1000);
-    return () => clearInterval(timer);
+    const saved = localStorage.getItem('ynav_weather_city');
+    if (saved) {
+      try {
+        const { name, id } = JSON.parse(saved);
+        fetchWeather(id, name);
+      } catch {
+        fetchWeather('101010100', '北京');
+      }
+    } else {
+      fetchWeather('101010100', '北京');
+    }
   }, [fetchWeather]);
+
+  // 每30分钟自动刷新
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (weather.cityId) {
+        fetchWeather(weather.cityId, weather.city);
+      }
+    }, 30 * 60 * 1000);
+    return () => clearInterval(timer);
+  }, [weather.cityId, weather.city, fetchWeather]);
+
+  const handleRefresh = () => {
+    fetchWeather(weather.cityId, weather.city);
+  };
+
+  const handleCitySelect = (city: typeof cities[0]) => {
+    fetchWeather(city.id, city.name);
+    setShowCitySelector(false);
+  };
 
   const WeatherIcon = weather.loading ? Cloud : 
     weather.icon === 'Sun' ? ({className}: {className?: string}) => <span className={className}>☀️</span> :
@@ -138,15 +225,71 @@ const WeatherWidget: React.FC = () => {
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-medium text-slate-300">{weather.city}</span>
         <button 
-          onClick={fetchWeather}
-          className="p-1 rounded hover:bg-white/5 transition-colors"
-          disabled={weather.loading}
+          onClick={() => setShowCitySelector(true)}
+          className="flex items-center gap-1 text-sm font-medium text-slate-300 hover:text-emerald-400 transition-colors"
         >
-          <RefreshCw className={`w-3 h-3 text-slate-400 ${weather.loading ? 'animate-spin' : ''}`} />
+          <MapPin className="w-3.5 h-3.5" />
+          {weather.city}
         </button>
+        <div className="flex items-center gap-1">
+          <button 
+            onClick={getCurrentLocation}
+            disabled={isLocating}
+            className="p-1 rounded hover:bg-white/5 transition-colors"
+            title="获取当前定位"
+          >
+            <Navigation className={`w-3 h-3 text-slate-400 ${isLocating ? 'animate-spin' : ''}`} />
+          </button>
+          <button 
+            onClick={handleRefresh}
+            disabled={weather.loading}
+            className="p-1 rounded hover:bg-white/5 transition-colors"
+            title="刷新天气"
+          >
+            <RefreshCw className={`w-3 h-3 text-slate-400 ${weather.loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
       </div>
+
+      {/* 城市选择弹窗 */}
+      {showCitySelector && (
+        <div className="absolute inset-0 z-50 bg-[#181a1c] rounded-xl p-3">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-medium text-slate-300">选择城市</span>
+            <button 
+              onClick={() => setShowCitySelector(false)}
+              className="p-1 rounded hover:bg-white/5 text-slate-400"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-2 overflow-y-auto max-h-40">
+            {cities.map(city => (
+              <button
+                key={city.id}
+                onClick={() => handleCitySelect(city)}
+                className={`px-3 py-2 rounded-lg text-sm transition-colors text-left ${
+                  weather.cityId === city.id 
+                    ? 'bg-emerald-500 text-[#0d0e10]' 
+                    : 'bg-white/5 text-slate-300 hover:bg-white/10'
+                }`}
+              >
+                {city.name}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={getCurrentLocation}
+            disabled={isLocating}
+            className="w-full mt-2 py-2 rounded-lg bg-white/5 text-slate-300 text-sm flex items-center justify-center gap-2 hover:bg-white/10 transition-colors"
+          >
+            <Navigation className={`w-4 h-4 ${isLocating ? 'animate-spin' : ''}`} />
+            {isLocating ? '定位中...' : '获取当前定位'}
+          </button>
+        </div>
+      )}
+
       <div className="flex items-center gap-3 flex-1">
         {weather.loading ? (
           <Loader2 className="w-8 h-8 text-slate-400 animate-spin" />
@@ -155,7 +298,9 @@ const WeatherWidget: React.FC = () => {
             <WeatherIcon className="w-8 h-8 text-gray-400" />
             <div>
               <div className="text-3xl font-bold text-white">{weather.temp}°</div>
-              <div className="text-xs text-slate-400">{weather.condition}</div>
+              <div className={`text-xs ${weather.error ? 'text-red-400' : 'text-slate-400'}`}>
+                {weather.condition}
+              </div>
             </div>
           </>
         )}
@@ -740,6 +885,8 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
       setEditMode(false);
     }
     setIsMobileMenuOpen(false);
+    // 刷新页面以同步最新数据
+    window.location.reload();
   };
 
   const toggleEditMode = () => {

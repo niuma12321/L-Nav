@@ -18,6 +18,7 @@ export interface WidgetConfig {
   description: string;
   icon: string;
   enabled: boolean;
+  isFixed?: boolean; // 是否为固定组件（不可修改删除）
   position: {
     desktop: { x: number; y: number; w: number; h: number };
     mobile: { order: number };
@@ -65,6 +66,7 @@ export const DEFAULT_WIDGETS: WidgetConfig[] = [
     description: '管理多引擎搜索、搜索建议及隐私过滤设置。支持快速切换 Google、Baidu、GitHub 模式。',
     icon: 'Search',
     enabled: true,
+    isFixed: true, // 固定组件
     position: {
       desktop: { x: 0, y: 0, w: 4, h: 2 },
       mobile: { order: 0 }
@@ -87,6 +89,7 @@ export const DEFAULT_WIDGETS: WidgetConfig[] = [
     description: '实时追踪 NASDAQ、HKEX 股票行情及加密货币波动。内置 K 线图预览与资产组合摘要。',
     icon: 'TrendingUp',
     enabled: true,
+    isFixed: true, // 固定组件
     position: {
       desktop: { x: 4, y: 0, w: 4, h: 2 },
       mobile: { order: 1 }
@@ -104,12 +107,15 @@ export const DEFAULT_WIDGETS: WidgetConfig[] = [
     description: '高精度气象数据、空气质量监测及未来7天预报。支持多城市自动轮播显示。',
     icon: 'Cloud',
     enabled: true,
+    isFixed: true, // 固定组件
     position: {
       desktop: { x: 8, y: 0, w: 4, h: 2 },
       mobile: { order: 2 }
     },
     settings: {
-      cities: ['上海'],
+      cities: ['北京'],
+      currentCity: '北京',
+      cityId: '101010100',
       showAirQuality: true,
       showForecast: true
     }
@@ -121,6 +127,7 @@ export const DEFAULT_WIDGETS: WidgetConfig[] = [
     description: '轻量级任务管理，支持 Todoist 与 Microsoft To Do 同步。番茄钟功能可选开启。',
     icon: 'CheckSquare',
     enabled: true,
+    isFixed: true, // 固定组件
     position: {
       desktop: { x: 0, y: 2, w: 4, h: 2 },
       mobile: { order: 3 }
@@ -137,6 +144,7 @@ export const DEFAULT_WIDGETS: WidgetConfig[] = [
     description: '聚合 RSS、科技头条及社交媒体热点。支持 AI 智能摘要功能，快速掌握资讯要点。',
     icon: 'Newspaper',
     enabled: true,
+    isFixed: true, // 固定组件
     position: {
       desktop: { x: 4, y: 2, w: 8, h: 2 },
       mobile: { order: 4 }
@@ -181,6 +189,7 @@ export const createAPIWidget = (apiConfig: APIDataConfig): WidgetConfig => ({
   description: `从 ${apiConfig.apiUrl} 获取数据`,
   icon: 'Database',
   enabled: true,
+  isFixed: false, // 自定义组件
   position: {
     desktop: { x: 0, y: 0, w: 4, h: 3 },
     mobile: { order: 0 }
