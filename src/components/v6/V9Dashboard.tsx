@@ -129,8 +129,41 @@ const WeatherWidget: React.FC = () => {
   const fetchWeather = useCallback(async (cityId: string, cityName: string) => {
     setWeather(prev => ({ ...prev, loading: true, error: false }));
     try {
-      // 使用和风天气免费API - 需要替换为真实API Key
-      const response = await fetch(`https://devapi.qweather.com/v7/weather/now?location=${cityId}&key=demo`, {
+      // 优先使用环境变量中的API Key
+      const apiKey = import.meta.env.VITE_QWEATHER_KEY || '';
+      
+      // 如果没有API Key，跳过API请求直接使用模拟数据
+      if (!apiKey) {
+        // 使用模拟数据
+        const mockData: Record<string, { temp: number; condition: string; humidity: number; windLevel: number }> = {
+          '101010100': { temp: 22, condition: '晴', humidity: 45, windLevel: 3 },
+          '101020100': { temp: 23, condition: '多云', humidity: 60, windLevel: 4 },
+          '101280101': { temp: 28, condition: '雷阵雨', humidity: 75, windLevel: 5 },
+          '101280601': { temp: 29, condition: '多云', humidity: 70, windLevel: 4 },
+          '101210101': { temp: 24, condition: '小雨', humidity: 80, windLevel: 3 },
+          '101190101': { temp: 21, condition: '阴', humidity: 65, windLevel: 3 },
+          '101270101': { temp: 25, condition: '多云', humidity: 55, windLevel: 2 },
+          '101200101': { temp: 26, condition: '晴', humidity: 50, windLevel: 3 },
+          '101110101': { temp: 20, condition: '晴', humidity: 40, windLevel: 2 },
+          '101040100': { temp: 27, condition: '多云', humidity: 60, windLevel: 3 },
+        };
+        const data = mockData[cityId] || { temp: 23, condition: '多云', humidity: 60, windLevel: 3 };
+        setWeather({
+          city: cityName,
+          cityId: cityId,
+          temp: data.temp,
+          condition: data.condition,
+          humidity: data.humidity,
+          windLevel: data.windLevel,
+          icon: getWeatherIconByCondition(data.condition),
+          loading: false,
+          error: false
+        });
+        localStorage.setItem('ynav_weather_city', JSON.stringify({ name: cityName, id: cityId }));
+        return;
+      }
+      
+      const response = await fetch(`https://devapi.qweather.com/v7/weather/now?location=${cityId}&key=${apiKey}`, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',

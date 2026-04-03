@@ -43,7 +43,11 @@ import {
   Utensils,
   Flame,
   Sparkles,
-  Search
+  Search,
+  FileJson,
+  FileText,
+  List,
+  AlignLeft
 } from 'lucide-react';
 import { useWidgetSystem } from '../../hooks/useWidgetSystem';
 import { 
@@ -87,6 +91,78 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Utensils,
   Flame,
   Sparkles
+};
+
+// 键值对编辑器组件
+interface KeyValueItem {
+  id: string;
+  key: string;
+  value: string;
+}
+
+interface KeyValueEditorProps {
+  items: KeyValueItem[];
+  onChange: (items: KeyValueItem[]) => void;
+  keyPlaceholder?: string;
+  valuePlaceholder?: string;
+  addButtonText?: string;
+}
+
+const KeyValueEditor: React.FC<KeyValueEditorProps> = ({
+  items,
+  onChange,
+  keyPlaceholder = '参数名',
+  valuePlaceholder = '参数值',
+  addButtonText = '添加'
+}) => {
+  const addItem = () => {
+    onChange([...items, { id: `${Date.now()}-${Math.random()}`, key: '', value: '' }]);
+  };
+
+  const removeItem = (id: string) => {
+    onChange(items.filter(item => item.id !== id));
+  };
+
+  const updateItem = (id: string, field: 'key' | 'value', value: string) => {
+    onChange(items.map(item => item.id === id ? { ...item, [field]: value } : item));
+  };
+
+  return (
+    <div className="space-y-2">
+      {items.map((item) => (
+        <div key={item.id} className="flex items-center gap-2">
+          <input
+            type="text"
+            value={item.key}
+            onChange={(e) => updateItem(item.id, 'key', e.target.value)}
+            placeholder={keyPlaceholder}
+            className="flex-1 px-3 py-2 bg-[#181a1c] rounded-lg border border-white/10 text-white text-sm focus:border-emerald-500/50 focus:outline-none"
+          />
+          <input
+            type="text"
+            value={item.value}
+            onChange={(e) => updateItem(item.id, 'value', e.target.value)}
+            placeholder={valuePlaceholder}
+            className="flex-1 px-3 py-2 bg-[#181a1c] rounded-lg border border-white/10 text-white text-sm focus:border-emerald-500/50 focus:outline-none"
+          />
+          <button
+            onClick={() => removeItem(item.id)}
+            className="p-2 rounded-lg hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-colors"
+            title="删除"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      ))}
+      <button
+        onClick={addItem}
+        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors text-sm"
+      >
+        <Plus className="w-4 h-4" />
+        {addButtonText}
+      </button>
+    </div>
+  );
 };
 
 // Widget settings modal
@@ -194,6 +270,25 @@ const WidgetConfigCenter: React.FC = () => {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [activeCategory, setActiveCategory] = useState<API60sCategory | 'all'>('all');
 
+  // API配置弹窗标签页状态
+  const [apiConfigTab, setApiConfigTab] = useState<'basic' | 'params' | 'headers' | 'body'>('basic');
+  
+  // Query参数状态（键值对数组）
+  const [queryParams, setQueryParams] = useState<Array<{ key: string; value: string; id: string }>>([]);
+  
+  // 请求头编辑模式
+  const [headersRawMode, setHeadersRawMode] = useState(false);
+  const [headersKeyValue, setHeadersKeyValue] = useState<Array<{ key: string; value: string; id: string }>>([]);
+  
+  // 请求体类型和状态
+  const [bodyType, setBodyType] = useState<'none' | 'json' | 'form-data' | 'x-www-form-urlencoded'>('none');
+  const [bodyFormData, setBodyFormData] = useState<Array<{ key: string; value: string; id: string }>>([]);
+  const [bodyRawJson, setBodyRawJson] = useState('');
+  
+  // 自定义API编辑模式状态
+  const [isEditingCustomAPI, setIsEditingCustomAPI] = useState(false);
+  const [editingWidgetId, setEditingWidgetId] = useState<string | null>(null);
+
   // Add/Edit widget form state
   const [newWidgetType, setNewWidgetType] = useState<'api-data'>('api-data');
   const [newWidgetTitle, setNewWidgetTitle] = useState('');
@@ -226,6 +321,8 @@ const WidgetConfigCenter: React.FC = () => {
   // 打开编辑弹窗
   const handleEditWidget = (widget: WidgetConfig) => {
     setEditingWidget(widget);
+    setIsEditingCustomAPI(true);
+    setEditingWidgetId(widget.id);
     // 填充表单数据
     if (widget.settings?.api) {
       const api = widget.settings.api;
@@ -233,12 +330,57 @@ const WidgetConfigCenter: React.FC = () => {
       setNewWidgetDesc(widget.description);
       setApiUrl(api.apiUrl || '');
       setApiMethod(api.method || 'GET');
-      setApiHeaders(api.headers ? JSON.stringify(api.headers, null, 2) : '');
-      setApiBody(api.body ? JSON.stringify(api.body, null, 2) : '');
       setRefreshInterval(api.refreshInterval || 0);
       setDataPath(api.dataPath || '');
       setDisplayType(api.displayType || 'list');
+      setFieldsTitle(api.fields?.title || 'title');
+      setFieldsValue(api.fields?.value || '');
+      setFieldsSubtitle(api.fields?.subtitle || '');
+      setFieldsImage(api.fields?.image || '');
+      setFieldsLink(api.fields?.link || '');
+      setMaxItems(api.maxItems || 10);
+      setEmptyText(api.emptyText || '暂无数据');
+      
+      // 解析headers到键值对格式
+      if (api.headers && Object.keys(api.headers).length > 0) {
+        const headerEntries = Object.entries(api.headers).map(([key, value], index) => ({
+          id: `header-${index}-${Date.now()}`,
+          key,
+          value: String(value)
+        }));
+        setHeadersKeyValue(headerEntries);
+        setApiHeaders(JSON.stringify(api.headers, null, 2));
+      } else {
+        setHeadersKeyValue([]);
+        setApiHeaders('');
+      }
+      
+      // 解析body
+      if (api.body) {
+        if (typeof api.body === 'string') {
+          try {
+            const parsed = JSON.parse(api.body);
+            setBodyType('json');
+            setBodyRawJson(JSON.stringify(parsed, null, 2));
+          } catch {
+            setBodyType('none');
+            setBodyRawJson('');
+          }
+        } else if (typeof api.body === 'object') {
+          setBodyType('json');
+          setBodyRawJson(JSON.stringify(api.body, null, 2));
+        }
+      } else {
+        setBodyType(api.method === 'GET' || api.method === 'DELETE' ? 'none' : 'json');
+        setBodyRawJson('');
+      }
+      setBodyFormData([]);
+      
+      // Query参数从URL解析
+      setQueryParams([]);
     }
+    setApiConfigTab('basic');
+    setHeadersRawMode(false);
     setShowAddWidgetModal(true);
   };
 
@@ -246,6 +388,8 @@ const WidgetConfigCenter: React.FC = () => {
   const handleCloseModal = () => {
     setShowAddWidgetModal(false);
     setEditingWidget(null);
+    setIsEditingCustomAPI(false);
+    setEditingWidgetId(null);
     // Reset form
     setNewWidgetTitle('');
     setNewWidgetDesc('');
@@ -264,6 +408,14 @@ const WidgetConfigCenter: React.FC = () => {
     setMaxItems(10);
     setEmptyText('暂无数据');
     setAddError('');
+    // Reset new states
+    setApiConfigTab('basic');
+    setQueryParams([]);
+    setHeadersRawMode(false);
+    setHeadersKeyValue([]);
+    setBodyType('none');
+    setBodyFormData([]);
+    setBodyRawJson('');
   };
 
   const handleSaveLayout = () => {
@@ -287,32 +439,65 @@ const WidgetConfigCenter: React.FC = () => {
     }
     
     try {
-      // Parse headers if provided
+      // 构建headers
       let parsedHeaders: Record<string, string> = {};
-      if (apiHeaders.trim()) {
-        try {
-          parsedHeaders = JSON.parse(apiHeaders);
-        } catch {
-          setAddError('请求头格式错误，请输入有效的JSON');
-          return;
+      if (headersRawMode) {
+        // Raw JSON模式
+        if (apiHeaders.trim()) {
+          try {
+            parsedHeaders = JSON.parse(apiHeaders);
+          } catch {
+            setAddError('请求头JSON格式错误');
+            return;
+          }
+        }
+      } else {
+        // 键值对模式
+        headersKeyValue.forEach(item => {
+          if (item.key.trim()) {
+            parsedHeaders[item.key.trim()] = item.value;
+          }
+        });
+      }
+      
+      // 构建请求体
+      let parsedBody: any = undefined;
+      if (bodyType !== 'none' && apiMethod !== 'GET' && apiMethod !== 'DELETE') {
+        if (bodyType === 'json') {
+          if (bodyRawJson.trim()) {
+            try {
+              parsedBody = JSON.parse(bodyRawJson);
+            } catch {
+              setAddError('请求体JSON格式错误');
+              return;
+            }
+          }
+        } else if (bodyType === 'form-data' || bodyType === 'x-www-form-urlencoded') {
+          const formDataObj: Record<string, string> = {};
+          bodyFormData.forEach(item => {
+            if (item.key.trim()) {
+              formDataObj[item.key.trim()] = item.value;
+            }
+          });
+          parsedBody = formDataObj;
         }
       }
       
-      // Parse body if provided
-      let parsedBody: any = undefined;
-      if (apiBody.trim()) {
-        try {
-          parsedBody = JSON.parse(apiBody);
-        } catch {
-          setAddError('请求体格式错误，请输入有效的JSON');
-          return;
-        }
+      // 构建带Query参数的URL
+      let finalUrl = apiUrl.trim();
+      const validParams = queryParams.filter(p => p.key.trim());
+      if (validParams.length > 0) {
+        const urlObj = new URL(finalUrl);
+        validParams.forEach(param => {
+          urlObj.searchParams.set(param.key.trim(), param.value);
+        });
+        finalUrl = urlObj.toString();
       }
       
       const apiConfig: APIDataConfig = {
-        id: editingWidget?.id || `custom-${Date.now()}`,
+        id: isEditingCustomAPI && editingWidgetId ? editingWidgetId : `custom-${Date.now()}`,
         name: newWidgetTitle,
-        apiUrl: apiUrl,
+        apiUrl: finalUrl,
         method: apiMethod,
         headers: Object.keys(parsedHeaders).length > 0 ? parsedHeaders : undefined,
         body: parsedBody,
@@ -330,7 +515,7 @@ const WidgetConfigCenter: React.FC = () => {
         emptyText: emptyText || '暂无数据'
       };
       
-      if (editingWidget) {
+      if (isEditingCustomAPI && editingWidget) {
         // 更新现有组件
         const updatedWidget = {
           ...editingWidget,
@@ -347,7 +532,7 @@ const WidgetConfigCenter: React.FC = () => {
       
       handleCloseModal();
     } catch (err) {
-      setAddError(editingWidget ? '更新组件失败' : '创建组件失败');
+      setAddError(isEditingCustomAPI ? '更新组件失败' : '创建组件失败');
     }
   };
 
@@ -656,101 +841,215 @@ const WidgetConfigCenter: React.FC = () => {
             <div className="space-y-4 mb-6">
               <h4 className="text-sm font-medium text-white flex items-center gap-2">
                 <Globe className="w-4 h-4 text-emerald-400" />
-                API配置
+                API配置 <span className="text-xs text-slate-500">(必填)</span>
               </h4>
               
-              <div>
-                <label className="block text-sm text-slate-400 mb-2">API URL *</label>
-                <input
-                  type="text"
-                  value={apiUrl}
-                  onChange={(e) => setApiUrl(e.target.value)}
-                  placeholder="https://api.example.com/data"
-                  className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:border-emerald-500/50 focus:outline-none transition-colors"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm text-slate-400 mb-2">请求方法</label>
-                  <select
-                    value={apiMethod}
-                    onChange={(e) => setApiMethod(e.target.value as 'GET' | 'POST')}
-                    className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white focus:border-emerald-500/50 focus:outline-none transition-colors"
+              {/* 标签页导航 */}
+              <div className="flex gap-1 bg-[#0d0e10] p-1 rounded-xl">
+                {[
+                  { key: 'basic', label: '基础配置', icon: FileJson },
+                  { key: 'params', label: '请求参数', icon: List },
+                  { key: 'headers', label: '请求头', icon: AlignLeft },
+                  { key: 'body', label: '请求体', icon: FileText }
+                ].map(({ key, label, icon: Icon }) => (
+                  <button
+                    key={key}
+                    onClick={() => setApiConfigTab(key as any)}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                      apiConfigTab === key
+                        ? 'bg-emerald-500 text-[#0d0e10]'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
                   >
-                    <option value="GET">GET</option>
-                    <option value="POST">POST</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm text-slate-400 mb-2">刷新间隔(秒)</label>
-                  <input
-                    type="number"
-                    value={refreshInterval}
-                    onChange={(e) => setRefreshInterval(parseInt(e.target.value) || 0)}
-                    placeholder="0为不自动刷新"
-                    min="0"
-                    className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:border-emerald-500/50 focus:outline-none transition-colors"
-                  />
-                </div>
+                    <Icon className="w-3.5 h-3.5" />
+                    {label}
+                  </button>
+                ))}
               </div>
 
-              <div>
-                <label className="block text-sm text-slate-400 mb-2">请求头 (JSON格式)</label>
-                <textarea
-                  value={apiHeaders}
-                  onChange={(e) => setApiHeaders(e.target.value)}
-                  placeholder='{"Authorization": "Bearer token", "Content-Type": "application/json"}'
-                  rows={2}
-                  className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:border-emerald-500/50 focus:outline-none transition-colors text-sm font-mono"
-                />
-              </div>
+              {/* 基础配置标签 */}
+              {apiConfigTab === 'basic' && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm text-slate-400 mb-2">API URL *</label>
+                    <input
+                      type="text"
+                      value={apiUrl}
+                      onChange={(e) => setApiUrl(e.target.value)}
+                      placeholder="https://api.example.com/data"
+                      className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:border-emerald-500/50 focus:outline-none transition-colors"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm text-slate-400 mb-2">请求方法 *</label>
+                      <select
+                        value={apiMethod}
+                        onChange={(e) => {
+                          const method = e.target.value as 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+                          setApiMethod(method as 'GET' | 'POST');
+                          // 自动切换请求体类型
+                          if (method === 'GET' || method === 'DELETE') {
+                            setBodyType('none');
+                          } else if (bodyType === 'none') {
+                            setBodyType('json');
+                          }
+                        }}
+                        className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white focus:border-emerald-500/50 focus:outline-none transition-colors"
+                      >
+                        <option value="GET">GET</option>
+                        <option value="POST">POST</option>
+                        <option value="PUT">PUT</option>
+                        <option value="PATCH">PATCH</option>
+                        <option value="DELETE">DELETE</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm text-slate-400 mb-2">刷新间隔(秒)</label>
+                      <input
+                        type="number"
+                        value={refreshInterval}
+                        onChange={(e) => setRefreshInterval(parseInt(e.target.value) || 0)}
+                        placeholder="0为不自动刷新"
+                        min="0"
+                        className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:border-emerald-500/50 focus:outline-none transition-colors"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-slate-400 mb-2">数据路径</label>
+                    <input
+                      type="text"
+                      value={dataPath}
+                      onChange={(e) => setDataPath(e.target.value)}
+                      placeholder="例如：data.items 或 results (留空使用根数据)"
+                      className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:border-emerald-500/50 focus:outline-none transition-colors"
+                    />
+                  </div>
+                </div>
+              )}
 
-              {apiMethod === 'POST' && (
-                <div>
-                  <label className="block text-sm text-slate-400 mb-2">请求体 (JSON格式)</label>
-                  <textarea
-                    value={apiBody}
-                    onChange={(e) => setApiBody(e.target.value)}
-                    placeholder='{"key": "value"}'
-                    rows={3}
-                    className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:border-emerald-500/50 focus:outline-none transition-colors text-sm font-mono"
+              {/* 请求参数标签 */}
+              {apiConfigTab === 'params' && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm text-slate-400">Query 参数</label>
+                    <span className="text-xs text-slate-500">自动拼接到 URL</span>
+                  </div>
+                  <KeyValueEditor
+                    items={queryParams}
+                    onChange={setQueryParams}
+                    keyPlaceholder="参数名"
+                    valuePlaceholder="参数值"
+                    addButtonText="添加参数"
                   />
                 </div>
               )}
 
-              <div>
-                <label className="block text-sm text-slate-400 mb-2">数据路径</label>
-                <input
-                  type="text"
-                  value={dataPath}
-                  onChange={(e) => setDataPath(e.target.value)}
-                  placeholder="例如：data.items 或 results (留空使用根数据)"
-                  className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:border-emerald-500/50 focus:outline-none transition-colors"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm text-slate-400 mb-2">显示方式</label>
-                <div className="grid grid-cols-4 gap-2">
-                  {(['list', 'table', 'card', 'text'] as const).map((type) => (
-                    <button
-                      key={type}
-                      onClick={() => setDisplayType(type)}
-                      className={`px-3 py-2 rounded-lg text-sm border transition-all ${
-                        displayType === type 
-                          ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400' 
-                          : 'border-white/10 text-slate-400 hover:border-white/20'
-                      }`}
-                    >
-                      {type === 'list' && '列表'}
-                      {type === 'table' && '表格'}
-                      {type === 'card' && '卡片'}
-                      {type === 'text' && '文本'}
-                    </button>
-                  ))}
+              {/* 请求头标签 */}
+              {apiConfigTab === 'headers' && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm text-slate-400">请求头</label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-500">Raw JSON</span>
+                      <button
+                        onClick={() => {
+                          if (!headersRawMode) {
+                            // 切换到Raw模式，转换键值对为JSON
+                            const obj: Record<string, string> = {};
+                            headersKeyValue.forEach(item => {
+                              if (item.key.trim()) obj[item.key] = item.value;
+                            });
+                            setApiHeaders(JSON.stringify(obj, null, 2));
+                          } else {
+                            // 切换到键值对模式，解析JSON
+                            try {
+                              const obj = JSON.parse(apiHeaders || '{}');
+                              const items = Object.entries(obj).map(([key, value], idx) => ({
+                                id: `h-${idx}-${Date.now()}`,
+                                key,
+                                value: String(value)
+                              }));
+                              setHeadersKeyValue(items);
+                            } catch {
+                              setHeadersKeyValue([]);
+                            }
+                          }
+                          setHeadersRawMode(!headersRawMode);
+                        }}
+                        className={`w-10 h-5 rounded-full transition-colors relative ${
+                          headersRawMode ? 'bg-emerald-500' : 'bg-slate-600'
+                        }`}
+                      >
+                        <span className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-transform ${
+                          headersRawMode ? 'left-6' : 'left-1'
+                        }`} />
+                      </button>
+                    </div>
+                  </div>
+                  {headersRawMode ? (
+                    <textarea
+                      value={apiHeaders}
+                      onChange={(e) => setApiHeaders(e.target.value)}
+                      placeholder='{"Authorization": "Bearer token", "Content-Type": "application/json"}'
+                      rows={5}
+                      className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:border-emerald-500/50 focus:outline-none transition-colors text-sm font-mono"
+                    />
+                  ) : (
+                    <KeyValueEditor
+                      items={headersKeyValue}
+                      onChange={setHeadersKeyValue}
+                      keyPlaceholder="Header 名称"
+                      valuePlaceholder="Header 值"
+                      addButtonText="添加请求头"
+                    />
+                  )}
                 </div>
-              </div>
+              )}
+
+              {/* 请求体标签 */}
+              {apiConfigTab === 'body' && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm text-slate-400">请求体类型</label>
+                    {(apiMethod === 'GET' || apiMethod === 'DELETE') && (
+                      <span className="text-xs text-amber-400">{apiMethod} 请求通常不需要请求体</span>
+                    )}
+                  </div>
+                  <select
+                    value={bodyType}
+                    onChange={(e) => setBodyType(e.target.value as any)}
+                    disabled={apiMethod === 'GET' || apiMethod === 'DELETE'}
+                    className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white focus:border-emerald-500/50 focus:outline-none transition-colors disabled:opacity-50"
+                  >
+                    <option value="none">none (无请求体)</option>
+                    <option value="json">JSON</option>
+                    <option value="form-data">Form Data</option>
+                    <option value="x-www-form-urlencoded">x-www-form-urlencoded</option>
+                  </select>
+                  
+                  {bodyType === 'json' && (
+                    <textarea
+                      value={bodyRawJson}
+                      onChange={(e) => setBodyRawJson(e.target.value)}
+                      placeholder='{"key": "value"}'
+                      rows={5}
+                      className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:border-emerald-500/50 focus:outline-none transition-colors text-sm font-mono"
+                    />
+                  )}
+                  
+                  {(bodyType === 'form-data' || bodyType === 'x-www-form-urlencoded') && (
+                    <KeyValueEditor
+                      items={bodyFormData}
+                      onChange={setBodyFormData}
+                      keyPlaceholder="字段名"
+                      valuePlaceholder="字段值"
+                      addButtonText="添加字段"
+                    />
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Error Message */}
@@ -878,6 +1177,26 @@ const WidgetConfigCenter: React.FC = () => {
                           setFieldsLink(preset.config.fields.link || '');
                           setMaxItems(preset.config.maxItems);
                           setEmptyText(preset.config.emptyText);
+                          // 初始化新状态
+                          setApiConfigTab('basic');
+                          setQueryParams([]);
+                          setHeadersRawMode(false);
+                          setHeadersKeyValue([]);
+                          setApiHeaders(preset.config.headers ? JSON.stringify(preset.config.headers, null, 2) : '');
+                          if (preset.config.headers) {
+                            const headerEntries = Object.entries(preset.config.headers).map(([key, value], index) => ({
+                              id: `preset-header-${index}-${Date.now()}`,
+                              key,
+                              value: String(value)
+                            }));
+                            setHeadersKeyValue(headerEntries);
+                          }
+                          setBodyType('none');
+                          setBodyFormData([]);
+                          setBodyRawJson(preset.config.body ? JSON.stringify(preset.config.body, null, 2) : '');
+                          if (preset.config.body && typeof preset.config.body === 'object') {
+                            setBodyType('json');
+                          }
                           setShowAPIConfigModal(true);
                         }
                       }}
@@ -963,41 +1282,199 @@ const WidgetConfigCenter: React.FC = () => {
                   <Globe className="w-4 h-4 text-emerald-400" />
                   API配置 <span className="text-xs text-slate-500 font-normal">(必填)</span>
                 </h4>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-xs text-slate-400 mb-1 block">API URL <span className="text-red-400">*</span></label>
-                    <input
-                      type="text"
-                      value={apiUrl}
-                      onChange={(e) => setApiUrl(e.target.value)}
-                      className="w-full px-3 py-2 bg-[#181a1c] rounded-lg border border-white/10 text-white text-sm focus:border-emerald-500/50 focus:outline-none"
-                      placeholder="https://api.example.com/endpoint"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
+                
+                {/* 标签页导航 */}
+                <div className="flex gap-1 bg-[#0d0e10] p-1 rounded-xl mb-3 border border-white/5">
+                  {[
+                    { key: 'basic', label: '基础配置', icon: FileJson },
+                    { key: 'params', label: '请求参数', icon: List },
+                    { key: 'headers', label: '请求头', icon: AlignLeft },
+                    { key: 'body', label: '请求体', icon: FileText }
+                  ].map(({ key, label, icon: Icon }) => (
+                    <button
+                      key={key}
+                      onClick={() => setApiConfigTab(key as any)}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                        apiConfigTab === key
+                          ? 'bg-emerald-500 text-[#0d0e10]'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* 基础配置标签 */}
+                {apiConfigTab === 'basic' && (
+                  <div className="space-y-3">
                     <div>
-                      <label className="text-xs text-slate-400 mb-1 block">请求方法 <span className="text-red-400">*</span></label>
-                      <select
-                        value={apiMethod}
-                        onChange={(e) => setApiMethod(e.target.value as 'GET' | 'POST')}
-                        className="w-full px-3 py-2 bg-[#181a1c] rounded-lg border border-white/10 text-white text-sm focus:border-emerald-500/50 focus:outline-none"
-                      >
-                        <option value="GET">GET</option>
-                        <option value="POST">POST</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-xs text-slate-400 mb-1 block">数据路径 <span className="text-red-400">*</span></label>
+                      <label className="text-xs text-slate-400 mb-1 block">API URL <span className="text-red-400">*</span></label>
                       <input
                         type="text"
-                        value={dataPath}
-                        onChange={(e) => setDataPath(e.target.value)}
+                        value={apiUrl}
+                        onChange={(e) => setApiUrl(e.target.value)}
                         className="w-full px-3 py-2 bg-[#181a1c] rounded-lg border border-white/10 text-white text-sm focus:border-emerald-500/50 focus:outline-none"
-                        placeholder="data.items"
+                        placeholder="https://api.example.com/endpoint"
                       />
                     </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs text-slate-400 mb-1 block">请求方法 <span className="text-red-400">*</span></label>
+                        <select
+                          value={apiMethod}
+                          onChange={(e) => {
+                            const method = e.target.value as 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+                            setApiMethod(method as 'GET' | 'POST');
+                            if (method === 'GET' || method === 'DELETE') {
+                              setBodyType('none');
+                            } else if (bodyType === 'none') {
+                              setBodyType('json');
+                            }
+                          }}
+                          className="w-full px-3 py-2 bg-[#181a1c] rounded-lg border border-white/10 text-white text-sm focus:border-emerald-500/50 focus:outline-none"
+                        >
+                          <option value="GET">GET</option>
+                          <option value="POST">POST</option>
+                          <option value="PUT">PUT</option>
+                          <option value="PATCH">PATCH</option>
+                          <option value="DELETE">DELETE</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-400 mb-1 block">数据路径 <span className="text-red-400">*</span></label>
+                        <input
+                          type="text"
+                          value={dataPath}
+                          onChange={(e) => setDataPath(e.target.value)}
+                          className="w-full px-3 py-2 bg-[#181a1c] rounded-lg border border-white/10 text-white text-sm focus:border-emerald-500/50 focus:outline-none"
+                          placeholder="data.items"
+                        />
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {/* 请求参数标签 */}
+                {apiConfigTab === 'params' && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs text-slate-400">Query 参数</label>
+                      <span className="text-xs text-slate-500">自动拼接到 URL</span>
+                    </div>
+                    <KeyValueEditor
+                      items={queryParams}
+                      onChange={setQueryParams}
+                      keyPlaceholder="参数名"
+                      valuePlaceholder="参数值"
+                      addButtonText="添加参数"
+                    />
+                  </div>
+                )}
+
+                {/* 请求头标签 */}
+                {apiConfigTab === 'headers' && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs text-slate-400">请求头</label>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-500">Raw JSON</span>
+                        <button
+                          onClick={() => {
+                            if (!headersRawMode) {
+                              const obj: Record<string, string> = {};
+                              headersKeyValue.forEach(item => {
+                                if (item.key.trim()) obj[item.key] = item.value;
+                              });
+                              setApiHeaders(JSON.stringify(obj, null, 2));
+                            } else {
+                              try {
+                                const obj = JSON.parse(apiHeaders || '{}');
+                                const items = Object.entries(obj).map(([key, value], idx) => ({
+                                  id: `h-${idx}-${Date.now()}`,
+                                  key,
+                                  value: String(value)
+                                }));
+                                setHeadersKeyValue(items);
+                              } catch {
+                                setHeadersKeyValue([]);
+                              }
+                            }
+                            setHeadersRawMode(!headersRawMode);
+                          }}
+                          className={`w-10 h-5 rounded-full transition-colors relative ${
+                            headersRawMode ? 'bg-emerald-500' : 'bg-slate-600'
+                          }`}
+                        >
+                          <span className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-transform ${
+                            headersRawMode ? 'left-6' : 'left-1'
+                          }`} />
+                        </button>
+                      </div>
+                    </div>
+                    {headersRawMode ? (
+                      <textarea
+                        value={apiHeaders}
+                        onChange={(e) => setApiHeaders(e.target.value)}
+                        placeholder='{"Authorization": "Bearer token", "Content-Type": "application/json"}'
+                        rows={5}
+                        className="w-full px-3 py-2 bg-[#181a1c] rounded-lg border border-white/10 text-white text-sm focus:border-emerald-500/50 focus:outline-none font-mono"
+                      />
+                    ) : (
+                      <KeyValueEditor
+                        items={headersKeyValue}
+                        onChange={setHeadersKeyValue}
+                        keyPlaceholder="Header 名称"
+                        valuePlaceholder="Header 值"
+                        addButtonText="添加请求头"
+                      />
+                    )}
+                  </div>
+                )}
+
+                {/* 请求体标签 */}
+                {apiConfigTab === 'body' && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs text-slate-400">请求体类型</label>
+                      {(apiMethod === 'GET' || apiMethod === 'DELETE') && (
+                        <span className="text-xs text-amber-400">{apiMethod} 请求通常不需要请求体</span>
+                      )}
+                    </div>
+                    <select
+                      value={bodyType}
+                      onChange={(e) => setBodyType(e.target.value as any)}
+                      disabled={apiMethod === 'GET' || apiMethod === 'DELETE'}
+                      className="w-full px-3 py-2 bg-[#181a1c] rounded-lg border border-white/10 text-white text-sm focus:border-emerald-500/50 focus:outline-none disabled:opacity-50"
+                    >
+                      <option value="none">none (无请求体)</option>
+                      <option value="json">JSON</option>
+                      <option value="form-data">Form Data</option>
+                      <option value="x-www-form-urlencoded">x-www-form-urlencoded</option>
+                    </select>
+                    
+                    {bodyType === 'json' && (
+                      <textarea
+                        value={bodyRawJson}
+                        onChange={(e) => setBodyRawJson(e.target.value)}
+                        placeholder='{"key": "value"}'
+                        rows={5}
+                        className="w-full px-3 py-2 bg-[#181a1c] rounded-lg border border-white/10 text-white text-sm focus:border-emerald-500/50 focus:outline-none font-mono"
+                      />
+                    )}
+                    
+                    {(bodyType === 'form-data' || bodyType === 'x-www-form-urlencoded') && (
+                      <KeyValueEditor
+                        items={bodyFormData}
+                        onChange={setBodyFormData}
+                        keyPlaceholder="字段名"
+                        valuePlaceholder="字段值"
+                        addButtonText="添加字段"
+                      />
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* 显示配置 - 必填 */}
@@ -1054,7 +1531,7 @@ const WidgetConfigCenter: React.FC = () => {
                 </div>
               </div>
 
-              {/* 可选参数 */}
+              {/* 可选参数 - 已移除请求头和请求体配置，移至API配置标签页 */}
               <div className="p-4 rounded-xl bg-[#0d0e10] border border-white/5">
                 <h4 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
                   <Settings className="w-4 h-4 text-slate-400" />
@@ -1128,28 +1605,6 @@ const WidgetConfigCenter: React.FC = () => {
                       />
                     </div>
                   </div>
-                  {apiMethod === 'POST' && (
-                    <div>
-                      <label className="text-xs text-slate-400 mb-1 block">请求体 (JSON)</label>
-                      <textarea
-                        value={apiBody}
-                        onChange={(e) => setApiBody(e.target.value)}
-                        rows={3}
-                        className="w-full px-3 py-2 bg-[#181a1c] rounded-lg border border-white/10 text-white text-sm focus:border-emerald-500/50 focus:outline-none font-mono"
-                        placeholder='{"key": "value"}'
-                      />
-                    </div>
-                  )}
-                  <div>
-                    <label className="text-xs text-slate-400 mb-1 block">请求头 (JSON)</label>
-                    <textarea
-                      value={apiHeaders}
-                      onChange={(e) => setApiHeaders(e.target.value)}
-                      rows={2}
-                      className="w-full px-3 py-2 bg-[#181a1c] rounded-lg border border-white/10 text-white text-sm focus:border-emerald-500/50 focus:outline-none font-mono"
-                      placeholder='{"Authorization": "Bearer token"}'
-                    />
-                  </div>
                 </div>
               </div>
             </div>
@@ -1186,31 +1641,67 @@ const WidgetConfigCenter: React.FC = () => {
                   }
                   if (!dataPath.trim()) {
                     setAddError('请输入数据路径');
+                    return;
                   }
                   if (!fieldsTitle.trim()) {
                     setAddError('请输入标题字段');
                     return;
                   }
 
-                  // 解析headers
+                  // 构建headers
                   let parsedHeaders: Record<string, string> = {};
-                  if (apiHeaders.trim()) {
-                    try {
-                      parsedHeaders = JSON.parse(apiHeaders);
-                    } catch {
-                      setAddError('请求头格式错误，请输入有效的JSON');
-                      return;
+                  if (headersRawMode) {
+                    if (apiHeaders.trim()) {
+                      try {
+                        parsedHeaders = JSON.parse(apiHeaders);
+                      } catch {
+                        setAddError('请求头JSON格式错误');
+                        return;
+                      }
                     }
+                  } else {
+                    headersKeyValue.forEach(item => {
+                      if (item.key.trim()) {
+                        parsedHeaders[item.key.trim()] = item.value;
+                      }
+                    });
                   }
 
-                  // 解析body
+                  // 构建请求体
                   let parsedBody: any = undefined;
-                  if (apiMethod === 'POST' && apiBody.trim()) {
+                  if (bodyType !== 'none' && apiMethod !== 'GET' && apiMethod !== 'DELETE') {
+                    if (bodyType === 'json') {
+                      if (bodyRawJson.trim()) {
+                        try {
+                          parsedBody = JSON.parse(bodyRawJson);
+                        } catch {
+                          setAddError('请求体JSON格式错误');
+                          return;
+                        }
+                      }
+                    } else if (bodyType === 'form-data' || bodyType === 'x-www-form-urlencoded') {
+                      const formDataObj: Record<string, string> = {};
+                      bodyFormData.forEach(item => {
+                        if (item.key.trim()) {
+                          formDataObj[item.key.trim()] = item.value;
+                        }
+                      });
+                      parsedBody = formDataObj;
+                    }
+                  }
+                  
+                  // 构建带Query参数的URL
+                  let finalUrl = apiUrl.trim();
+                  const validParams = queryParams.filter(p => p.key.trim());
+                  if (validParams.length > 0) {
                     try {
-                      parsedBody = JSON.parse(apiBody);
+                      const urlObj = new URL(finalUrl);
+                      validParams.forEach(param => {
+                        urlObj.searchParams.set(param.key.trim(), param.value);
+                      });
+                      finalUrl = urlObj.toString();
                     } catch {
-                      setAddError('请求体格式错误，请输入有效的JSON');
-                      return;
+                      // URL无效，使用原始URL
                     }
                   }
 
@@ -1218,7 +1709,7 @@ const WidgetConfigCenter: React.FC = () => {
                   const apiConfig: APIDataConfig = {
                     id: selectedPreset.config.id,
                     name: newWidgetTitle,
-                    apiUrl: apiUrl,
+                    apiUrl: finalUrl,
                     method: apiMethod,
                     headers: Object.keys(parsedHeaders).length > 0 ? parsedHeaders : undefined,
                     body: parsedBody,

@@ -226,7 +226,7 @@ export interface API60sPreset {
 }
 
 // 60s API 基础URL
-const API_60S_BASE = 'https://60s-api.viki.moe';
+const API_60S_BASE = 'https://60s.viki.moe';
 
 // 周期资讯类 API (日更/周更/实时)
 export const API_60S_PERIODIC: API60sPreset[] = [
@@ -245,7 +245,7 @@ export const API_60S_PERIODIC: API60sPreset[] = [
       refreshInterval: 3600,
       dataPath: 'data.news',
       displayType: 'list',
-      fields: { title: 'news' },
+      fields: { title: '' }, // 字符串数组，直接用item
       maxItems: 15,
       emptyText: '今日资讯加载中...'
     }
@@ -260,12 +260,12 @@ export const API_60S_PERIODIC: API60sPreset[] = [
     config: {
       id: 'ai-news',
       name: 'AI资讯快报',
-      apiUrl: `${API_60S_BASE}/v2/ai`,
+      apiUrl: `${API_60S_BASE}/v2/ai-news`,
       method: 'GET',
       refreshInterval: 3600,
-      dataPath: 'data',
+      dataPath: 'data.news',
       displayType: 'list',
-      fields: { title: 'title', subtitle: 'summary', value: 'time' },
+      fields: { title: 'title', subtitle: 'source', value: 'date', link: 'link' },
       maxItems: 5,
       emptyText: '暂无AI资讯'
     }
@@ -300,7 +300,7 @@ export const API_60S_PERIODIC: API60sPreset[] = [
     config: {
       id: 'exchange-rate',
       name: '当日货币汇率',
-      apiUrl: `${API_60S_BASE}/v2/exchange`,
+      apiUrl: `${API_60S_BASE}/v2/exchange-rate`,
       method: 'GET',
       refreshInterval: 1800,
       dataPath: 'data.rates',
@@ -320,12 +320,12 @@ export const API_60S_PERIODIC: API60sPreset[] = [
     config: {
       id: 'history-today',
       name: '历史上的今天',
-      apiUrl: `${API_60S_BASE}/v2/history`,
+      apiUrl: `${API_60S_BASE}/v2/today-in-history`,
       method: 'GET',
       refreshInterval: 3600,
-      dataPath: 'data',
+      dataPath: 'data.items',
       displayType: 'list',
-      fields: { title: 'title', subtitle: 'year' },
+      fields: { title: 'title', subtitle: 'year', value: 'description', link: 'link' },
       maxItems: 5,
       emptyText: '历史事件加载中...'
     }
@@ -513,7 +513,7 @@ export const API_60S_TRENDING: API60sPreset[] = [
       refreshInterval: 600,
       dataPath: 'data',
       displayType: 'list',
-      fields: { title: 'title', value: 'hot', subtitle: 'rank' },
+      fields: { title: 'title', value: 'hot_value', image: 'cover', link: 'link' },
       maxItems: 10,
       emptyText: '热搜加载中...'
     }
@@ -573,7 +573,7 @@ export const API_60S_TRENDING: API60sPreset[] = [
       refreshInterval: 300,
       dataPath: 'data',
       displayType: 'list',
-      fields: { title: 'title', value: 'hot', subtitle: 'rank' },
+      fields: { title: 'title', value: 'hot_value', link: 'link' },
       maxItems: 10,
       emptyText: '热搜加载中...'
     }
