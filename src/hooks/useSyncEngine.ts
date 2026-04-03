@@ -138,6 +138,16 @@ export function useSyncEngine(options: UseSyncEngineOptions = {}): UseSyncEngine
         data: Omit<YNavSyncData, 'meta'>,
         force: boolean = false
     ): Promise<boolean> => {
+        // 严格检查：禁止推送空数据
+        const hasValidLinks = Array.isArray(data.links) && data.links.length > 0;
+        const hasValidCategories = Array.isArray(data.categories) && data.categories.length > 0;
+        
+        if (!hasValidLinks || !hasValidCategories) {
+            console.warn('[SyncEngine] Refusing to push empty data to cloud');
+            onError?.('数据为空，无法同步');
+            return false;
+        }
+        
         setSyncStatus('syncing');
 
         const localMeta = getLocalSyncMeta();
@@ -218,7 +228,7 @@ export function useSyncEngine(options: UseSyncEngineOptions = {}): UseSyncEngine
             if (pendingData.current) {
                 const success = await pushToCloud(pendingData.current);
                 if (success) {
-                    onSyncComplete?.();
+                    onSyncComplete?.(pendingData.current as YNavSyncData);
                 }
                 pendingData.current = null;
             }
