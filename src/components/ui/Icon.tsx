@@ -56,6 +56,20 @@ const GRADIENT_STYLES = {
 // 默认兜底图标（更友好的默认值）
 const FALLBACK_ICON = 'HelpCircle';
 
+// 判断是否为 emoji（短字符串且不是 URL 或 Lucide 图标名）
+const isEmoji = (str: string): boolean => {
+  // 如果是 URL（以 http 或 data: 开头），不是 emoji
+  if (str.startsWith('http') || str.startsWith('data:')) {
+    return false;
+  }
+  // 如果长度小于等于 4，可能是 emoji（大多数 emoji 是 2-4 个字符）
+  // 且不是常见的 Lucide 图标名（首字母大写）
+  if (str.length <= 4 && !/^[A-Z][a-zA-Z]*$/.test(str)) {
+    return true;
+  }
+  return false;
+};
+
 // ==============================================
 // 🚀 顶级图标组件
 // ==============================================
@@ -71,6 +85,26 @@ const Icon: React.FC<IconProps> = ({
   gradient = 'none',
   ...rest
 }) => {
+  // 检查是否为 emoji
+  const emojiMode = useMemo(() => isEmoji(name as string), [name]);
+
+  // 如果是 emoji，直接渲染为 span
+  if (emojiMode) {
+    return (
+      <span
+        className={`inline-flex items-center justify-center ${className}`}
+        style={{ 
+          fontSize: size,
+          lineHeight: 1,
+          ...rest.style 
+        }}
+        aria-label={`${name} emoji`}
+      >
+        {name}
+      </span>
+    );
+  }
+
   // 动态获取图标组件 + 缓存优化
   const IconComponent = useMemo(() => {
     const cacheKey = name as string;

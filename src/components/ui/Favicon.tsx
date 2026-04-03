@@ -5,6 +5,8 @@ import { FAVICON_CACHE_KEY } from '../../utils/constants';
 interface FaviconProps {
   /** 目标域名/URL */
   url?: string;
+  /** 自定义图标（emoji 或图片 URL） */
+  icon?: string;
   /** 图标大小 */
   size?: number;
   /** 自定义类名 */
@@ -50,11 +52,42 @@ const faviconCache = {
 // ==================== 核心组件 ====================
 const Favicon: React.FC<FaviconProps> = ({
   url,
+  icon,
   size = 20,
   className = '',
   forceFallback = false,
 }) => {
   const [errorCount, setErrorCount] = useState(0);
+
+  // 如果有自定义图标（emoji 或图片 URL），优先显示
+  if (icon) {
+    // 如果是图片 URL
+    if (icon.startsWith('http') || icon.startsWith('data:')) {
+      return (
+        <img
+          src={icon}
+          alt="icon"
+          width={size}
+          height={size}
+          className={`rounded object-contain ${className}`}
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = 'none';
+          }}
+        />
+      );
+    }
+    // 如果是 emoji（短字符串）
+    if (icon.length <= 4) {
+      return (
+        <span
+          className={`inline-flex items-center justify-center ${className}`}
+          style={{ fontSize: size, lineHeight: 1 }}
+        >
+          {icon}
+        </span>
+      );
+    }
+  }
 
   // 解析纯净域名
   const { host, isInternal } = useMemo(() => {

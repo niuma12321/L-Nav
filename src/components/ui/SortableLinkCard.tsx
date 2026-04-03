@@ -64,7 +64,17 @@ const SortableLinkCard: React.FC<SortableLinkCardProps> = ({
                             }`}
                         style={customToneStyle}
                     >
-                        {link.icon ? <img src={link.icon} alt="" className="w-5 h-5" /> : link.title.charAt(0)}
+                        {link.icon ? (
+                            link.icon.startsWith('http') || link.icon.startsWith('data:') ? (
+                                <img src={link.icon} alt="" className="w-5 h-5" />
+                            ) : link.icon.length <= 4 ? (
+                                <span className="text-lg">{link.icon}</span>
+                            ) : (
+                                <img src={link.icon} alt="" className="w-5 h-5" />
+                            )
+                        ) : (
+                            link.title.charAt(0)
+                        )}
                     </div>
 
                     {/* 标题 */}

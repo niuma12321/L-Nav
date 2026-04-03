@@ -61,6 +61,29 @@ const mockResources: Resource[] = [
   { id: '12', title: '财联社', url: 'cls.cn', description: '财经快讯7x24', categoryId: 'finance', favicon: 'https://cls.cn/favicon.ico', createdAt: Date.now() },
 ];
 
+// 辅助函数：渲染图标（支持 emoji、自定义图片、默认 favicon）
+const renderResourceIcon = (resource: Resource, size: number = 24) => {
+  // 优先显示自定义 icon（emoji 或图片 URL）
+  if (resource.icon) {
+    // 如果是图片 URL
+    if (resource.icon.startsWith('http') || resource.icon.startsWith('data:')) {
+      return <img src={resource.icon} alt="" className={`w-${size/4} h-${size/4} rounded`} style={{ width: size, height: size }} />;
+    }
+    // 如果是 emoji（短字符串）
+    if (resource.icon.length <= 4) {
+      return <span style={{ fontSize: size, lineHeight: 1 }}>{resource.icon}</span>;
+    }
+  }
+  
+  // 其次显示 favicon
+  if (resource.favicon) {
+    return <img src={resource.favicon} alt="" className={`w-${size/4} h-${size/4} rounded`} style={{ width: size, height: size }} />;
+  }
+  
+  // 默认图标
+  return <Link2 className={`w-${size/4} h-${size/4} text-slate-500`} style={{ width: size, height: size }} />;
+};
+
 interface ResourceCenterViewCNProps {
   onAddResource?: () => void;
   onImport?: () => void;
@@ -419,11 +442,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resource, viewMode, onEdit,
         className="flex items-center gap-4 p-4 rounded-2xl bg-[#181a1c] hover:bg-[#242629] transition-colors group cursor-pointer"
       >
         <div className="w-12 h-12 rounded-xl bg-[#0d0e10] flex items-center justify-center shrink-0">
-          {resource.favicon ? (
-            <img src={resource.favicon} alt="" className="w-6 h-6 rounded" />
-          ) : (
-            <Link2 className="w-6 h-6 text-slate-500" />
-          )}
+          {renderResourceIcon(resource, 24)}
         </div>
         <div className="flex-1 min-w-0">
           <h4 className="text-base font-medium text-white truncate" title={resource.title}>{resource.title}</h4>
@@ -469,11 +488,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resource, viewMode, onEdit,
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="w-12 h-12 rounded-xl bg-[#0d0e10] flex items-center justify-center">
-          {resource.favicon ? (
-            <img src={resource.favicon} alt="" className="w-6 h-6 rounded" />
-          ) : (
-            <Link2 className="w-6 h-6 text-slate-500" />
-          )}
+          {renderResourceIcon(resource, 24)}
         </div>
         <div className="relative">
           <button 

@@ -100,6 +100,7 @@ const LinkCard: React.FC<LinkCardProps> = React.memo(({
   const renderIcon = () => (
     <Favicon 
       url={link.url} 
+      icon={link.icon}
       size={isDetailedView ? 24 : 20}
       forceFallback={false}
     />
