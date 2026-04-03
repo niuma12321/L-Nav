@@ -9,7 +9,11 @@ export type WidgetType =
   | 'notes'
   | 'news-feed'
   | 'market-overview'
-  | 'api-data'; // 新增：API数据组件
+  | 'api-data' // API数据组件
+  | 'automation-tasks' // 待执行任务
+  | 'automation-logs' // 执行日志
+  | 'smart-home-status' // 设备状态
+  | 'smart-home-quick'; // 快捷控制
 
 export interface WidgetConfig {
   id: string;

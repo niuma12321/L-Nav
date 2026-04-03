@@ -1,9 +1,13 @@
 import { getAssetFromKV, serveSinglePageApp } from '@cloudflare/kv-asset-handler';
+import automation, { automationScheduled } from './routes/automation';
+import smartHome from './routes/smart-home';
 
 export interface Env {
   YNAV_WORKER_KV: KVNamespace;
   YNAV_D1: D1Database;
   YNAV_R2: R2Bucket;
+  HA_BASE_URL: string;
+  HA_TOKEN: string;
 }
 
 // CORS 响应头
@@ -81,7 +85,7 @@ async function initializeDB(db: D1Database): Promise<void> {
 }
 
 // API 路由处理
-async function handleAPI(request: Request, env: Env): Promise<Response> {
+async function handleAPI(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const url = new URL(request.url);
   const path = url.pathname;
 
@@ -125,6 +129,16 @@ async function handleAPI(request: Request, env: Env): Promise<Response> {
   // 通用代理 API - 处理第三方API请求
   if (path === '/api/v1/proxy') {
     return handleProxyAPI(request);
+  }
+
+  // 自动化调度 API
+  if (path.startsWith('/api/v1/automation')) {
+    return automation.fetch(request, env, ctx);
+  }
+
+  // 智能家居 API
+  if (path.startsWith('/api/v1/smart-home')) {
+    return smartHome.fetch(request, env, ctx);
   }
 
   return new Response(JSON.stringify({ error: 'Not found' }), {
@@ -686,7 +700,7 @@ export default {
 
     // 处理 API 请求
     if (url.pathname.startsWith('/api/')) {
-      return handleAPI(request, env);
+      return handleAPI(request, env, ctx);
     }
 
     // 处理静态资源请求

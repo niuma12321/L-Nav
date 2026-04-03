@@ -64,3 +64,11 @@ directory = "dist"
 API_VERSION = "v1"
 # 应用名称
 APP_NAME = "Y-Nav"
+
+# 智能家居配置（通过环境变量传入，避免硬编码）
+HA_BASE_URL = "https://your-homeassistant-domain/api"
+HA_TOKEN = "your-long-lived-access-token"
+
+# Cron定时触发器（每分钟执行一次自动化任务）
+[[triggers]]
+crons = ["* * * * *"]

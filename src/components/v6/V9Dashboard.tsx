@@ -51,6 +51,8 @@ import NavEditModal from '../modals/NavEditModal';
 import ResourceCenterViewCN from './ResourceCenterViewCN';
 import RSSReaderViewCN from './RSSReaderViewCN';
 import WidgetConfigCenter from './WidgetConfigCenter';
+import { AutomationCenterView } from '../automation/AutomationCenterView';
+import { SmartHomeView } from '../smartHome/SmartHomeView';
 import LabView from './LabView';
 import EmojiPicker from '../ui/EmojiPicker';
 
@@ -1217,6 +1219,8 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
     { id: 'resources', label: '资源中心', icon: FolderOpen },
     { id: 'rss', label: 'RSS阅读', icon: Rss },
     { id: 'widgets', label: '组件配置', icon: Grid3X3 },
+    { id: 'automation', label: '自动化调度', icon: RefreshCw },
+    { id: 'smart-home', label: '智能家居', icon: House },
     { id: 'labs', label: '实验室', icon: FlaskConical },
   ]);
   const [isNavEditMode, setIsNavEditMode] = useState(false);
@@ -1547,6 +1551,10 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
           />
         ) : activeView === 'rss' ? (
           <RSSReaderViewCN />
+        ) : activeView === 'automation' ? (
+          <AutomationCenterView onBack={() => setActiveView('dashboard')} />
+        ) : activeView === 'smart-home' ? (
+          <SmartHomeView onBack={() => setActiveView('dashboard')} />
         ) : activeView === 'labs' ? (
           <LabView />
         ) : (
