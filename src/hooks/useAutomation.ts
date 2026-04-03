@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useDataStore } from './useDataStore';
 
 const API_BASE = '/api/v1/automation';
@@ -30,8 +30,8 @@ export interface AutomationLog {
 }
 
 export function useAutomation() {
-  // 从localStorage获取用户ID或使用默认值
-  const userId = localStorage.getItem('user_id') || 'default';
+  // 从localStorage获取用户ID并使用useMemo缓存
+  const userId = useMemo(() => localStorage.getItem('user_id') || 'default', []);
   const [tasks, setTasks] = useState<AutomationTask[]>([]);
   const [logs, setLogs] = useState<AutomationLog[]>([]);
   const [loading, setLoading] = useState(false);

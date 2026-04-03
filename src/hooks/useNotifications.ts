@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 
 const API_BASE = '/api/v1/notifications';
 
@@ -26,8 +26,8 @@ export interface NotificationSettings {
 }
 
 export function useNotifications() {
-  // 从localStorage获取用户ID或使用默认值
-  const userId = localStorage.getItem('user_id') || 'default';
+  // 从localStorage获取用户ID并使用useMemo缓存，避免每次渲染重新创建
+  const userId = useMemo(() => localStorage.getItem('user_id') || 'default', []);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
