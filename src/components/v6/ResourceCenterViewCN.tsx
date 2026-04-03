@@ -178,6 +178,14 @@ const ResourceCenterViewCN: React.FC<ResourceCenterViewCNProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Debug Panel - 可视化调试信息 */}
+      <div className="p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/30">
+        <p className="text-xs text-yellow-400 font-mono">
+          DEBUG: links={links?.length || 0}, categories={categories?.length || 0}, 
+          resources={resources?.length || 0}, filtered={filteredResources?.length || 0}
+        </p>
+      </div>
+      
       {/* Header Section */}
       <div className="flex items-start justify-between">
         <div>
