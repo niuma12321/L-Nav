@@ -60,8 +60,8 @@ const WidgetSettingsModal: React.FC<{
   if (!isOpen || !widget) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-[#181a1c] rounded-2xl border border-white/10 w-full max-w-md p-6 shadow-2xl">
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-[#181a1c] rounded-2xl border border-white/10 w-full max-w-md p-6 shadow-2xl my-auto">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-bold text-white">组件设置 - {widget.title}</h3>
           <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/10 text-slate-400">
@@ -519,8 +519,8 @@ const WidgetConfigCenter: React.FC = () => {
 
       {/* Add/Edit Widget Modal */}
       {showAddWidgetModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#181a1c] rounded-2xl border border-white/10 w-full max-w-lg p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-[#181a1c] rounded-2xl border border-white/10 w-full max-w-lg p-6 shadow-2xl max-h-[90vh] overflow-y-auto my-auto">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-bold text-white">{editingWidget ? '编辑组件' : '添加组件'}</h3>
               <button onClick={handleCloseModal} className="p-2 rounded-lg hover:bg-white/10 text-slate-400">

@@ -155,11 +155,20 @@ export const NavEditModal: React.FC<NavEditModalProps> = ({
     onClose();
   };
 
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="w-full max-w-md bg-[#181a1c] rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
+    <div 
+      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto"
+      onClick={handleBackdropClick}
+    >
+      <div className="w-full max-w-md p-8 rounded-3xl bg-gradient-to-br from-[#1a1c1e] to-[#0d0e10] border border-white/10 shadow-2xl my-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-white/10">
           <h2 className="text-lg font-semibold text-white">编辑导航菜单</h2>

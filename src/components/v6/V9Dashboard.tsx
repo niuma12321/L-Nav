@@ -917,8 +917,8 @@ const SearchWidget: React.FC = () => {
 
       {/* 搜索引擎管理弹窗 */}
       {showEngineModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowEngineModal(false)}>
-          <div className="bg-[#181a1c] rounded-2xl border border-white/10 w-full max-w-md p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto" onClick={() => setShowEngineModal(false)}>
+          <div className="bg-[#181a1c] rounded-2xl border border-white/10 w-full max-w-md p-6 shadow-2xl my-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-white">管理搜索引擎</h3>
               <button onClick={() => setShowEngineModal(false)} className="p-2 rounded-lg hover:bg-white/10 text-slate-400">
@@ -927,7 +927,7 @@ const SearchWidget: React.FC = () => {
             </div>
             
             {/* 现有引擎列表 */}
-            <div className="space-y-2 mb-4 max-h-48 overflow-y-auto">
+            <div className="space-y-2 mb-4 max-h-32 sm:max-h-48 overflow-y-auto">
               {engines.map(engine => (
                 <div key={engine.name} className="flex items-center justify-between px-3 py-2 bg-[#0d0e10] rounded-lg">
                   <div className="flex items-center gap-2">
@@ -974,9 +974,9 @@ const SearchWidget: React.FC = () => {
                 </button>
                 
                 {showEmojiPicker && (
-                  <div className="absolute z-50 mt-2 w-full">
-                    <div className="bg-[#181a1c] rounded-xl border border-white/10 shadow-2xl overflow-hidden">
-                      <div className="p-2 border-b border-white/5 flex justify-between items-center">
+                  <div className="fixed sm:absolute z-[60] mt-2 left-4 right-4 sm:left-0 sm:right-0 max-h-[60vh] overflow-hidden">
+                    <div className="bg-[#181a1c] rounded-xl border border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[60vh]">
+                      <div className="p-2 border-b border-white/5 flex justify-between items-center shrink-0">
                         <span className="text-sm text-slate-300">选择图标</span>
                         <button
                           onClick={() => setShowEmojiPicker(false)}
@@ -985,7 +985,7 @@ const SearchWidget: React.FC = () => {
                           <X className="w-4 h-4" />
                         </button>
                       </div>
-                      <div className="h-64">
+                      <div className="flex-1 overflow-hidden">
                         <EmojiPicker
                           onSelect={(emoji) => {
                             setNewEngine({...newEngine, icon: emoji});
@@ -1000,6 +1000,7 @@ const SearchWidget: React.FC = () => {
                 )}
               </div>
               <button
+                type="button"
                 onClick={addEngine}
                 className="w-full py-2.5 rounded-xl bg-emerald-500 text-[#0d0e10] font-medium hover:bg-emerald-400 transition-colors text-sm"
               >
