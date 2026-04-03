@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   Rss, 
   Plus, 
@@ -12,7 +12,9 @@ import {
   ChevronUp,
   Search,
   X,
-  Loader2
+  Loader2,
+  Upload,
+  FileText
 } from 'lucide-react';
 
 // RSS 源类型
@@ -100,6 +102,10 @@ const RSSReaderViewCN: React.FC = () => {
   const [newSourceUrl, setNewSourceUrl] = useState('');
   const [newSourceTitle, setNewSourceTitle] = useState('');
   const [addError, setAddError] = useState('');
+  const [addMode, setAddMode] = useState<'manual' | 'opml'>('manual');
+  const [opmlImporting, setOpmlImporting] = useState(false);
+  const [opmlStats, setOpmlStats] = useState<{total: number; success: number; failed: number} | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 搜索
   const [searchQuery, setSearchQuery] = useState('');
@@ -221,6 +227,150 @@ const RSSReaderViewCN: React.FC = () => {
     
     setLoading(false);
     return successCount;
+  };
+
+  // 解析 OPML 文件
+  const parseOPML = (xmlText: string): Array<{title: string; url: string}> => {
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+    
+    // 检查解析错误
+    const parseError = xmlDoc.querySelector('parsererror');
+    if (parseError) {
+      throw new Error('OPML 文件解析失败');
+    }
+
+    const feeds: Array<{title: string; url: string}> = [];
+    const outlines = xmlDoc.querySelectorAll('outline[type="rss"], outline[xmlUrl]');
+    
+    outlines.forEach((outline) => {
+      const title = outline.getAttribute('title') || 
+                   outline.getAttribute('text') || 
+                   '未命名源';
+      const url = outline.getAttribute('xmlUrl') || 
+                 outline.getAttribute('url');
+      
+      if (url) {
+        feeds.push({ title, url });
+      }
+    });
+
+    return feeds;
+  };
+
+  // 处理 OPML 文件导入
+  const handleOPMLImport = async (file: File) => {
+    setOpmlImporting(true);
+    setAddError('');
+    setOpmlStats(null);
+
+    try {
+      const text = await file.text();
+      const feeds = parseOPML(text);
+
+      if (feeds.length === 0) {
+        throw new Error('未找到有效的 RSS 订阅源，请检查 OPML 文件格式');
+      }
+
+      let successCount = 0;
+      let failedCount = 0;
+      const newSources: RSSSource[] = [];
+      const newItems: RSSItem[] = [];
+
+      for (const feed of feeds) {
+        try {
+          // 检查是否已存在
+          const exists = sources.some(s => s.url === feed.url);
+          if (exists) {
+            continue;
+          }
+
+          // 尝试获取 RSS 验证
+          const response = await fetch(`${RSS_PROXY_API}?url=${encodeURIComponent(feed.url)}`);
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+
+          const xmlText = await response.text();
+          const parser = new DOMParser();
+          const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+          
+          // 提取标题
+          const channelTitle = xmlDoc.querySelector('channel > title, feed > title')?.textContent || 
+                              feed.title || 
+                              '未命名源';
+
+          const newSource: RSSSource = {
+            id: `source-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            title: channelTitle,
+            url: feed.url,
+            addedAt: Date.now(),
+            lastFetched: Date.now()
+          };
+
+          newSources.push(newSource);
+
+          // 解析条目
+          const entries = xmlDoc.querySelectorAll('item, entry');
+          entries.forEach((entry, index) => {
+            const title = entry.querySelector('title')?.textContent || '无标题';
+            const link = entry.querySelector('link')?.textContent || 
+                        entry.querySelector('link')?.getAttribute('href') || '';
+            const description = entry.querySelector('description, summary, content')?.textContent || '';
+            const pubDate = entry.querySelector('pubDate, published, updated')?.textContent || '';
+            const author = entry.querySelector('author, creator')?.textContent || '';
+            
+            newItems.push({
+              id: `${newSource.id}-${index}-${Date.now()}`,
+              title: title.trim(),
+              link: link.trim(),
+              description: description.trim().substring(0, 500),
+              pubDate,
+              author: author.trim(),
+              sourceId: newSource.id,
+              sourceTitle: newSource.title
+            });
+          });
+
+          successCount++;
+          // 延迟避免请求过快
+          await new Promise(resolve => setTimeout(resolve, 300));
+        } catch {
+          failedCount++;
+        }
+      }
+
+      if (newSources.length > 0) {
+        const allSources = [...newSources, ...sources];
+        saveSources(allSources);
+        
+        const existingLinks = new Set(items.map(i => i.link));
+        const uniqueNewItems = newItems.filter(item => !existingLinks.has(item.link));
+        const allItems = [...uniqueNewItems, ...items].slice(0, 200);
+        saveItems(allItems);
+      }
+
+      setOpmlStats({ total: feeds.length, success: successCount, failed: failedCount });
+      
+      if (successCount > 0) {
+        setTimeout(() => {
+          setShowAddModal(false);
+          setAddMode('manual');
+          setOpmlStats(null);
+        }, 2000);
+      }
+    } catch (error) {
+      setAddError(error instanceof Error ? error.message : '导入失败');
+    } finally {
+      setOpmlImporting(false);
+    }
+  };
+
+  // 处理文件选择
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    handleOPMLImport(file);
   };
 
   // 添加新 RSS 源
@@ -634,34 +784,102 @@ const RSSReaderViewCN: React.FC = () => {
             </div>
 
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  RSS 地址 <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="url"
-                  value={newSourceUrl}
-                  onChange={(e) => setNewSourceUrl(e.target.value)}
-                  placeholder="https://example.com/feed.xml"
-                  className="w-full px-4 py-3 bg-[#0d0e10] rounded-xl border border-white/10 focus:border-orange-500/50 focus:outline-none text-white placeholder:text-slate-500"
-                />
-                <p className="text-xs text-slate-500 mt-1">
-                  支持 RSS 2.0、Atom 格式
-                </p>
+              <div className="flex gap-2 mb-4">
+                <button
+                  onClick={() => setAddMode('manual')}
+                  className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    addMode === 'manual' 
+                      ? 'bg-orange-500 text-[#0d0e10]' 
+                      : 'bg-white/5 text-slate-300 hover:bg-white/10'
+                  }`}
+                >
+                  手动添加
+                </button>
+                <button
+                  onClick={() => setAddMode('opml')}
+                  className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    addMode === 'opml' 
+                      ? 'bg-orange-500 text-[#0d0e10]' 
+                      : 'bg-white/5 text-slate-300 hover:bg-white/10'
+                  }`}
+                >
+                  OPML 导入
+                </button>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  显示名称 <span className="text-slate-500">(可选)</span>
-                </label>
-                <input
-                  type="text"
-                  value={newSourceTitle}
-                  onChange={(e) => setNewSourceTitle(e.target.value)}
-                  placeholder="自动获取"
-                  className="w-full px-4 py-3 bg-[#0d0e10] rounded-xl border border-white/10 focus:border-orange-500/50 focus:outline-none text-white placeholder:text-slate-500"
-                />
-              </div>
+              {addMode === 'manual' ? (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      RSS 地址 <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="url"
+                      value={newSourceUrl}
+                      onChange={(e) => setNewSourceUrl(e.target.value)}
+                      placeholder="https://example.com/feed.xml"
+                      className="w-full px-4 py-3 bg-[#0d0e10] rounded-xl border border-white/10 focus:border-orange-500/50 focus:outline-none text-white placeholder:text-slate-500"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">
+                      支持 RSS 2.0、Atom 格式
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      显示名称 <span className="text-slate-500">(可选)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={newSourceTitle}
+                      onChange={(e) => setNewSourceTitle(e.target.value)}
+                      placeholder="自动获取"
+                      className="w-full px-4 py-3 bg-[#0d0e10] rounded-xl border border-white/10 focus:border-orange-500/50 focus:outline-none text-white placeholder:text-slate-500"
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-4">
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-white/20 rounded-xl p-8 text-center cursor-pointer hover:border-orange-500/50 transition-colors"
+                  >
+                    <Upload className="w-10 h-10 mx-auto mb-3 text-slate-400" />
+                    <p className="text-sm font-medium text-slate-300 mb-1">
+                      点击选择 OPML 文件
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      支持 .opml、.xml 格式的订阅源列表
+                    </p>
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".opml,.xml,text/xml"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                  
+                  {opmlImporting && (
+                    <div className="flex items-center justify-center gap-2 py-4">
+                      <Loader2 className="w-5 h-5 text-orange-400 animate-spin" />
+                      <span className="text-sm text-slate-300">正在导入订阅源...</span>
+                    </div>
+                  )}
+                  
+                  {opmlStats && (
+                    <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FileText className="w-4 h-4 text-green-400" />
+                        <span className="text-sm font-medium text-green-400">导入完成</span>
+                      </div>
+                      <p className="text-xs text-slate-400">
+                        总计: {opmlStats.total} | 成功: {opmlStats.success} | 失败: {opmlStats.failed}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {addError && (
                 <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20">
@@ -670,33 +888,35 @@ const RSSReaderViewCN: React.FC = () => {
                 </div>
               )}
 
-              <div className="flex gap-3 pt-4">
-                <button
-                  onClick={() => {
-                    setShowAddModal(false);
-                    setAddError('');
-                    setNewSourceUrl('');
-                    setNewSourceTitle('');
-                  }}
-                  className="flex-1 px-4 py-3 rounded-xl bg-white/5 text-slate-300 hover:bg-white/10 transition-colors"
-                >
-                  取消
-                </button>
-                <button
-                  onClick={addSource}
-                  disabled={loading || !newSourceUrl.trim()}
-                  className="flex-1 px-4 py-3 rounded-xl bg-orange-500 text-[#0d0e10] font-medium hover:bg-orange-400 transition-colors disabled:opacity-50"
-                >
-                  {loading ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      添加中...
-                    </span>
-                  ) : (
-                    '添加'
-                  )}
-                </button>
-              </div>
+              {addMode === 'manual' && (
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={() => {
+                      setShowAddModal(false);
+                      setAddError('');
+                      setNewSourceUrl('');
+                      setNewSourceTitle('');
+                    }}
+                    className="flex-1 px-4 py-3 rounded-xl bg-white/5 text-slate-300 hover:bg-white/10 transition-colors"
+                  >
+                    取消
+                  </button>
+                  <button
+                    onClick={addSource}
+                    disabled={loading || !newSourceUrl.trim()}
+                    className="flex-1 px-4 py-3 rounded-xl bg-orange-500 text-[#0d0e10] font-medium hover:bg-orange-400 transition-colors disabled:opacity-50"
+                  >
+                    {loading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        添加中...
+                      </span>
+                    ) : (
+                      '添加'
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
