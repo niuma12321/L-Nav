@@ -51,6 +51,17 @@ export const APIDataWidget: React.FC<APIDataWidgetProps> = ({ config }) => {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
+      // 检查响应类型，确保是 JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        // 如果返回的是 HTML，显示友好的错误信息
+        if (text.trim().startsWith('<')) {
+          throw new Error('API 返回了 HTML 页面而非 JSON 数据，请检查 API 地址是否正确');
+        }
+        throw new Error('API 返回格式错误，期望 JSON 数据');
+      }
+
       const result = await response.json();
       
       // 根据 dataPath 提取数据
