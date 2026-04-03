@@ -6,17 +6,14 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   return {
+    // 开发服务器配置
+    // 注意: API 请求在开发环境直接访问 /api/*
+    // 生产环境由 Cloudflare Workers 统一处理
     server: {
       port: 3000,
       host: '0.0.0.0',
-      proxy: {
-        // 代理 API 请求到线上服务
-        '/api': {
-          target: 'https://678870.xyz',
-          changeOrigin: true,
-          secure: true,
-        }
-      }
+      // 开发环境 API 代理已移除
+      // 生产环境: Workers 自动处理 /api/* 路由
     },
     plugins: [react(), tailwindcss()],
     define: {
@@ -29,26 +26,30 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(__dirname, './src'),
       }
     },
+    // 构建配置
     build: {
+      // 输出到 dist 目录，由 Workers Assets 自动部署
+      outDir: 'dist',
+      // 代码分割配置
       rollupOptions: {
         output: {
           manualChunks: {
-            // React core libraries
+            // React 核心库
             'vendor-react': ['react', 'react-dom'],
-            // Drag and drop libraries
+            // 拖拽库
             'vendor-dnd': [
               '@dnd-kit/core',
               '@dnd-kit/sortable',
               '@dnd-kit/utilities'
             ],
-            // Icon library
+            // 图标库
             'vendor-icons': ['lucide-react'],
-            // AI library
+            // AI 库
             'vendor-ai': ['@google/genai'],
           }
         }
       },
-      // Increase chunk size warning limit to reduce warnings
+      // 增加 chunk 大小警告阈值
       chunkSizeWarningLimit: 1000
     }
   };

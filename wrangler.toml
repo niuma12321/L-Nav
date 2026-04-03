@@ -1,41 +1,61 @@
-# Cloudflare Workers 部署配置 (Workers + Assets + D1 + R2)
+# ==========================================
+# Cloudflare Workers 部署配置
+# 项目: home (Y-Nav 导航站)
+# 架构: Workers + Assets + D1 + R2 + KV
+# ==========================================
+
+# Workers 项目名称
 name = "home"
+
+# Workers 入口文件（处理 API 和静态资源）
 main = "worker/index.ts"
+
+# 兼容性日期（新功能支持）
 compatibility_date = "2024-01-01"
 
 # ==========================================
-# 数据存储配置
+# 数据存储绑定
 # ==========================================
 
-# KV 命名空间 - 快速缓存和同步
+# 1. KV 存储 - 快速缓存和同步状态
+# 用途: 缓存、临时数据、同步状态、静态资源
+# 限制: 键值对，适合读取频繁的数据
 [[kv_namespaces]]
 binding = "YNAV_WORKER_KV"
 id = "43e6854cf0354bf5970054b899dde7d9"
 
-# D1 数据库 - 结构化数据存储
+# 2. D1 数据库 - 结构化数据存储
+# 用途: 链接、分类、用户设置、备份元数据
+# 优势: SQL 查询、关系型数据、支持复杂查询
 [[d1_databases]]
 binding = "YNAV_D1"
 database_name = "ynav-db"
-database_id = "f6e0f916-2855-481f-b6dd-09790f377811"  # 需要填入你的 D1 database ID
+database_id = "f6e0f916-2855-481f-b6dd-09790f377811"
 
-# R2 存储桶 - 大文件存储（备份、图标等）
+# 3. R2 存储桶 - 大文件对象存储
+# 用途: 备份文件、图标缓存、导出数据
+# 优势: S3 兼容、大容量、低成本
 [[r2_buckets]]
 binding = "YNAV_R2"
 bucket_name = "ynav-storage"
 
-# 静态资源 - 前端构建文件
+# ==========================================
+# 静态资源配置
+# ==========================================
+
+# 前端构建输出目录
+# Vite 构建后的静态文件，由 Workers Assets 自动处理
 [assets]
 directory = "dist"
 
 # ==========================================
 # 环境变量
 # ==========================================
-[vars]
-NODE_ENV = "production"
-API_VERSION = "v1"
 
-# 生产环境配置
-[env.production]
-[env.production.vars]
+[vars]
+# 环境标识
 NODE_ENV = "production"
+# API 版本
 API_VERSION = "v1"
+# 应用名称
+APP_NAME = "Y-Nav"
