@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Database, Upload, Cloud, Lock, Eye, EyeOff, RefreshCw, Clock, Cpu,
-  CloudUpload, CloudDownload, Trash2
+  CloudUpload, CloudDownload, Trash2, Trash
 } from 'lucide-react';
 import { SiteSettings, SyncStatus } from '../../../types';
 import {
   SYNC_API_ENDPOINT, SYNC_META_KEY, SYNC_PASSWORD_KEY, VIEW_PASSWORD_KEY,
   SYNC_API_VERSION, SYNC_DATA_SCHEMA_VERSION
 } from '../../../utils/constants';
+import { useDialog } from '../../ui/DialogProvider';
 
 // ==============================================
 // 类型定义（补全所有缺失类型，消除any）
@@ -178,8 +179,16 @@ const formatDeviceLabel = (deviceId?: string, browser?: string, os?: string): st
 };
 
 const formatBackupTime = (backup: BackupItem): string => {
-  if (backup.updatedAt) return new Date(backup.updatedAt).toLocaleString(DATE_LOCALE, DATE_FORMAT_OPTIONS.short);
-  if (backup.timestamp) return backup.timestamp.replace('T', ' ');
+  if (backup.updatedAt && typeof backup.updatedAt === 'number') {
+    try {
+      return new Date(backup.updatedAt).toLocaleString(DATE_LOCALE, DATE_FORMAT_OPTIONS.short);
+    } catch {
+      return '时间格式错误';
+    }
+  }
+  if (backup.timestamp && typeof backup.timestamp === 'string') {
+    return backup.timestamp.replace('T', ' ');
+  }
   return '未知时间';
 };
 
@@ -207,6 +216,7 @@ const DataTab: React.FC<DataTabProps> = React.memo(({
   webmasterUnlocked = false,
   onWebmasterUnlockedChange
 }) => {
+  const { confirm } = useDialog();
   // ==============================================
   // 状态管理（精简分组，无冗余）
   // ==============================================
@@ -316,6 +326,15 @@ const DataTab: React.FC<DataTabProps> = React.memo(({
   }, [fetchBackups, onRestoreBackup]);
 
   const handleDeleteBackup = useCallback(async (key: string) => {
+    const shouldDelete = await confirm({
+      title: '删除备份',
+      message: '确定要删除这个备份吗？此操作不可恢复。',
+      confirmText: '删除',
+      cancelText: '取消',
+      variant: 'danger'
+    });
+    if (!shouldDelete) return;
+    
     setDeletingKey(key);
     try {
       await onDeleteBackup(key);
@@ -323,7 +342,31 @@ const DataTab: React.FC<DataTabProps> = React.memo(({
     } finally {
       setDeletingKey(null);
     }
-  }, [fetchBackups, onDeleteBackup]);
+  }, [fetchBackups, onDeleteBackup, confirm]);
+
+  const handleDeleteAllBackups = useCallback(async () => {
+    const shouldDelete = await confirm({
+      title: '删除全部备份',
+      message: `确定要删除全部 ${backups.length} 个备份吗？此操作不可恢复。`,
+      confirmText: '全部删除',
+      cancelText: '取消',
+      variant: 'danger'
+    });
+    if (!shouldDelete) return;
+    
+    let deletedCount = 0;
+    for (const backup of backups) {
+      if (backup.key) {
+        try {
+          await onDeleteBackup(backup.key);
+          deletedCount++;
+        } catch {
+          // 继续删除其他备份
+        }
+      }
+    }
+    await fetchBackups();
+  }, [backups, fetchBackups, onDeleteBackup, confirm]);
 
   // ==============================================
   // 依赖副作用（自动触发数据加载）
@@ -406,11 +449,16 @@ const DataTab: React.FC<DataTabProps> = React.memo(({
         {/* 云端备份列表 */}
         <div className="mb-4 p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/40">
           <div className="flex justify-between items-center mb-3">
-            <span className="text-sm font-bold">云端备份列表</span>
+            <span className="text-sm font-bold">云端备份列表{backups.length > 0 && ` (${backups.length}个)`}</span>
             <div className="flex gap-3">
               <button onClick={handleCreateBackup} disabled={isCreatingBackup} className="text-xs text-emerald-600 flex items-center gap-1">
                 <CloudUpload size={12} className={isCreatingBackup ? 'animate-spin' : ''} />创建备份
               </button>
+              {backups.length > 0 && (
+                <button onClick={handleDeleteAllBackups} disabled={!!deletingKey} className="text-xs text-red-600 flex items-center gap-1">
+                  <Trash size={12} />全部删除
+                </button>
+              )}
             </div>
           </div>
 
