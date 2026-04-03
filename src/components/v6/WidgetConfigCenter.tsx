@@ -205,7 +205,18 @@ const WidgetConfigCenter: React.FC = () => {
   const [refreshInterval, setRefreshInterval] = useState(0);
   const [dataPath, setDataPath] = useState('');
   const [displayType, setDisplayType] = useState<'list' | 'table' | 'json' | 'cards'>('list');
+  const [fieldsTitle, setFieldsTitle] = useState('title');
+  const [fieldsValue, setFieldsValue] = useState('value');
+  const [fieldsSubtitle, setFieldsSubtitle] = useState('');
+  const [fieldsImage, setFieldsImage] = useState('');
+  const [fieldsLink, setFieldsLink] = useState('');
+  const [maxItems, setMaxItems] = useState(10);
+  const [emptyText, setEmptyText] = useState('暂无数据');
   const [addError, setAddError] = useState('');
+
+  // API preset config modal state
+  const [showAPIConfigModal, setShowAPIConfigModal] = useState(false);
+  const [selectedPreset, setSelectedPreset] = useState<API60sPreset | null>(null);
 
   // 分离固定组件和自定义组件
   const fixedWidgets = widgets.filter(w => w.isFixed);
@@ -245,6 +256,13 @@ const WidgetConfigCenter: React.FC = () => {
     setRefreshInterval(0);
     setDataPath('');
     setDisplayType('list');
+    setFieldsTitle('title');
+    setFieldsValue('value');
+    setFieldsSubtitle('');
+    setFieldsImage('');
+    setFieldsLink('');
+    setMaxItems(10);
+    setEmptyText('暂无数据');
     setAddError('');
   };
 
@@ -302,11 +320,14 @@ const WidgetConfigCenter: React.FC = () => {
         dataPath: dataPath || '',
         displayType: displayType as any,
         fields: {
-          title: 'title',
-          value: 'value'
+          title: fieldsTitle || 'title',
+          value: fieldsValue || undefined,
+          subtitle: fieldsSubtitle || undefined,
+          image: fieldsImage || undefined,
+          link: fieldsLink || undefined
         },
-        maxItems: 10,
-        emptyText: '暂无数据'
+        maxItems: maxItems || 10,
+        emptyText: emptyText || '暂无数据'
       };
       
       if (editingWidget) {
@@ -443,7 +464,7 @@ const WidgetConfigCenter: React.FC = () => {
             <div className="w-12 h-12 rounded-2xl bg-orange-500/10 flex items-center justify-center">
               <Sparkles className="w-6 h-6 text-orange-400" />
             </div>
-            <span className="text-sm font-medium">60s API组件</span>
+            <span className="text-sm font-medium">API组件</span>
             <span className="text-xs text-slate-600">{ALL_API_60S_PRESETS.length} 个预设接口</span>
           </button>
         </div>
@@ -775,8 +796,8 @@ const WidgetConfigCenter: React.FC = () => {
           <div className="bg-[#181a1c] rounded-2xl border border-white/10 w-full max-w-4xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto my-auto">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h3 className="text-lg font-bold text-white">60s API 组件库</h3>
-                <p className="text-sm text-slate-400 mt-1">点击添加预设API组件到您的仪表盘</p>
+                <h3 className="text-lg font-bold text-white">API 组件库</h3>
+                <p className="text-sm text-slate-400 mt-1">点击添加预设API组件到您的仪表盘，添加后可在组件设置中配置参数</p>
               </div>
               <button 
                 onClick={() => setShow60sAPIModal(false)} 
@@ -841,8 +862,23 @@ const WidgetConfigCenter: React.FC = () => {
                     <button
                       onClick={() => {
                         if (!isAdded) {
-                          const widget = createAPIWidget(preset.config);
-                          addWidget(widget);
+                          setSelectedPreset(preset);
+                          // 预填充配置参数
+                          setNewWidgetTitle(preset.config.name);
+                          setNewWidgetDesc(preset.description);
+                          setApiUrl(preset.config.apiUrl);
+                          setApiMethod(preset.config.method);
+                          setRefreshInterval(preset.config.refreshInterval);
+                          setDataPath(preset.config.dataPath);
+                          setDisplayType(preset.config.displayType as any);
+                          setFieldsTitle(preset.config.fields.title);
+                          setFieldsValue(preset.config.fields.value || '');
+                          setFieldsSubtitle(preset.config.fields.subtitle || '');
+                          setFieldsImage(preset.config.fields.image || '');
+                          setFieldsLink(preset.config.fields.link || '');
+                          setMaxItems(preset.config.maxItems);
+                          setEmptyText(preset.config.emptyText);
+                          setShowAPIConfigModal(true);
                         }
                       }}
                       disabled={isAdded}
@@ -852,7 +888,7 @@ const WidgetConfigCenter: React.FC = () => {
                           : 'bg-orange-500 text-[#0d0e10] hover:bg-orange-400'
                       }`}
                     >
-                      {isAdded ? '已添加' : '添加组件'}
+                      {isAdded ? '已添加' : '配置并添加'}
                     </button>
                   </div>
                 );
@@ -865,6 +901,355 @@ const WidgetConfigCenter: React.FC = () => {
                 <p>该分类下暂无API组件</p>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* API参数配置弹窗 */}
+      {showAPIConfigModal && selectedPreset && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-[#181a1c] rounded-2xl border border-white/10 w-full max-w-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto my-auto">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-lg font-bold text-white">配置API组件 - {selectedPreset.name}</h3>
+                <p className="text-sm text-slate-400 mt-1">配置API参数和显示选项</p>
+              </div>
+              <button 
+                onClick={() => {
+                  setShowAPIConfigModal(false);
+                  setSelectedPreset(null);
+                  handleCloseModal();
+                }} 
+                className="p-2 rounded-lg hover:bg-white/10 text-slate-400"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* 基本信息 */}
+              <div className="p-4 rounded-xl bg-[#0d0e10] border border-white/5">
+                <h4 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
+                  <Database className="w-4 h-4 text-emerald-400" />
+                  基本信息
+                </h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-slate-400 mb-1 block">组件名称 <span className="text-red-400">*</span></label>
+                    <input
+                      type="text"
+                      value={newWidgetTitle}
+                      onChange={(e) => setNewWidgetTitle(e.target.value)}
+                      className="w-full px-3 py-2 bg-[#181a1c] rounded-lg border border-white/10 text-white text-sm focus:border-emerald-500/50 focus:outline-none"
+                      placeholder="组件显示名称"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-400 mb-1 block">描述</label>
+                    <input
+                      type="text"
+                      value={newWidgetDesc}
+                      onChange={(e) => setNewWidgetDesc(e.target.value)}
+                      className="w-full px-3 py-2 bg-[#181a1c] rounded-lg border border-white/10 text-white text-sm focus:border-emerald-500/50 focus:outline-none"
+                      placeholder="组件描述"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* API配置 - 必填 */}
+              <div className="p-4 rounded-xl bg-[#0d0e10] border border-white/5">
+                <h4 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-emerald-400" />
+                  API配置 <span className="text-xs text-slate-500 font-normal">(必填)</span>
+                </h4>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs text-slate-400 mb-1 block">API URL <span className="text-red-400">*</span></label>
+                    <input
+                      type="text"
+                      value={apiUrl}
+                      onChange={(e) => setApiUrl(e.target.value)}
+                      className="w-full px-3 py-2 bg-[#181a1c] rounded-lg border border-white/10 text-white text-sm focus:border-emerald-500/50 focus:outline-none"
+                      placeholder="https://api.example.com/endpoint"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-slate-400 mb-1 block">请求方法 <span className="text-red-400">*</span></label>
+                      <select
+                        value={apiMethod}
+                        onChange={(e) => setApiMethod(e.target.value as 'GET' | 'POST')}
+                        className="w-full px-3 py-2 bg-[#181a1c] rounded-lg border border-white/10 text-white text-sm focus:border-emerald-500/50 focus:outline-none"
+                      >
+                        <option value="GET">GET</option>
+                        <option value="POST">POST</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-400 mb-1 block">数据路径 <span className="text-red-400">*</span></label>
+                      <input
+                        type="text"
+                        value={dataPath}
+                        onChange={(e) => setDataPath(e.target.value)}
+                        className="w-full px-3 py-2 bg-[#181a1c] rounded-lg border border-white/10 text-white text-sm focus:border-emerald-500/50 focus:outline-none"
+                        placeholder="data.items"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 显示配置 - 必填 */}
+              <div className="p-4 rounded-xl bg-[#0d0e10] border border-white/5">
+                <h4 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
+                  <LayoutDashboard className="w-4 h-4 text-emerald-400" />
+                  显示配置 <span className="text-xs text-slate-500 font-normal">(必填)</span>
+                </h4>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs text-slate-400 mb-1 block">显示方式 <span className="text-red-400">*</span></label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {(['list', 'table', 'card', 'text'] as const).map((type) => (
+                        <button
+                          key={type}
+                          onClick={() => setDisplayType(type)}
+                          className={`px-3 py-2 rounded-lg text-sm border transition-all ${
+                            displayType === type 
+                              ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400' 
+                              : 'border-white/10 text-slate-400 hover:border-white/20'
+                          }`}
+                        >
+                          {type === 'list' && '列表'}
+                          {type === 'table' && '表格'}
+                          {type === 'card' && '卡片'}
+                          {type === 'text' && '文本'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-slate-400 mb-1 block">标题字段 <span className="text-red-400">*</span></label>
+                      <input
+                        type="text"
+                        value={fieldsTitle}
+                        onChange={(e) => setFieldsTitle(e.target.value)}
+                        className="w-full px-3 py-2 bg-[#181a1c] rounded-lg border border-white/10 text-white text-sm focus:border-emerald-500/50 focus:outline-none"
+                        placeholder="title"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-400 mb-1 block">最大条目数 <span className="text-red-400">*</span></label>
+                      <input
+                        type="number"
+                        value={maxItems}
+                        onChange={(e) => setMaxItems(parseInt(e.target.value) || 10)}
+                        min={1}
+                        max={50}
+                        className="w-full px-3 py-2 bg-[#181a1c] rounded-lg border border-white/10 text-white text-sm focus:border-emerald-500/50 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 可选参数 */}
+              <div className="p-4 rounded-xl bg-[#0d0e10] border border-white/5">
+                <h4 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
+                  <Settings className="w-4 h-4 text-slate-400" />
+                  可选参数 <span className="text-xs text-slate-500 font-normal">(选填)</span>
+                </h4>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-slate-400 mb-1 block">副标题字段</label>
+                      <input
+                        type="text"
+                        value={fieldsSubtitle}
+                        onChange={(e) => setFieldsSubtitle(e.target.value)}
+                        className="w-full px-3 py-2 bg-[#181a1c] rounded-lg border border-white/10 text-white text-sm focus:border-emerald-500/50 focus:outline-none"
+                        placeholder="subtitle"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-400 mb-1 block">数值字段</label>
+                      <input
+                        type="text"
+                        value={fieldsValue}
+                        onChange={(e) => setFieldsValue(e.target.value)}
+                        className="w-full px-3 py-2 bg-[#181a1c] rounded-lg border border-white/10 text-white text-sm focus:border-emerald-500/50 focus:outline-none"
+                        placeholder="value"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-slate-400 mb-1 block">图片字段</label>
+                      <input
+                        type="text"
+                        value={fieldsImage}
+                        onChange={(e) => setFieldsImage(e.target.value)}
+                        className="w-full px-3 py-2 bg-[#181a1c] rounded-lg border border-white/10 text-white text-sm focus:border-emerald-500/50 focus:outline-none"
+                        placeholder="image"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-400 mb-1 block">链接字段</label>
+                      <input
+                        type="text"
+                        value={fieldsLink}
+                        onChange={(e) => setFieldsLink(e.target.value)}
+                        className="w-full px-3 py-2 bg-[#181a1c] rounded-lg border border-white/10 text-white text-sm focus:border-emerald-500/50 focus:outline-none"
+                        placeholder="link"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-slate-400 mb-1 block">刷新间隔(秒)</label>
+                      <input
+                        type="number"
+                        value={refreshInterval}
+                        onChange={(e) => setRefreshInterval(parseInt(e.target.value) || 0)}
+                        min={0}
+                        className="w-full px-3 py-2 bg-[#181a1c] rounded-lg border border-white/10 text-white text-sm focus:border-emerald-500/50 focus:outline-none"
+                        placeholder="0为不自动刷新"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-400 mb-1 block">空数据提示</label>
+                      <input
+                        type="text"
+                        value={emptyText}
+                        onChange={(e) => setEmptyText(e.target.value)}
+                        className="w-full px-3 py-2 bg-[#181a1c] rounded-lg border border-white/10 text-white text-sm focus:border-emerald-500/50 focus:outline-none"
+                        placeholder="暂无数据"
+                      />
+                    </div>
+                  </div>
+                  {apiMethod === 'POST' && (
+                    <div>
+                      <label className="text-xs text-slate-400 mb-1 block">请求体 (JSON)</label>
+                      <textarea
+                        value={apiBody}
+                        onChange={(e) => setApiBody(e.target.value)}
+                        rows={3}
+                        className="w-full px-3 py-2 bg-[#181a1c] rounded-lg border border-white/10 text-white text-sm focus:border-emerald-500/50 focus:outline-none font-mono"
+                        placeholder='{"key": "value"}'
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <label className="text-xs text-slate-400 mb-1 block">请求头 (JSON)</label>
+                    <textarea
+                      value={apiHeaders}
+                      onChange={(e) => setApiHeaders(e.target.value)}
+                      rows={2}
+                      className="w-full px-3 py-2 bg-[#181a1c] rounded-lg border border-white/10 text-white text-sm focus:border-emerald-500/50 focus:outline-none font-mono"
+                      placeholder='{"Authorization": "Bearer token"}'
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 错误提示 */}
+            {addError && (
+              <div className="mt-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                {addError}
+              </div>
+            )}
+
+            {/* 操作按钮 */}
+            <div className="mt-6 flex gap-3">
+              <button 
+                onClick={() => {
+                  setShowAPIConfigModal(false);
+                  setSelectedPreset(null);
+                  handleCloseModal();
+                }}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 text-slate-300 hover:bg-white/10 transition-colors text-sm"
+              >
+                取消
+              </button>
+              <button 
+                onClick={() => {
+                  // 验证必填参数
+                  if (!newWidgetTitle.trim()) {
+                    setAddError('请输入组件名称');
+                    return;
+                  }
+                  if (!apiUrl.trim()) {
+                    setAddError('请输入API URL');
+                    return;
+                  }
+                  if (!dataPath.trim()) {
+                    setAddError('请输入数据路径');
+                  }
+                  if (!fieldsTitle.trim()) {
+                    setAddError('请输入标题字段');
+                    return;
+                  }
+
+                  // 解析headers
+                  let parsedHeaders: Record<string, string> = {};
+                  if (apiHeaders.trim()) {
+                    try {
+                      parsedHeaders = JSON.parse(apiHeaders);
+                    } catch {
+                      setAddError('请求头格式错误，请输入有效的JSON');
+                      return;
+                    }
+                  }
+
+                  // 解析body
+                  let parsedBody: any = undefined;
+                  if (apiMethod === 'POST' && apiBody.trim()) {
+                    try {
+                      parsedBody = JSON.parse(apiBody);
+                    } catch {
+                      setAddError('请求体格式错误，请输入有效的JSON');
+                      return;
+                    }
+                  }
+
+                  // 创建API配置
+                  const apiConfig: APIDataConfig = {
+                    id: selectedPreset.config.id,
+                    name: newWidgetTitle,
+                    apiUrl: apiUrl,
+                    method: apiMethod,
+                    headers: Object.keys(parsedHeaders).length > 0 ? parsedHeaders : undefined,
+                    body: parsedBody,
+                    refreshInterval: refreshInterval,
+                    dataPath: dataPath,
+                    displayType: displayType as any,
+                    fields: {
+                      title: fieldsTitle,
+                      value: fieldsValue || undefined,
+                      subtitle: fieldsSubtitle || undefined,
+                      image: fieldsImage || undefined,
+                      link: fieldsLink || undefined
+                    },
+                    maxItems: maxItems,
+                    emptyText: emptyText || '暂无数据'
+                  };
+
+                  // 创建组件
+                  const widget = createAPIWidget(apiConfig);
+                  addWidget(widget);
+
+                  // 关闭弹窗
+                  setShowAPIConfigModal(false);
+                  setSelectedPreset(null);
+                  handleCloseModal();
+                }}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-emerald-500 text-[#0d0e10] hover:bg-emerald-400 transition-colors text-sm font-medium"
+              >
+                添加组件
+              </button>
+            </div>
           </div>
         </div>
       )}
