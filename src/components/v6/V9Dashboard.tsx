@@ -49,9 +49,10 @@ import NavEditModal from '../modals/NavEditModal';
 
 // Static imports - fixed dynamic import issues
 import ResourceCenterViewCN from './ResourceCenterViewCN';
+import RSSReaderViewCN from './RSSReaderViewCN';
 import WidgetConfigCenter from './WidgetConfigCenter';
 import LabView from './LabView';
-import RSSReaderViewCN from './RSSReaderViewCN';
+import EmojiPicker from '../ui/EmojiPicker';
 
 interface V9DashboardProps {
   onAddResource?: () => void;
@@ -764,6 +765,7 @@ const SearchWidget: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showEngineModal, setShowEngineModal] = useState(false);
   const [newEngine, setNewEngine] = useState({ name: '', url: '', icon: '' });
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [searchHistory, setSearchHistory] = useState<string[]>(() => {
     const saved = localStorage.getItem('ynav_search_history');
     return saved ? JSON.parse(saved) : [];
@@ -959,13 +961,44 @@ const SearchWidget: React.FC = () => {
                 onChange={(e) => setNewEngine({...newEngine, url: e.target.value})}
                 className="w-full px-3 py-2 bg-[#0d0e10] rounded-lg border border-white/5 text-white text-sm"
               />
-              <input
-                type="text"
-                placeholder="图标 (emoji或留空)"
-                value={newEngine.icon}
-                onChange={(e) => setNewEngine({...newEngine, icon: e.target.value})}
-                className="w-full px-3 py-2 bg-[#0d0e10] rounded-lg border border-white/5 text-white text-sm"
-              />
+              
+              {/* Emoji 选择器 */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  className="w-full px-3 py-2 bg-[#0d0e10] rounded-lg border border-white/5 text-white text-sm flex items-center gap-2 hover:bg-[#1a1c1f] transition-colors"
+                >
+                  <span className="text-xl">{newEngine.icon || '🔍'}</span>
+                  <span className="text-slate-400">{newEngine.icon ? '已选择图标' : '点击选择图标'}</span>
+                </button>
+                
+                {showEmojiPicker && (
+                  <div className="absolute z-50 mt-2 w-full">
+                    <div className="bg-[#181a1c] rounded-xl border border-white/10 shadow-2xl overflow-hidden">
+                      <div className="p-2 border-b border-white/5 flex justify-between items-center">
+                        <span className="text-sm text-slate-300">选择图标</span>
+                        <button
+                          onClick={() => setShowEmojiPicker(false)}
+                          className="p-1 rounded hover:bg-white/10 text-slate-400"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="h-64">
+                        <EmojiPicker
+                          onSelect={(emoji) => {
+                            setNewEngine({...newEngine, icon: emoji});
+                            setShowEmojiPicker(false);
+                          }}
+                          onClose={() => setShowEmojiPicker(false)}
+                          selectedEmoji={newEngine.icon}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
               <button
                 onClick={addEngine}
                 className="w-full py-2.5 rounded-xl bg-emerald-500 text-[#0d0e10] font-medium hover:bg-emerald-400 transition-colors text-sm"

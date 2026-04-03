@@ -153,6 +153,7 @@ const ResourceCenterViewCN: React.FC<ResourceCenterViewCNProps> = ({
           description: link.description || '',
           categoryId: link.categoryId || 'uncategorized',
           favicon: favicon || '',
+          icon: link.icon,
           createdAt: link.createdAt || Date.now()
         };
       });
