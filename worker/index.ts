@@ -122,6 +122,11 @@ async function handleAPI(request: Request, env: Env): Promise<Response> {
     return handleRSSAPI(request);
   }
 
+  // 通用代理 API - 处理第三方API请求
+  if (path === '/api/v1/proxy') {
+    return handleProxyAPI(request);
+  }
+
   return new Response(JSON.stringify({ error: 'Not found' }), {
     status: 404,
     headers: { 'Content-Type': 'application/json', ...corsHeaders }
@@ -542,44 +547,8 @@ async function handleRSSAPI(request: Request): Promise<Response> {
     });
   }
 
-  // 允许的 RSS 域名白名单（可选安全措施）
-  const allowedDomains = [
-    'feeds.feedburner.com',
-    'www.v2ex.com',
-    'v2ex.com',
-    'rsshub.app',
-    'github.com',
-    'api.github.com',
-    'www.reddit.com',
-    'reddit.com',
-    'hn.algolia.com',
-    'news.ycombinator.com',
-    'www.youtube.com',
-    'youtube.com',
-    'medium.com',
-    'www.medium.com',
-    'dev.to',
-    'www.producthunt.com',
-    'producthunt.com',
-    'techcrunch.com',
-    'www.techcrunch.com',
-    'theverge.com',
-    'www.theverge.com',
-    'arstechnica.com',
-    'www.arstechnica.com',
-    'wired.com',
-    'www.wired.com'
-  ];
-
   try {
     const targetUrl = new URL(rssUrl);
-    // 可选：检查域名白名单
-    // if (!allowedDomains.some(domain => targetUrl.hostname.includes(domain))) {
-    //   return new Response(JSON.stringify({ error: 'Domain not allowed' }), {
-    //     status: 403,
-    //     headers: { 'Content-Type': 'application/json', ...corsHeaders }
-    //   });
-    // }
 
     // 设置请求头模拟浏览器
     const headers = {
@@ -594,7 +563,6 @@ async function handleRSSAPI(request: Request): Promise<Response> {
     const response = await fetch(rssUrl, {
       method: 'GET',
       headers,
-      // Cloudflare Workers 自动处理 CORS
     });
 
     if (!response.ok) {
@@ -620,13 +588,91 @@ async function handleRSSAPI(request: Request): Promise<Response> {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type',
-        'Cache-Control': 'public, max-age=300' // 缓存5分钟
+        'Cache-Control': 'public, max-age=300'
       }
     });
   } catch (error) {
     console.error('RSS proxy error:', error);
     return new Response(JSON.stringify({ 
       error: error instanceof Error ? error.message : 'Failed to fetch RSS feed'
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+}
+
+// 通用代理 API - 处理第三方API请求
+async function handleProxyAPI(request: Request): Promise<Response> {
+  if (request.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+
+  try {
+    const body = await request.json() as { url: string; method?: string; headers?: Record<string, string>; body?: string };
+    const { url: targetUrl, method = 'GET', headers = {}, body: requestBody } = body;
+
+    if (!targetUrl) {
+      return new Response(JSON.stringify({ error: 'Missing URL parameter' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
+    // 验证 URL 格式
+    try {
+      new URL(targetUrl);
+    } catch {
+      return new Response(JSON.stringify({ error: 'Invalid URL format' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
+    // 构建请求头
+    const requestHeaders: Record<string, string> = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'application/json, text/plain, text/html, */*',
+      'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+      ...headers
+    };
+
+    // 发送请求
+    const fetchOptions: RequestInit = {
+      method,
+      headers: requestHeaders,
+    };
+
+    if (method === 'POST' && requestBody) {
+      fetchOptions.body = requestBody;
+    }
+
+    const response = await fetch(targetUrl, fetchOptions);
+
+    // 获取响应内容
+    const responseText = await response.text();
+    
+    // 获取响应头中的内容类型
+    const responseContentType = response.headers.get('content-type') || 'application/json';
+
+    // 返回响应
+    return new Response(responseText, {
+      status: response.status,
+      headers: {
+        'Content-Type': responseContentType,
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Cache-Control': 'public, max-age=60'
+      }
+    });
+  } catch (error) {
+    console.error('Proxy API error:', error);
+    return new Response(JSON.stringify({ 
+      error: error instanceof Error ? error.message : 'Proxy request failed'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', ...corsHeaders }
