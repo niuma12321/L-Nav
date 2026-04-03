@@ -15,13 +15,13 @@ id = "43e6854cf0354bf5970054b899dde7d9"
 # D1 数据库 - 结构化数据存储
 [[d1_databases]]
 binding = "YNAV_D1"
-database_name = "y-nav-db"
-database_id = ""  # 需要填入你的 D1 database ID
+database_name = "ynav-db"
+database_id = "f6e0f916-2855-481f-b6dd-09790f377811"  # 需要填入你的 D1 database ID
 
 # R2 存储桶 - 大文件存储（备份、图标等）
 [[r2_buckets]]
 binding = "YNAV_R2"
-bucket_name = "y-nav-storage"
+bucket_name = "ynav-storage"
 
 # 静态资源 - 前端构建文件
 [assets]
