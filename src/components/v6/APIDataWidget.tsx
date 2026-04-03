@@ -122,20 +122,19 @@ export const APIDataWidget: React.FC<APIDataWidgetProps> = ({ config }) => {
     setError(null);
     
     try {
-      // 使用代理服务器转发请求
-      const proxyUrl = '/api/v1/proxy';
-      const response = await fetch(proxyUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          url: config.apiUrl,
-          method: config.method,
-          headers: config.headers || {},
-          body: config.method === 'POST' ? config.body : undefined
-        })
-      });
+      // 直接读取配置中的API参数进行请求
+      const fetchOptions: RequestInit = {
+        method: config.method,
+        headers: config.headers || { 'Content-Type': 'application/json' }
+      };
+
+      if (config.method === 'POST' && config.body) {
+        fetchOptions.body = typeof config.body === 'string' 
+          ? config.body 
+          : JSON.stringify(config.body);
+      }
+
+      const response = await fetch(config.apiUrl, fetchOptions);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
