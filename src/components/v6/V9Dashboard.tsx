@@ -1150,6 +1150,16 @@ const LinkCard: React.FC<{
 
 const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings, onOpenImport, onEditLink, onDeleteLink, links = [], categories = [] }) => {
   const [activeView, setActiveView] = useState('dashboard');
+  
+  // 等待数据加载完成
+  const [dataLoaded, setDataLoaded] = useState(false);
+  useEffect(() => {
+    // 检查 links 和 categories 是否已加载（有数据或空数组都表示已加载）
+    if (Array.isArray(links) && Array.isArray(categories)) {
+      setDataLoaded(true);
+    }
+  }, [links, categories]);
+  
   const [currentTime, setCurrentTime] = useState(new Date());
   const [searchMode, setSearchMode] = useState<'internal' | 'external'>('external');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -1213,7 +1223,7 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
   const [navEditModalOpen, setNavEditModalOpen] = useState(false);
   const [editingNavItem, setEditingNavItem] = useState<{id: string, label: string, originalId: string} | null>(null);
 
-  if (!isLoaded) {
+  if (!isLoaded || !dataLoaded) {
     return (
       <div className="min-h-screen bg-[#0d0e10] flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />

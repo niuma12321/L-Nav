@@ -1,0 +1,16 @@
+{
+  "links": [
+    {"id": "1", "title": "GitHub", "url": "https://github.com", "categoryId": "dev", "createdAt": 1700000000000, "description": "全球最大的代码托管与开源社区", "pinned": true},
+    {"id": "2", "title": "React", "url": "https://react.dev", "categoryId": "dev", "createdAt": 1700000000000, "description": "Meta 开源的 Web 用户界面构建库", "pinned": true},
+    {"id": "3", "title": "Tailwind CSS", "url": "https://tailwindcss.com", "categoryId": "design", "createdAt": 1700000000000, "description": "原子化 CSS 框架", "pinned": true},
+    {"id": "4", "title": "ChatGPT", "url": "https://chat.openai.com", "categoryId": "ai", "createdAt": 1700000000000, "description": "OpenAI 开发的 AI 聊天机器人", "pinned": true},
+    {"id": "5", "title": "Gemini", "url": "https://gemini.google.com", "categoryId": "ai", "createdAt": 1700000000000, "description": "Google DeepMind 开发的 AI 助手", "pinned": true}
+  ],
+  "categories": [
+    {"id": "common", "name": "常用推荐", "icon": "Star"},
+    {"id": "dev", "name": "开发工具", "icon": "Code"},
+    {"id": "design", "name": "设计资源", "icon": "Palette"},
+    {"id": "ai", "name": "人工智能", "icon": "Bot"}
+  ],
+  "meta": {"version": 1, "updatedAt": 1700000000000, "deviceId": "init"}
+}

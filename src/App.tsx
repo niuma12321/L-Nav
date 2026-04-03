@@ -1162,12 +1162,6 @@ function App() {
     hasInitialCloudCheckCompletedRef.current = false;
 
     const checkCloudData = async () => {
-      // 临时禁用云端同步，强制使用本地数据
-      console.log('[Sync] Cloud sync temporarily disabled, using local data only');
-      hasInitialCloudCheckCompletedRef.current = true;
-      return;
-      
-      /* 禁用云端检查
       const localMeta = getLocalSyncMeta();
       const localVersion = localMeta?.version ?? 0;
       const localUpdatedAt = typeof localMeta?.updatedAt === 'number' ? localMeta.updatedAt : 0;
@@ -1199,9 +1193,11 @@ function App() {
             localData: { ...localData, meta: { updatedAt: localUpdatedAt, deviceId: localDeviceId, version: localVersion } },
             remoteData: cloudData
           });
+        } else {
+          // 版本一致时，直接使用云端数据更新
+          handleSyncComplete(cloudData);
         }
       }
-      */
     };
 
     checkCloudData().finally(() => {

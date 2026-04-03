@@ -147,19 +147,32 @@ async function handleSyncAPI(request: Request, env: Env): Promise<Response> {
         meta: { version: 1, updatedAt: Date.now(), deviceId: 'cloud' }
       };
 
-      return new Response(JSON.stringify(syncData), {
+      return new Response(JSON.stringify({ success: true, data: syncData }), {
         headers: { 'Content-Type': 'application/json', ...corsHeaders }
       });
     } catch (e) {
-      // D1 失败，回退到 KV
-      const data = await env.YNAV_WORKER_KV.get('sync:data', 'text');
-      if (!data) {
-        return new Response(JSON.stringify({ error: 'No data found' }), {
+      // D1 失败，回退到 KV (ynav:data:v1)
+      const kvData = await env.YNAV_WORKER_KV.get('ynav:data:v1', 'text');
+      if (!kvData) {
+        return new Response(JSON.stringify({ success: false, error: 'No data found' }), {
           status: 404,
           headers: { 'Content-Type': 'application/json', ...corsHeaders }
         });
       }
-      return new Response(data, {
+      const parsed = JSON.parse(kvData);
+      // KV 存储格式可能是: { links, categories, ... } 或 { data: { links, categories, ... }, expectedVersion: ... }
+      // 提取实际的同步数据
+      let responseData;
+      if (parsed.data && (parsed.data.links || parsed.data.categories)) {
+        // 格式: { data: { links, categories, ... }, expectedVersion: ... }
+        responseData = parsed.data;
+      } else if (parsed.links || parsed.categories) {
+        // 格式: { links, categories, ... }
+        responseData = parsed;
+      } else {
+        responseData = parsed;
+      }
+      return new Response(JSON.stringify({ success: true, data: responseData }), {
         headers: { 'Content-Type': 'application/json', ...corsHeaders }
       });
     }
@@ -279,7 +292,7 @@ async function handleBackupAPI(request: Request, env: Env): Promise<Response> {
           'SELECT id, name, size, created_at FROM backups WHERE user_id = ? ORDER BY created_at DESC'
         ).bind('default').all();
 
-        return new Response(JSON.stringify({ backups: result.results || [] }), {
+      return new Response(JSON.stringify({ success: true, backups: result.results || [] }), {
           headers: { 'Content-Type': 'application/json', ...corsHeaders }
         });
       } catch (e) {
@@ -290,7 +303,7 @@ async function handleBackupAPI(request: Request, env: Env): Promise<Response> {
           const meta = await env.YNAV_WORKER_KV.get(key.name, 'text');
           if (meta) backups.push(JSON.parse(meta));
         }
-        return new Response(JSON.stringify({ backups }), {
+        return new Response(JSON.stringify({ success: true, backups }), {
           headers: { 'Content-Type': 'application/json', ...corsHeaders }
         });
       }
@@ -326,7 +339,7 @@ async function handleLinksAPI(request: Request, env: Env): Promise<Response> {
       const result = await env.YNAV_D1.prepare(
         'SELECT * FROM links WHERE user_id = ? ORDER BY order_index'
       ).bind('default').all();
-      return new Response(JSON.stringify({ links: result.results || [] }), {
+      return new Response(JSON.stringify({ success: true, links: result.results || [] }), {
         headers: { 'Content-Type': 'application/json', ...corsHeaders }
       });
     } catch (e) {
@@ -373,7 +386,7 @@ async function handleCategoriesAPI(request: Request, env: Env): Promise<Response
       const result = await env.YNAV_D1.prepare(
         'SELECT * FROM categories WHERE user_id = ? ORDER BY order_index'
       ).bind('default').all();
-      return new Response(JSON.stringify({ categories: result.results || [] }), {
+      return new Response(JSON.stringify({ success: true, categories: result.results || [] }), {
         headers: { 'Content-Type': 'application/json', ...corsHeaders }
       });
     } catch (e) {

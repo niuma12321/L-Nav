@@ -1,0 +1,28 @@
+{
+  "links": [
+    {"id": "1", "title": "GitHub", "url": "https://github.com", "categoryId": "dev", "createdAt": 1700000000000, "description": "全球最大的代码托管与开源社区", "pinned": true, "icon": "https://www.faviconextractor.com/favicon/github.com?larger=true"},
+    {"id": "2", "title": "React", "url": "https://react.dev", "categoryId": "dev", "createdAt": 1700000000000, "description": "Meta 开源的 Web 用户界面构建库", "pinned": true, "icon": "https://www.faviconextractor.com/favicon/react.dev?larger=true"},
+    {"id": "6", "title": "Vercel", "url": "https://vercel.com", "categoryId": "dev", "createdAt": 1700000000000, "description": "AI Cloud 前端部署与托管平台，提供开发者工具和云基础设施", "icon": "https://www.faviconextractor.com/favicon/vercel.com?larger=true"},
+    {"id": "12", "title": "VS Code", "url": "https://code.visualstudio.com", "categoryId": "dev", "createdAt": 1700000000000, "description": "微软开源 AI 代码编辑器，支持 Claude Sonnet 等多种 AI 模型", "icon": "https://www.faviconextractor.com/favicon/code.visualstudio.com?larger=true"},
+    {"id": "3", "title": "Tailwind CSS", "url": "https://tailwindcss.com", "categoryId": "design", "createdAt": 1700000000000, "description": "原子化 CSS 框架，快速构建现代网页", "pinned": true, "icon": "https://www.faviconextractor.com/favicon/tailwindcss.com?larger=true"},
+    {"id": "7", "title": "Figma", "url": "https://figma.com", "categoryId": "design", "createdAt": 1700000000000, "description": "在线协作界面设计工具，探索全球顶尖设计师作品", "icon": "https://www.faviconextractor.com/favicon/figma.com?larger=true"},
+    {"id": "11", "title": "Dribbble", "url": "https://dribbble.com", "categoryId": "design", "createdAt": 1700000000000, "description": "设计师作品分享社区，发现世界顶级设计师的创意", "icon": "https://www.faviconextractor.com/favicon/dribbble.com?larger=true"},
+    {"id": "4", "title": "ChatGPT", "url": "https://chat.openai.com", "categoryId": "ai", "createdAt": 1700000000000, "description": "OpenAI 开发的 AI 聊天机器人", "pinned": true, "icon": "https://www.faviconextractor.com/favicon/chat.openai.com?larger=true"},
+    {"id": "5", "title": "Gemini", "url": "https://gemini.google.com", "categoryId": "ai", "createdAt": 1700000000000, "description": "Google DeepMind 开发的 AI 助手", "pinned": true, "icon": "https://www.faviconextractor.com/favicon/gemini.google.com?larger=true"},
+    {"id": "10", "title": "Claude", "url": "https://claude.ai", "categoryId": "ai", "createdAt": 1700000000000, "description": "Anthropic 开发的 AI 助手（部分地区可用）", "icon": "https://www.faviconextractor.com/favicon/claude.ai?larger=true"},
+    {"id": "13", "title": "Midjourney", "url": "https://www.midjourney.com", "categoryId": "ai", "createdAt": 1700000000000, "description": "社区资助的 AI 研究实验室，以美丽的 AI 图像模型闻名", "icon": "https://www.faviconextractor.com/favicon/midjourney.com?larger=true"},
+    {"id": "8", "title": "Hacker News", "url": "https://news.ycombinator.com", "categoryId": "read", "createdAt": 1700000000000, "description": "极客新闻聚合社区，专注于技术和创业", "icon": "https://www.faviconextractor.com/favicon/news.ycombinator.com?larger=true"},
+    {"id": "14", "title": "The Verge", "url": "https://www.theverge.com", "categoryId": "read", "createdAt": 1700000000000, "description": "科技新闻与评测网站，CES 2026 等展会实时报道", "icon": "https://www.faviconextractor.com/favicon/theverge.com?larger=true"},
+    {"id": "9", "title": "YouTube", "url": "https://youtube.com", "categoryId": "ent", "createdAt": 1700000000000, "description": "全球最大的视频分享平台", "icon": "https://www.faviconextractor.com/favicon/youtube.com?larger=true"},
+    {"id": "15", "title": "Netflix", "url": "https://www.netflix.com", "categoryId": "ent", "createdAt": 1700000000000, "description": "流媒体影视平台，2026 年将带回多部大制作", "icon": "https://www.faviconextractor.com/favicon/netflix.com?larger=true"}
+  ],
+  "categories": [
+    {"id": "common", "name": "常用推荐", "icon": "Star"},
+    {"id": "dev", "name": "开发工具", "icon": "Code"},
+    {"id": "design", "name": "设计资源", "icon": "Palette"},
+    {"id": "read", "name": "阅读资讯", "icon": "BookOpen"},
+    {"id": "ent", "name": "休闲娱乐", "icon": "Gamepad2"},
+    {"id": "ai", "name": "人工智能", "icon": "Bot"}
+  ],
+  "meta": {"version": 1, "updatedAt": 1700000000000, "deviceId": "init"}
+}
