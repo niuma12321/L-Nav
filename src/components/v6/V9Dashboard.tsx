@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { 
   Search, 
@@ -1074,7 +1074,20 @@ const LinkCard: React.FC<{
   isHidden?: boolean;
   onEdit?: () => void;
 }> = ({ id, title, url, icon, description, color = 'bg-indigo-500/20 text-indigo-400', isHidden, onEdit }) => {
-  const domain = new URL(url).hostname;
+  // 安全地获取域名，处理无效 URL
+  const domain = useMemo(() => {
+    try {
+      return new URL(url).hostname;
+    } catch {
+      // 如果 URL 无效，尝试添加 https 协议再解析
+      try {
+        return new URL(`https://${url}`).hostname;
+      } catch {
+        // 如果仍然无效，返回原始字符串或空字符串
+        return url.split('/')[0] || 'unknown';
+      }
+    }
+  }, [url]);
   // 使用更可靠的 favicon 服务，添加错误处理
   const faviconUrl = icon || `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
 
