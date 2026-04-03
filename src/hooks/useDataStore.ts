@@ -14,6 +14,8 @@ export const useDataStore = () => {
     useEffect(() => {
         if (!isLoaded) return;
         
+        console.log('[DataStore] Data check - links:', links?.length, 'categories:', categories?.length);
+        
         // 如果链接为空，恢复默认数据
         if (!links || links.length === 0) {
             console.warn('[DataStore] Links empty, restoring defaults');
