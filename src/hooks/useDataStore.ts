@@ -185,14 +185,22 @@ export const useDataStore = () => {
             const cloudData = await pullFromCloud();
             
             if (cloudData.links.length > 0 || cloudData.categories.length > 0) {
-                // 云端有数据，完全以云端为准（覆盖本地）
-                setLinks(cloudData.links);
-                setCategories(cloudData.categories);
+                // 合并云端数据和本地数据（以本地为优先，云端补充）
+                const localLinkIds = new Set(localLinks.map(l => l.id));
+                const cloudOnlyLinks = cloudData.links.filter(l => !localLinkIds.has(l.id));
+                const mergedLinks = [...localLinks, ...cloudOnlyLinks];
+                
+                const localCatIds = new Set(localCategories.map(c => c.id));
+                const cloudOnlyCats = cloudData.categories.filter(c => !localCatIds.has(c.id));
+                const mergedCategories = [...localCategories, ...cloudOnlyCats];
+                
+                setLinks(mergedLinks);
+                setCategories(mergedCategories);
                 localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ 
-                    links: cloudData.links, 
-                    categories: cloudData.categories 
+                    links: mergedLinks, 
+                    categories: mergedCategories 
                 }));
-                console.log('[DataStore] Overridden with cloud data');
+                console.log('[DataStore] Merged with cloud data - local:', localLinks.length, '+ cloud:', cloudOnlyLinks.length, '= total:', mergedLinks.length);
             } else {
                 // 云端无数据，上传本地数据
                 const success = await pushToCloud(localLinks, localCategories);

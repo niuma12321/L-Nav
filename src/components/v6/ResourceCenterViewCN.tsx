@@ -266,55 +266,6 @@ const ResourceCenterViewCN: React.FC<ResourceCenterViewCNProps> = ({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {/* 统一设置下拉框 */}
-          <div className="relative">
-            <button
-              onClick={() => setShowSettingsDropdown(!showSettingsDropdown)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#181a1c] text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
-            >
-              <Settings className="w-4 h-4" />
-              <span className="text-sm font-medium">设置</span>
-              <ChevronDown className={`w-4 h-4 transition-transform ${showSettingsDropdown ? 'rotate-180' : ''}`} />
-            </button>
-            
-            {showSettingsDropdown && (
-              <div className="absolute top-full right-0 mt-2 w-48 rounded-xl bg-[#181a1c] border border-white/10 shadow-xl z-50 py-1">
-                <button
-                  onClick={() => {
-                    onOpenSettings?.();
-                    setShowSettingsDropdown(false);
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
-                >
-                  <Globe className="w-4 h-4" />
-                  网站设置
-                </button>
-                <button
-                  onClick={() => {
-                    onOpenMenuSettings?.();
-                    setShowSettingsDropdown(false);
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
-                >
-                  <Menu className="w-4 h-4" />
-                  菜单配置
-                </button>
-                <button
-                  onClick={() => {
-                    onOpenWidgetSettings?.();
-                    setShowSettingsDropdown(false);
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
-                >
-                  <LayoutGrid className="w-4 h-4" />
-                  组件配置
-                </button>
-              </div>
-            )}
-          </div>
-
-          <div className="w-px h-6 bg-white/10 mx-1" />
-
           <button
             onClick={onImport}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#181a1c] text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
@@ -413,110 +364,103 @@ const ResourceCenterViewCN: React.FC<ResourceCenterViewCNProps> = ({
         </div>
       </div>
 
-      {/* 置顶/常用 - 快捷访问区域 */}
+      {/* 置顶/常用 - 卡片形式展示 */}
       {(pinnedLinks.length > 0 || frequentLinks.length > 0) && (
-        <div className="flex flex-wrap items-center gap-2 p-3 rounded-xl bg-[#181a1c]/50 border border-white/5">
-          {/* 置顶链接 - 紧凑标签样式 */}
+        <div className="space-y-4">
+          {/* 置顶链接 - 卡片形式 */}
           {pinnedLinks.length > 0 && (
-            <>
-              <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 shrink-0">
-                <Pin className="w-3 h-3" />
-                <span className="text-xs font-medium">置顶</span>
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <Pin className="w-4 h-4 text-emerald-400" />
+                <span className="text-sm font-medium text-emerald-400">置顶链接</span>
               </div>
-              {pinnedLinks.map((link) => {
-                // 获取正确的favicon
-                const getFaviconUrl = (url: string) => {
-                  try {
-                    const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`);
-                    const domain = urlObj.hostname;
-                    return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
-                  } catch {
-                    return '';
-                  }
-                };
-                const faviconUrl = link.favicon && !link.favicon.includes('faviconextractor') 
-                  ? link.favicon 
-                  : getFaviconUrl(link.url);
-                
-                return (
-                  <a
-                    key={link.id}
-                    href={link.url.startsWith('http') ? link.url : `https://${link.url}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0d0e10] hover:bg-emerald-500/10 border border-transparent hover:border-emerald-500/20 transition-all group"
-                    title={link.title}
-                  >
-                    {link.icon ? (
-                      <span className="text-xs">{link.icon}</span>
-                    ) : faviconUrl ? (
-                      <img src={faviconUrl} alt="" className="w-3.5 h-3.5 rounded" />
-                    ) : (
-                      <Globe className="w-3 h-3 text-slate-500 group-hover:text-emerald-400" />
-                    )}
-                    <span className="text-xs text-slate-300 group-hover:text-emerald-400 truncate max-w-[100px]">{link.title}</span>
-                  </a>
-                );
-              })}
-            </>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
+                {pinnedLinks.map((link) => {
+                  const getFaviconUrl = (url: string) => {
+                    try {
+                      const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`);
+                      const domain = urlObj.hostname;
+                      return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+                    } catch {
+                      return '';
+                    }
+                  };
+                  const faviconUrl = link.favicon && !link.favicon.includes('faviconextractor') 
+                    ? link.favicon 
+                    : getFaviconUrl(link.url);
+                  
+                  return (
+                    <a
+                      key={link.id}
+                      href={link.url.startsWith('http') ? link.url : `https://${link.url}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex flex-col items-center gap-2 p-3 rounded-xl bg-[#181a1c] hover:bg-emerald-500/10 border border-white/5 hover:border-emerald-500/20 transition-all group"
+                      title={link.title}
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-[#0d0e10] flex items-center justify-center">
+                        {link.icon ? (
+                          <span className="text-lg">{link.icon}</span>
+                        ) : faviconUrl ? (
+                          <img src={faviconUrl} alt="" className="w-6 h-6 rounded" />
+                        ) : (
+                          <Globe className="w-5 h-5 text-slate-500 group-hover:text-emerald-400" />
+                        )}
+                      </div>
+                      <span className="text-xs text-slate-300 group-hover:text-emerald-400 truncate w-full text-center">{link.title}</span>
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
           )}
           
-          {/* 分隔线 */}
-          {pinnedLinks.length > 0 && frequentLinks.length > 0 && (
-            <div className="w-px h-4 bg-white/10 mx-1" />
-          )}
-          
-          {/* 常用链接 - 紧凑标签样式 */}
+          {/* 常用链接 - 卡片形式 */}
           {frequentLinks.length > 0 && (
-            <>
-              <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-500/10 text-slate-400 shrink-0">
-                <LayoutGrid className="w-3 h-3" />
-                <span className="text-xs font-medium">常用</span>
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <LayoutGrid className="w-4 h-4 text-slate-400" />
+                <span className="text-sm font-medium text-slate-400">常用链接</span>
               </div>
-              {frequentLinks.slice(0, 6).map((link) => {
-                // 获取正确的favicon
-                const getFaviconUrl = (url: string) => {
-                  try {
-                    const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`);
-                    const domain = urlObj.hostname;
-                    return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
-                  } catch {
-                    return '';
-                  }
-                };
-                const faviconUrl = link.favicon && !link.favicon.includes('faviconextractor') 
-                  ? link.favicon 
-                  : getFaviconUrl(link.url);
-                
-                return (
-                  <a
-                    key={link.id}
-                    href={link.url.startsWith('http') ? link.url : `https://${link.url}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0d0e10] hover:bg-white/5 border border-transparent hover:border-white/10 transition-all group"
-                    title={link.title}
-                  >
-                    {link.icon ? (
-                      <span className="text-xs">{link.icon}</span>
-                    ) : faviconUrl ? (
-                      <img src={faviconUrl} alt="" className="w-3.5 h-3.5 rounded" />
-                    ) : (
-                      <Globe className="w-3 h-3 text-slate-500" />
-                    )}
-                    <span className="text-xs text-slate-400 group-hover:text-slate-200 truncate max-w-[100px]">{link.title}</span>
-                  </a>
-                );
-              })}
-              {frequentLinks.length > 6 && (
-                <button
-                  onClick={() => setActiveCategory('all')}
-                  className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-[#0d0e10] text-slate-500 hover:text-emerald-400 transition-colors"
-                >
-                  <span className="text-xs">+{frequentLinks.length - 6}</span>
-                </button>
-              )}
-            </>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
+                {frequentLinks.slice(0, 8).map((link) => {
+                  const getFaviconUrl = (url: string) => {
+                    try {
+                      const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`);
+                      const domain = urlObj.hostname;
+                      return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+                    } catch {
+                      return '';
+                    }
+                  };
+                  const faviconUrl = link.favicon && !link.favicon.includes('faviconextractor') 
+                    ? link.favicon 
+                    : getFaviconUrl(link.url);
+                  
+                  return (
+                    <a
+                      key={link.id}
+                      href={link.url.startsWith('http') ? link.url : `https://${link.url}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex flex-col items-center gap-2 p-3 rounded-xl bg-[#181a1c] hover:bg-white/5 border border-white/5 hover:border-white/10 transition-all group"
+                      title={link.title}
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-[#0d0e10] flex items-center justify-center">
+                        {link.icon ? (
+                          <span className="text-lg">{link.icon}</span>
+                        ) : faviconUrl ? (
+                          <img src={faviconUrl} alt="" className="w-6 h-6 rounded" />
+                        ) : (
+                          <Globe className="w-5 h-5 text-slate-500" />
+                        )}
+                      </div>
+                      <span className="text-xs text-slate-400 group-hover:text-slate-200 truncate w-full text-center">{link.title}</span>
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
           )}
         </div>
       )}

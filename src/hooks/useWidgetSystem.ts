@@ -32,14 +32,23 @@ export function useWidgetSystem() {
     }
   }, []);
 
-  // Load widgets from localStorage
+  // Load widgets from localStorage and merge with new default widgets
   useEffect(() => {
     const stored = localStorage.getItem(WIDGETS_STORAGE_KEY);
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
-          setWidgets(parsed);
+          // Merge stored widgets with new default widgets
+          const mergedWidgets = [...parsed];
+          // Add any new default widgets that don't exist in stored data
+          DEFAULT_WIDGETS.forEach(defaultWidget => {
+            const exists = mergedWidgets.find(w => w.id === defaultWidget.id);
+            if (!exists) {
+              mergedWidgets.push(defaultWidget);
+            }
+          });
+          setWidgets(mergedWidgets);
         } else {
           setWidgets(DEFAULT_WIDGETS);
         }
