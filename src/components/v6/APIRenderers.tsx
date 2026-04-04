@@ -148,8 +148,16 @@ export const BingWallpaperRenderer: React.FC<{ data: any[] }> = ({ data }) => {
 // ==========================================
 // 5. 汇率 - 表格展示
 // API: /v2/exchange-rate
+// 数据结构: { data: { conversion_rates: { USD: 1, CNY: 7.23, ... } } }
 // ==========================================
 export const ExchangeRateRenderer: React.FC<{ data: any[] }> = ({ data }) => {
+  // conversion_rates是对象格式，需要转换为数组
+  const rates = data[0] || {};
+  const entries = Object.entries(rates).map(([currency, rate]) => ({
+    currency,
+    rate: typeof rate === 'number' ? rate.toFixed(4) : rate
+  })).slice(0, 10); // 只显示前10个
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -157,15 +165,13 @@ export const ExchangeRateRenderer: React.FC<{ data: any[] }> = ({ data }) => {
           <tr className="text-xs text-slate-400 border-b border-white/10">
             <th className="text-left py-2 px-2">货币</th>
             <th className="text-right py-2 px-2">汇率</th>
-            <th className="text-right py-2 px-2">更新时间</th>
           </tr>
         </thead>
         <tbody>
-          {data.map((item, index) => (
+          {entries.map((item, index) => (
             <tr key={index} className="border-b border-white/5 hover:bg-[#0d0e10]">
               <td className="py-2 px-2 text-white">{item.currency}</td>
               <td className="py-2 px-2 text-right text-emerald-400">{item.rate}</td>
-              <td className="py-2 px-2 text-right text-xs text-slate-500">{item.update_time}</td>
             </tr>
           ))}
         </tbody>
@@ -321,10 +327,11 @@ export const OilPriceRenderer: React.FC<{ data: any[] }> = ({ data }) => {
 // ==========================================
 // 10. 摸鱼日报 - 富文本卡片
 // API: /v2/moyu
+// 数据结构: { data: { today: "晨报内容..." } }
 // ==========================================
 export const MoyuDailyRenderer: React.FC<{ data: any[] }> = ({ data }) => {
-  const item = data[0] || {};
-  const content = item.content || item.title || '';
+  // data.today 是字符串格式
+  const content = typeof data[0] === 'string' ? data[0] : (data[0]?.today || data[0]?.content || '');
 
   // 解析内容中的不同部分
   const lines = content.split('\n').filter((line: string) => line.trim());
