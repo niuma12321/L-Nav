@@ -1384,7 +1384,7 @@ const WidgetConfigCenter: React.FC = () => {
                           onClick={() => {
                             if (!headersRawMode) {
                               const obj: Record<string, string> = {};
-                              headersKeyValue.forEach(item => {
+                              (headersKeyValue || []).forEach(item => {
                                 if (item.key.trim()) obj[item.key] = item.value;
                               });
                               setApiHeaders(JSON.stringify(obj, null, 2));

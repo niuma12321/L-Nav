@@ -244,7 +244,7 @@ export function useNotifications(userId?: string) {
 
     const shownNotifications = new Set<number>();
     
-    notifications.forEach(n => {
+    (notifications || []).forEach(n => {
       if (!n.is_read && !shownNotifications.has(n.id)) {
         shownNotifications.add(n.id);
         new Notification(`【L-Nav】${n.title}`, {

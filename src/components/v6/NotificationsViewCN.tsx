@@ -301,7 +301,7 @@ const NotificationSettingsModal: React.FC<{ onClose: () => void }> = ({ onClose 
 
   useEffect(() => {
     const settingsMap: Record<string, any> = {};
-    settings.forEach(s => {
+    (settings || []).forEach(s => {
       settingsMap[s.type] = s;
     });
     setLocalSettings(settingsMap);

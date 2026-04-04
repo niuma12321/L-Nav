@@ -284,12 +284,12 @@ const ImportModal: React.FC<ImportModalProps> = ({
             // we should remap the links to the existing category ID instead of creating a new duplicate-named category.
 
             const nameToIdMap = new Map<string, string>();
-            categories.forEach(c => nameToIdMap.set(c.name, c.id));
+            (categories || []).forEach(c => nameToIdMap.set(c.name, c.id));
 
             // Valid new categories to add
             const categoriesToAdd: Category[] = [];
 
-            filteredCategories.forEach(pc => {
+            (filteredCategories || []).forEach(pc => {
                 if (nameToIdMap.has(pc.name)) {
                     // Category exists, we don't add it.
                     // But we need to know its ID to remap links.

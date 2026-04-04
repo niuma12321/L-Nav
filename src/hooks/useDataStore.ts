@@ -340,7 +340,7 @@ export const useDataStore = () => {
 
     const importData = useCallback((newLinks: LinkItem[], newCategories: Category[]) => {
         const mergedCategories = [...categories];
-        newCategories.forEach(nc => {
+        (newCategories || []).forEach(nc => {
             if (!mergedCategories.some(c => c.id === nc.id || c.name === nc.name)) {
                 mergedCategories.push(nc);
             }
