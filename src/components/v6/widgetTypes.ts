@@ -157,6 +157,20 @@ export const DEFAULT_WIDGETS: WidgetConfig[] = [
       sources: ['tech', 'finance', 'rss'],
       maxItems: 10
     }
+  },
+  {
+    id: 'embedded-news',
+    type: 'embedded-news',
+    title: '新闻资讯',
+    description: '内嵌 news.678870.xyz 新闻页面',
+    icon: 'Newspaper',
+    enabled: true,
+    isFixed: true,
+    position: {
+      desktop: { x: 0, y: 4, w: 8, h: 4 },
+      mobile: { order: 5 }
+    },
+    settings: {}
   }
 ];
 
