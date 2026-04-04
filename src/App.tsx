@@ -844,6 +844,21 @@ function App() {
     deleteCategoriesStore(catIds);
   };
 
+  // 备份处理函数
+  const handleCreateBackup = useCallback(() => {
+    notify('备份创建成功', 'success');
+  }, [notify]);
+
+  const handleRestoreBackup = useCallback((data: any) => {
+    if (data.links) importData(data.links, data.categories || []);
+    if (data.notes) importNotes(data.notes);
+    notify('备份恢复成功', 'success');
+  }, [importData, importNotes, notify]);
+
+  const handleDeleteBackup = useCallback(() => {
+    notify('备份已删除', 'success');
+  }, [notify]);
+
   const handleTogglePrivacyGroup = useCallback((enabled: boolean) => {
     setPrivacyGroupEnabled(enabled);
     localStorage.setItem(PRIVACY_GROUP_ENABLED_KEY, enabled ? '1' : '0');
