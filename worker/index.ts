@@ -1061,17 +1061,28 @@ async function handleNotificationsAPI(request: Request, env: Env, ctx: Execution
               headers: { 'Content-Type': 'application/json', ...corsHeaders }
             });
           }
+          // 调试日志
+          console.log('[Telegram] Token:', settings.telegram_bot_token.substring(0, 20) + '...');
+          console.log('[Telegram] Chat ID:', settings.telegram_chat_id);
+          console.log('[Telegram] Chat ID type:', typeof settings.telegram_chat_id);
+          
           // 发送到 Telegram Bot
-          const resp = await fetch(`https://api.telegram.org/bot${settings.telegram_bot_token}/sendMessage`, {
+          const url = `https://api.telegram.org/bot${settings.telegram_bot_token}/sendMessage`;
+          const body = {
+            chat_id: String(settings.telegram_chat_id).trim(),
+            text: `${title}\n\n${content}`,
+            parse_mode: 'HTML'
+          };
+          console.log('[Telegram] Request URL:', url);
+          console.log('[Telegram] Request body:', JSON.stringify(body));
+          
+          const resp = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              chat_id: settings.telegram_chat_id,
-              text: `<b>${title}</b>\n\n${content}`,
-              parse_mode: 'HTML'
-            })
+            body: JSON.stringify(body)
           });
           const result = await resp.json();
+          console.log('[Telegram] Response:', JSON.stringify(result));
           if (!result.ok) {
             throw new Error(result.description || 'Telegram API error');
           }
