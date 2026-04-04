@@ -951,21 +951,121 @@ async function handleNotificationsAPI(request: Request, env: Env, ctx: Execution
     // POST /api/v1/notifications/test - 测试推送
     if (path === '/api/v1/notifications/test' && method === 'POST') {
       const body = await request.json() as any;
-      const { channel } = body;
+      const { userId, channel } = body;
       
-      // 创建一条测试通知
-      await env.YNAV_D1.prepare(`
-        INSERT INTO notifications (user_id, type, title, content, is_read, created_at)
-        VALUES (?, 'system_notice', '测试通知', ?, 0, datetime('now'))
-      `).bind('default', `这是一条通过 ${channel || '未知渠道'} 发送的测试通知`).run();
+      if (!userId || !channel) {
+        return new Response(JSON.stringify({ error: 'Missing userId or channel' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
 
-      return new Response(JSON.stringify({ 
-        ok: true, 
-        message: '测试通知已发送',
-        channel: channel || 'unknown'
-      }), {
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+      // 获取用户设置
+      const settings = await env.YNAV_D1.prepare(
+        'SELECT * FROM notification_settings WHERE user_id = ?'
+      ).bind(userId).first();
+
+      if (!settings) {
+        return new Response(JSON.stringify({ error: 'No notification settings found' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
+      const title = 'L-Nav 测试推送';
+      const content = `这是一条通过 [${channel}] 渠道发送的测试通知`;
+      
+      try {
+        // 根据渠道发送推送
+        if (channel === 'wechat') {
+          if (!settings.serverchan_sckey) {
+            return new Response(JSON.stringify({ error: 'ServerChan SCKEY not configured' }), {
+              status: 400,
+              headers: { 'Content-Type': 'application/json', ...corsHeaders }
+            });
+          }
+          // 发送到 ServerChan (微信)
+          const resp = await fetch(`https://sctapi.ftqq.com/${settings.serverchan_sckey}.send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `title=${encodeURIComponent(title)}&desp=${encodeURIComponent(content)}`
+          });
+          const result = await resp.json();
+          if (!result.code === 0 && result.data) {
+            throw new Error(result.message || 'ServerChan API error');
+          }
+        } else if (channel === 'email') {
+          // TODO: 邮件发送
+          console.log('[Test] Email push:', settings.email_to);
+        } else if (channel === 'webhook') {
+          if (settings.webhook_url) {
+            await fetch(settings.webhook_url, {
+              method: 'POST',
+              headers: { 
+                'Content-Type': 'application/json',
+                ...JSON.parse(settings.webhook_headers || '{}')
+              },
+              body: JSON.stringify({ title, content })
+            });
+          }
+        } else if (channel === 'feishu') {
+          if (settings.feishu_webhook) {
+            await fetch(settings.feishu_webhook, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                msg_type: 'text',
+                content: { text: `[${title}] ${content}` }
+              })
+            });
+          }
+        } else if (channel === 'dingtalk') {
+          if (settings.dingtalk_webhook) {
+            await fetch(settings.dingtalk_webhook, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                msgtype: 'text',
+                text: { content: `[${title}] ${content}` }
+              })
+            });
+          }
+        } else if (channel === 'wecom') {
+          if (settings.wecom_webhook) {
+            await fetch(settings.wecom_webhook, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                msgtype: 'text',
+                text: { content: `[${title}] ${content}` }
+              })
+            });
+          }
+        }
+
+        // 创建测试通知记录
+        await env.YNAV_D1.prepare(`
+          INSERT INTO notifications (user_id, type, title, content, is_read, created_at)
+          VALUES (?, 'system_notice', ?, ?, 0, datetime('now'))
+        `).bind(userId, title, content).run();
+
+        return new Response(JSON.stringify({ 
+          ok: true, 
+          message: '测试推送已发送',
+          channel
+        }), {
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      } catch (err: any) {
+        console.error('[Test Push Error]', err);
+        return new Response(JSON.stringify({ 
+          ok: false, 
+          error: err.message || 'Push failed'
+        }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
     }
 
     // 未匹配的路由返回 404
