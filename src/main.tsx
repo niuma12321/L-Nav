@@ -417,9 +417,12 @@ const AppWrapper: React.FC = () => {
   return (
     <ErrorBoundary
       fallback={(error: Error | null, resetError: () => void) => (
-        <div className="p-4">
+        <div className="p-4 max-w-4xl mx-auto">
           <h2 className="text-xl font-bold text-red-600 mb-2">应用崩溃了</h2>
-          <p className="text-gray-600 mb-4">{error?.message}</p>
+          <p className="text-gray-600 mb-2">错误信息: {error?.message}</p>
+          <pre className="text-gray-500 mb-4 text-xs bg-gray-100 p-2 rounded overflow-auto max-h-96">
+            {error?.stack}
+          </pre>
           <button
             onClick={resetError}
             className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
