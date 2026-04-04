@@ -211,18 +211,89 @@ CREATE TABLE IF NOT EXISTS notifications (
   created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000)
 );
 
--- 用户通知配置表
+-- 用户通知配置表（支持多渠道配置）
 CREATE TABLE IF NOT EXISTS notification_settings (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id TEXT NOT NULL,
-  type TEXT NOT NULL,
-  enabled BOOLEAN DEFAULT 1, -- 是否启用该类型通知
-  push_browser BOOLEAN DEFAULT 1, -- 浏览器推送
-  push_email BOOLEAN DEFAULT 0, -- 邮件推送
-  push_webhook BOOLEAN DEFAULT 0, -- Webhook推送（飞书/钉钉）
-  webhook_url TEXT, -- Webhook地址
-  email_address TEXT, -- 邮件地址
-  UNIQUE(user_id, type)
+  
+  -- 邮箱配置
+  email_to TEXT DEFAULT '',
+  smtp_host TEXT DEFAULT '',
+  smtp_port INTEGER DEFAULT 465,
+  smtp_user TEXT DEFAULT '',
+  smtp_pass TEXT DEFAULT '',
+  
+  -- 浏览器推送配置
+  vapid_public_key TEXT DEFAULT '',
+  vapid_private_key TEXT DEFAULT '',
+  
+  -- 通用 Webhook
+  webhook_url TEXT DEFAULT '',
+  webhook_headers TEXT DEFAULT '{}',
+  
+  -- 飞书
+  feishu_webhook TEXT DEFAULT '',
+  feishu_secret TEXT DEFAULT '',
+  
+  -- 钉钉
+  dingtalk_webhook TEXT DEFAULT '',
+  dingtalk_secret TEXT DEFAULT '',
+  
+  -- 企业微信
+  wecom_webhook TEXT DEFAULT '',
+  
+  -- 微信（Server酱）
+  serverchan_sckey TEXT DEFAULT '',
+  
+  -- ==============================
+  -- 通知类型 × 渠道 开关（1=开启, 0=关闭）
+  -- ==============================
+  
+  -- 任务成功
+  success_browser INTEGER DEFAULT 1,
+  success_email INTEGER DEFAULT 0,
+  success_webhook INTEGER DEFAULT 0,
+  success_feishu INTEGER DEFAULT 0,
+  success_dingtalk INTEGER DEFAULT 0,
+  success_wecom INTEGER DEFAULT 0,
+  success_wechat INTEGER DEFAULT 0,
+  
+  -- 任务失败
+  fail_browser INTEGER DEFAULT 1,
+  fail_email INTEGER DEFAULT 1,
+  fail_webhook INTEGER DEFAULT 1,
+  fail_feishu INTEGER DEFAULT 1,
+  fail_dingtalk INTEGER DEFAULT 1,
+  fail_wecom INTEGER DEFAULT 1,
+  fail_wechat INTEGER DEFAULT 1,
+  
+  -- 设备告警
+  alert_browser INTEGER DEFAULT 1,
+  alert_email INTEGER DEFAULT 1,
+  alert_webhook INTEGER DEFAULT 1,
+  alert_feishu INTEGER DEFAULT 1,
+  alert_dingtalk INTEGER DEFAULT 1,
+  alert_wecom INTEGER DEFAULT 1,
+  alert_wechat INTEGER DEFAULT 1,
+  
+  -- 系统通知
+  notice_browser INTEGER DEFAULT 1,
+  notice_email INTEGER DEFAULT 0,
+  notice_webhook INTEGER DEFAULT 0,
+  notice_feishu INTEGER DEFAULT 0,
+  notice_dingtalk INTEGER DEFAULT 0,
+  notice_wecom INTEGER DEFAULT 0,
+  notice_wechat INTEGER DEFAULT 0,
+  
+  -- 保留旧字段兼容
+  type TEXT,
+  enabled BOOLEAN DEFAULT 1,
+  push_browser BOOLEAN DEFAULT 1,
+  push_email BOOLEAN DEFAULT 0,
+  push_webhook BOOLEAN DEFAULT 0,
+  email_address TEXT,
+  
+  UNIQUE(user_id)
 );
 
 -- 创建索引

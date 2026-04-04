@@ -13,25 +13,80 @@ export interface Notification {
   created_at: number;
 }
 
-export interface NotificationSettings {
-  id: number;
-  user_id: string;
-  type: string;
-  enabled: boolean;
-  push_browser: boolean;
-  push_email: boolean;
-  push_webhook: boolean;
-  webhook_url?: string;
-  email_address?: string;
+// 新的完整通知配置接口
+export interface FullNotificationSettings {
+  // 邮箱配置
+  email_to: string;
+  smtp_host: string;
+  smtp_port: number;
+  smtp_user: string;
+  smtp_pass: string;
+
+  // 浏览器推送配置
+  vapid_public_key: string;
+  vapid_private_key: string;
+
+  // 通用 Webhook
+  webhook_url: string;
+  webhook_headers: string;
+
+  // 飞书
+  feishu_webhook: string;
+  feishu_secret: string;
+
+  // 钉钉
+  dingtalk_webhook: string;
+  dingtalk_secret: string;
+
+  // 企业微信
+  wecom_webhook: string;
+
+  // 微信（Server酱）
+  serverchan_sckey: string;
+
+  // 任务成功开关
+  success_browser: number;
+  success_email: number;
+  success_webhook: number;
+  success_feishu: number;
+  success_dingtalk: number;
+  success_wecom: number;
+  success_wechat: number;
+
+  // 任务失败开关
+  fail_browser: number;
+  fail_email: number;
+  fail_webhook: number;
+  fail_feishu: number;
+  fail_dingtalk: number;
+  fail_wecom: number;
+  fail_wechat: number;
+
+  // 设备告警开关
+  alert_browser: number;
+  alert_email: number;
+  alert_webhook: number;
+  alert_feishu: number;
+  alert_dingtalk: number;
+  alert_wecom: number;
+  alert_wechat: number;
+
+  // 系统通知开关
+  notice_browser: number;
+  notice_email: number;
+  notice_webhook: number;
+  notice_feishu: number;
+  notice_dingtalk: number;
+  notice_wecom: number;
+  notice_wechat: number;
 }
 
-export function useNotifications() {
-  // 从localStorage获取用户ID或使用默认值
-  const userId = localStorage.getItem('user_id') || 'default';
+export function useNotifications(userId?: string) {
+  const uid = userId || localStorage.getItem('user_id') || 'default';
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [settings, setSettings] = useState<NotificationSettings[]>([]);
+  const [settings, setSettings] = useState<FullNotificationSettings | null>(null);
 
   // 获取通知列表
   const fetchNotifications = useCallback(async (options?: { isRead?: boolean; type?: string; limit?: number }) => {
@@ -118,30 +173,47 @@ export function useNotifications() {
 
   // 获取通知设置
   const fetchSettings = useCallback(async () => {
-    if (!userId) return;
+    if (!uid) return;
     try {
-      const res = await fetch(`${API_BASE}/settings?userId=${userId}`);
+      const res = await fetch(`${API_BASE}/settings?userId=${uid}`);
       const data = await res.json();
-      setSettings(data || []);
+      setSettings(data);
     } catch (e) {
       console.error('获取通知设置失败', e);
     }
-  }, [userId]);
+  }, [uid]);
 
   // 保存通知设置
-  const saveSettings = useCallback(async (type: string, settings: Partial<NotificationSettings>) => {
-    if (!userId) return;
+  const saveSettings = async (data: Partial<FullNotificationSettings>) => {
+    if (!uid || !settings) return;
+    setLoading(true);
+    const updated = { ...settings, ...data };
     try {
       await fetch(`${API_BASE}/settings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, type, ...settings })
+        body: JSON.stringify({ userId: uid, ...updated })
       });
-      await fetchSettings();
+      setSettings(updated);
     } catch (e) {
       console.error('保存通知设置失败', e);
     }
-  }, [userId, fetchSettings]);
+    setLoading(false);
+  };
+
+  // 测试推送
+  const testPush = async (channel: string) => {
+    if (!uid) return;
+    try {
+      await fetch(`${API_BASE}/test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: uid, channel })
+      });
+    } catch (e) {
+      console.error('测试推送失败', e);
+    }
+  };
 
   // 初始化：每30秒轮询未读数量
   useEffect(() => {
@@ -149,6 +221,11 @@ export function useNotifications() {
     const interval = setInterval(fetchUnreadCount, 30000);
     return () => clearInterval(interval);
   }, [fetchUnreadCount]);
+
+  // 初始化时加载设置
+  useEffect(() => {
+    if (uid) fetchSettings();
+  }, [uid, fetchSettings]);
 
   // 请求浏览器通知权限
   useEffect(() => {
@@ -191,6 +268,7 @@ export function useNotifications() {
     deleteNotification,
     clearRead,
     fetchSettings,
-    saveSettings
+    saveSettings,
+    testPush
   };
 }

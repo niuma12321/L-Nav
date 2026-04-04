@@ -1,5 +1,5 @@
 import React, { useMemo, useEffect, useState, useCallback, useRef } from 'react';
-import { LinkItem, Category, SyncConflict, YNavSyncData } from './types';
+import { LinkItem, Category } from './types';
 
 // 同步导入所有组件，避免懒加载Promise问题
 import LinkModal from './components/modals/LinkModal';
@@ -46,10 +46,8 @@ import {
   useSorting,
   useConfig,
   useSidebar,
-  useSyncEngine,
   useNotes,
-  useRouter,
-  buildSyncData
+  useRouter
 } from './hooks';
 
 import {
@@ -61,17 +59,24 @@ import {
   PRIVACY_GROUP_ENABLED_KEY,
   PRIVACY_SESSION_UNLOCKED_KEY,
   PRIVACY_USE_SEPARATE_PASSWORD_KEY,
-  SYNC_API_ENDPOINT,
-  SYNC_META_KEY,
-  SYNC_PASSWORD_KEY,
   VIEW_PASSWORD_KEY,
-  WEBMASTER_UNLOCKED_KEY,
-  getDeviceId
+  WEBMASTER_UNLOCKED_KEY
 } from './utils/constants';
 import { decryptPrivateVault, encryptPrivateVault } from './utils/privateVault';
 
 function App() {
   // === Core Data ===
+  // ==========================================
+  // 本地数据优先 - 同步功能已移除
+  // ==========================================
+  // 数据仅在本地存储，确保始终最新
+  useEffect(() => {
+    setPrivateVaultCipher(localStorage.getItem(PRIVATE_VAULT_KEY));
+    setUseSeparatePrivacyPassword(localStorage.getItem(PRIVACY_USE_SEPARATE_PASSWORD_KEY) === '1');
+    setPrivacyGroupEnabled(localStorage.getItem(PRIVACY_GROUP_ENABLED_KEY) === '1');
+    setPrivacyAutoUnlockEnabled(localStorage.getItem(PRIVACY_AUTO_UNLOCK_KEY) === '1');
+  }, []);
+
   const {
     links,
     categories,
@@ -134,31 +139,26 @@ function App() {
     notify('已退出登录', 'info');
   }, [notify]);
 
-  // === Sync Engine ===
-  const [syncConflictOpen, setSyncConflictOpen] = useState(false);
-  const [currentConflict, setCurrentConflict] = useState<SyncConflict | null>(null);
-  const [dataBackupOpen, setDataBackupOpen] = useState(false);
-  
   // === Mobile UI State ===
   const [mobileActiveTab, setMobileActiveTab] = useState<'home' | 'search' | 'favorites' | 'more'>('home');
   const [mobileContentViewerOpen, setMobileContentViewerOpen] = useState(false);
   const [mobileContentViewerUrl, setMobileContentViewerUrl] = useState('');
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  
+
   // === Emerald Obsidian View State ===
   const [emeraldView, setEmeraldView] = useState<'dashboard' | 'analytics' | 'notes' | 'bookmarks' | 'settings'>('dashboard');
   const [bottomTab, setBottomTab] = useState<'home' | 'widgets' | 'search' | 'profile'>('home');
   const [dashboardViewMode, setDashboardViewMode] = useState<'grid' | 'list'>('grid');
   const [notesFilter, setNotesFilter] = useState<'all' | 'pinned' | 'archived'>('all');
-  
+
   // === Mobile Component States ===
   const [mobileCategoryOpen, setMobileCategoryOpen] = useState(false);
   const [mobileLinkSheetOpen, setMobileLinkSheetOpen] = useState(false);
   const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
   const [mobileBulkEditOpen, setMobileBulkEditOpen] = useState(false);
   const [editingLinkMobile, setEditingLinkMobile] = useState<LinkItem | null>(null);
-  
+
   // 搜索历史记录
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
     try {
@@ -169,12 +169,12 @@ function App() {
     }
   });
   const trendingSearches = ['AI工具', 'React教程', '设计资源', '开发文档', '效率工具'];
-  
+
   // 保存搜索历史
   useEffect(() => {
     localStorage.setItem('ynav:recentSearches', JSON.stringify(recentSearches));
   }, [recentSearches]);
-  
+
   // 检测移动端
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -182,81 +182,6 @@ function App() {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-  const hasInitialSyncRun = useRef(false);
-  const hasInitialCloudCheckCompletedRef = useRef(false);
-  const suppressNextAutoSyncRef = useRef(false);
-  const autoUnlockAttemptedRef = useRef(false);
-  const syncPasswordRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const syncPasswordRefreshIdRef = useRef(0);
-  const lastSyncPasswordRef = useRef((() => {
-    const pwd = localStorage.getItem(SYNC_PASSWORD_KEY);
-    return (pwd && typeof pwd === 'string') ? pwd.trim() : '';
-  })());
-  const viewPasswordRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const viewPasswordRefreshIdRef = useRef(0);
-  const lastViewPasswordRef = useRef((() => {
-    const pwd = localStorage.getItem(VIEW_PASSWORD_KEY);
-    return (pwd && typeof pwd === 'string') ? pwd.trim() : '';
-  })());
-  const isSyncPasswordRefreshingRef = useRef(false);
-  const [remoteAuth, setRemoteAuth] = useState<{
-    passwordRequired: boolean;
-    canWrite: boolean;
-    viewPasswordRequired?: boolean;
-    canView?: boolean;
-  } | null>(null);
-
-  const buildRemoteAuthHeaders = useCallback(() => {
-    const syncPwd = localStorage.getItem(SYNC_PASSWORD_KEY);
-    const viewPwd = localStorage.getItem(VIEW_PASSWORD_KEY);
-    const syncPassword = (syncPwd && typeof syncPwd === 'string') ? syncPwd.trim() : '';
-    const viewPassword = (viewPwd && typeof viewPwd === 'string') ? viewPwd.trim() : '';
-    return {
-      'Content-Type': 'application/json',
-      ...(syncPassword ? { 'X-Sync-Password': syncPassword } : {}),
-      ...(viewPassword ? { 'X-View-Password': viewPassword } : {})
-    };
-  }, []);
-
-  const refreshRemoteAuth = useCallback(async () => {
-    try {
-      const response = await fetch(`${SYNC_API_ENDPOINT}?action=whoami`, { headers: buildRemoteAuthHeaders() });
-      const result = await response.json();
-      if (!result?.success) {
-        setRemoteAuth(null);
-        return;
-      }
-      setRemoteAuth({
-        passwordRequired: !!result.passwordRequired,
-        canWrite: !!result.canWrite,
-        viewPasswordRequired: !!result.viewPasswordRequired,
-        canView: !!result.canView
-      });
-    } catch {
-      setRemoteAuth(null);
-    }
-  }, [buildRemoteAuthHeaders]);
-  const getLocalSyncMeta = useCallback(() => {
-    const stored = localStorage.getItem(SYNC_META_KEY);
-    if (!stored) return null;
-    try {
-      return JSON.parse(stored);
-    } catch {
-      return null;
-    }
-  }, []);
-
-  useEffect(() => {
-    setPrivateVaultCipher(localStorage.getItem(PRIVATE_VAULT_KEY));
-    setUseSeparatePrivacyPassword(localStorage.getItem(PRIVACY_USE_SEPARATE_PASSWORD_KEY) === '1');
-    setPrivacyGroupEnabled(localStorage.getItem(PRIVACY_GROUP_ENABLED_KEY) === '1');
-    setPrivacyAutoUnlockEnabled(localStorage.getItem(PRIVACY_AUTO_UNLOCK_KEY) === '1');
-  }, []);
-
-  useEffect(() => {
-    if (!isLoaded) return;
-    refreshRemoteAuth();
-  }, [isLoaded, refreshRemoteAuth]);
 
   // === Theme ===
   const { themeMode, darkMode, setThemeAndApply } = useTheme();
@@ -269,7 +194,7 @@ function App() {
     sidebarWidthClass,
     toggleSidebarCollapsed,
   } = useSidebar();
-  
+
   // === Router (SPA路由系统) ===
   const {
     currentRoute,
@@ -337,101 +262,6 @@ function App() {
     return false;
   }, [isReadOnly, notify]);
 
-  // === Sync Engine Hook ===
-  const handleSyncConflict = useCallback((conflict: SyncConflict) => {
-    setCurrentConflict(conflict);
-    setSyncConflictOpen(true);
-  }, []);
-
-  const handleSyncComplete = useCallback((data: YNavSyncData) => {
-    // 当从云端恢复数据时更新本地数据
-    // 严格检查：数据必须存在且非空
-    if (!data) {
-      console.warn('[Sync] Received undefined data, skipping sync');
-      return;
-    }
-    
-    const hasValidLinks = Array.isArray(data.links) && data.links.length > 0;
-    const hasValidCategories = Array.isArray(data.categories) && data.categories.length > 0;
-    
-    if (hasValidLinks && hasValidCategories) {
-      updateData(data.links, data.categories);
-      suppressNextAutoSyncRef.current = true;
-    }
-    if (data.searchConfig) {
-      restoreSearchConfig(data.searchConfig);
-    }
-    if (data.aiConfig) {
-      restoreAIConfig(data.aiConfig);
-    }
-    if (data.siteSettings) {
-      restoreSiteSettings(data.siteSettings);
-      const mode = (data.siteSettings as any)?.siteMode;
-      if (mode === 'webmaster' || mode === 'personal') {
-        setRemoteSiteMode(mode);
-      } else if (mode === undefined) {
-        setRemoteSiteMode('personal');
-      }
-    }
-    if (typeof data.privateVault === 'string') {
-      setPrivateVaultCipher(data.privateVault);
-      localStorage.setItem(PRIVATE_VAULT_KEY, data.privateVault);
-      if (isPrivateUnlocked && privateVaultPassword) {
-        decryptPrivateVault(privateVaultPassword, data.privateVault)
-          .then(payload => setPrivateLinks(payload.links || []))
-          .catch(() => {
-            setIsPrivateUnlocked(false);
-            setPrivateLinks([]);
-            setPrivateVaultPassword(null);
-            notify('隐私分组已锁定，请重新解锁', 'warning');
-          });
-      }
-    }
-
-    // 更新 prevSyncDataRef 时也检查数据有效性（使用不同的变量名）
-    const hasLinks = Array.isArray(data.links) && data.links.length > 0;
-    const hasCategories = Array.isArray(data.categories) && data.categories.length > 0;
-    
-    if (hasLinks && hasCategories) {
-      prevSyncDataRef.current = JSON.stringify(buildSyncData(
-        data.links,
-        data.categories,
-        data.searchConfig,
-        data.aiConfig,
-        data.siteSettings,
-        data.privateVault
-      ));
-    }
-  }, [
-    updateData,
-    restoreAIConfig,
-    restoreSiteSettings,
-    isPrivateUnlocked,
-    notify,
-    privateVaultPassword
-  ]);
-
-  const handleSyncError = useCallback((error: string) => {
-    console.error('[Sync Error]', error);
-  }, []);
-
-  const {
-    syncStatus,
-    lastSyncTime,
-    pullFromCloud,
-    pushToCloud,
-    schedulePush,
-    createBackup,
-    restoreBackup,
-    deleteBackup,
-    resolveConflict: resolveSyncConflict,
-    cancelPendingSync
-  } = useSyncEngine({
-    onConflict: handleSyncConflict,
-    onSyncComplete: handleSyncComplete,
-    onError: handleSyncError
-  });
-
   // === Search ===
   const {
     searchQuery,
@@ -485,8 +315,8 @@ function App() {
       const privacyPwd = localStorage.getItem(PRIVACY_PASSWORD_KEY);
       return (privacyPwd && typeof privacyPwd === 'string') ? String(privacyPwd).trim() : '';
     }
-    const syncPwd = localStorage.getItem(SYNC_PASSWORD_KEY);
-    return (syncPwd && typeof syncPwd === 'string') ? syncPwd.trim() : '';
+    const syncPwd = localStorage.getItem(VIEW_PASSWORD_KEY);
+    return (syncPwd && typeof syncPwd === 'string') ? String(syncPwd).trim() : '';
   }, [useSeparatePrivacyPassword]);
 
   const handleUnlockPrivateVault = useCallback(async (input?: string) => {
@@ -497,14 +327,14 @@ function App() {
     }
 
     if (!useSeparatePrivacyPassword) {
-      const syncPwd = localStorage.getItem(SYNC_PASSWORD_KEY);
+      const syncPwd = localStorage.getItem(VIEW_PASSWORD_KEY);
       const syncPassword = (syncPwd && typeof syncPwd === 'string') ? String(syncPwd).trim() : '';
       if (!String(syncPassword ?? '').trim()) {
-        notify('请先设置同步密码，再解锁隐私分组', 'warning');
+        notify('请先设置密码，再解锁隐私分组', 'warning');
         return false;
       }
       if (password !== syncPassword) {
-        notify('同步密码不匹配，请重新输入', 'error');
+        notify('密码不匹配，请重新输入', 'error');
         return false;
       }
     }
@@ -565,7 +395,7 @@ function App() {
     const { useSeparatePassword, oldPassword, newPassword } = payload;
     const trimmedOld = (oldPassword && typeof oldPassword === 'string') ? String(oldPassword).trim() : '';
     const trimmedNew = (newPassword && typeof newPassword === 'string') ? String(newPassword).trim() : '';
-    const syncPwd = localStorage.getItem(SYNC_PASSWORD_KEY);
+    const syncPwd = localStorage.getItem(VIEW_PASSWORD_KEY);
     const syncPassword = (syncPwd && typeof syncPwd === 'string') ? String(syncPwd).trim() : '';
 
     if (!String(trimmedOld ?? '').trim() || !String(trimmedNew ?? '').trim()) {
@@ -574,12 +404,12 @@ function App() {
     }
 
     if (useSeparatePassword && !String(syncPassword ?? '').trim()) {
-      notify('请先设置同步密码，再启用独立密码模式', 'warning');
+      notify('请先设置密码，再启用独立密码模式', 'warning');
       return false;
     }
 
     if (!useSeparatePassword && trimmedNew !== syncPassword) {
-      notify('切换回同步密码时，新密码必须与同步密码一致', 'warning');
+      notify('切换回密码时，新密码必须与密码一致', 'warning');
       return false;
     }
 
@@ -635,15 +465,13 @@ function App() {
   const hasRevealCredential = !!(
     (() => {
       const viewPwd = localStorage.getItem(VIEW_PASSWORD_KEY);
-      const syncPwd = localStorage.getItem(SYNC_PASSWORD_KEY);
       return ((viewPwd && typeof viewPwd === 'string') ? String(viewPwd).trim() : '')
-        || ((syncPwd && typeof syncPwd === 'string') ? String(syncPwd).trim() : '')
         || webmasterUnlocked;
     })()
   );
   const isWebmasterSite = remoteSiteMode === 'webmaster';
   const canRevealHidden = isWebmasterSite
-    ? !!(remoteAuth?.canView || remoteAuth?.canWrite || webmasterUnlocked)
+    ? !!webmasterUnlocked
     : hasRevealCredential;
   const hiddenCategoryIds = useMemo(() => {
     return new Set(categories.filter(c => c.hidden).map(c => c.id));
@@ -848,26 +676,10 @@ function App() {
   const privateCount = privacyGroupEnabled && isPrivateUnlocked ? privateLinks.length : 0;
   const privateUnlockHint = useSeparatePrivacyPassword
     ? '请输入独立密码解锁隐私分组'
-    : '请输入同步密码解锁隐私分组';
+    : '请输入密码解锁隐私分组';
   const privateUnlockSubHint = useSeparatePrivacyPassword
     ? '独立密码仅保存在本地，切换设备需手动输入'
-    : '同步密码来自数据设置';
-
-  useEffect(() => {
-    if (!privacyGroupEnabled || !privacyAutoUnlockEnabled || isPrivateUnlocked) return;
-    if (sessionStorage.getItem(PRIVACY_SESSION_UNLOCKED_KEY) !== '1') return;
-    if (autoUnlockAttemptedRef.current) return;
-    autoUnlockAttemptedRef.current = true;
-    handleUnlockPrivateVault().then((success) => {
-      if (!success) {
-        sessionStorage.removeItem(PRIVACY_SESSION_UNLOCKED_KEY);
-      }
-    });
-  }, [privacyGroupEnabled, privacyAutoUnlockEnabled, isPrivateUnlocked, handleUnlockPrivateVault]);
-
-  useEffect(() => {
-    autoUnlockAttemptedRef.current = false;
-  }, [privacyGroupEnabled, privacyAutoUnlockEnabled]);
+    : '密码来自设置';
 
   // === Handlers ===
   const handleImportConfirm = (newLinks: LinkItem[], newCategories: Category[]) => {
@@ -1148,281 +960,21 @@ function App() {
   const useCustomBackground = !!siteSettings.backgroundImageEnabled && !!backgroundImage;
   const backgroundMotion = siteSettings.backgroundMotion ?? false;
 
-  // === KV Sync: Initial Load ===
   useEffect(() => {
-    // 只在本地数据加载完成后执行一次
-    if (!isLoaded || hasInitialSyncRun.current) return;
-    hasInitialSyncRun.current = true;
-    hasInitialCloudCheckCompletedRef.current = false;
-
-    const checkCloudData = async () => {
-      const localMeta = getLocalSyncMeta();
-      const localVersion = localMeta?.version ?? 0;
-      const localUpdatedAt = typeof localMeta?.updatedAt === 'number' ? localMeta.updatedAt : 0;
-      const localDeviceId = localMeta?.deviceId || getDeviceId();
-      const cloudData = await pullFromCloud();
-
-      // 严格检查云端数据：必须是非空数组
-      const hasValidCloudData = cloudData && 
-        Array.isArray(cloudData.links) && cloudData.links.length > 0 &&
-        Array.isArray(cloudData.categories) && cloudData.categories.length > 0;
-      
-      if (hasValidCloudData) {
-        // Webmaster mode: always use remote data for visitors (read-only public site)
-        if ((cloudData as any).siteSettings?.siteMode === 'webmaster') {
-          handleSyncComplete(cloudData);
-          return;
-        }
-        // 版本不一致时提示用户选择
-        if (cloudData.meta.version !== localVersion) {
-          const localData = buildSyncData(
-            links,
-            categories,
-            { mode: searchMode, externalSources: externalSearchSources },
-            aiConfig,
-            siteSettings,
-            privateVaultCipher || undefined
-          );
-          handleSyncConflict({
-            localData: { ...localData, meta: { updatedAt: localUpdatedAt, deviceId: localDeviceId, version: localVersion } },
-            remoteData: cloudData
-          });
-        } else {
-          // 版本一致时，直接使用云端数据更新
-          handleSyncComplete(cloudData);
-        }
+    if (!privacyGroupEnabled || !privacyAutoUnlockEnabled || isPrivateUnlocked) return;
+    if (sessionStorage.getItem(PRIVACY_SESSION_UNLOCKED_KEY) !== '1') return;
+    if (autoUnlockAttemptedRef.current) return;
+    autoUnlockAttemptedRef.current = true;
+    handleUnlockPrivateVault().then((success) => {
+      if (!success) {
+        sessionStorage.removeItem(PRIVACY_SESSION_UNLOCKED_KEY);
       }
-    };
-
-    checkCloudData().finally(() => {
-      hasInitialCloudCheckCompletedRef.current = true;
     });
-  }, [isLoaded]);
-
-  // === KV Sync: Auto-sync on data change ===
-  const prevSyncDataRef = useRef<string | null>(null);
+  }, [privacyGroupEnabled, privacyAutoUnlockEnabled, isPrivateUnlocked, handleUnlockPrivateVault]);
 
   useEffect(() => {
-    // 跳过初始加载阶段
-    if (!isLoaded || !hasInitialSyncRun.current || currentConflict) return;
-    if (!hasInitialCloudCheckCompletedRef.current) return;
-    if (isSyncPasswordRefreshingRef.current) return;
-    if (isReadOnly) return;
-
-    const syncData = buildSyncData(
-      links,
-      categories,
-      { mode: searchMode, externalSources: externalSearchSources },
-      aiConfig,
-      siteSettings,
-      privateVaultCipher || undefined
-    );
-    const serialized = JSON.stringify(syncData);
-
-    if (suppressNextAutoSyncRef.current) {
-      suppressNextAutoSyncRef.current = false;
-      prevSyncDataRef.current = serialized;
-      return;
-    }
-
-    if (serialized !== prevSyncDataRef.current) {
-      prevSyncDataRef.current = serialized;
-      schedulePush(syncData);
-    }
-  }, [links, categories, isLoaded, searchMode, externalSearchSources, aiConfig, siteSettings, privateVaultCipher, schedulePush, buildSyncData, currentConflict, isReadOnly]);
-
-  // === Sync Conflict Resolution ===
-  const handleResolveConflict = useCallback((choice: 'local' | 'remote') => {
-    if (choice === 'remote' && currentConflict) {
-      // 使用云端数据
-      handleSyncComplete(currentConflict.remoteData);
-    }
-    resolveSyncConflict(choice);
-    setSyncConflictOpen(false);
-    setCurrentConflict(null);
-  }, [currentConflict, handleSyncComplete, resolveSyncConflict]);
-
-  // 手动触发同步
-  const handleManualSync = useCallback(async () => {
-    const syncData = buildSyncData(
-      links,
-      categories,
-      { mode: searchMode, externalSources: externalSearchSources },
-      aiConfig,
-      siteSettings,
-      privateVaultCipher || undefined
-    );
-    await pushToCloud(syncData);
-  }, [links, categories, searchMode, externalSearchSources, aiConfig, siteSettings, privateVaultCipher, pushToCloud]);
-
-  const handleCreateBackup = useCallback(async () => {
-    if (!ensureEditable('创建备份')) return false;
-    const syncData = buildSyncData(
-      links,
-      categories,
-      { mode: searchMode, externalSources: externalSearchSources },
-      aiConfig,
-      siteSettings,
-      privateVaultCipher || undefined
-    );
-    const success = await createBackup(syncData);
-    if (success) {
-      notify('备份已创建', 'success');
-    } else {
-      notify('备份失败，请稍后重试', 'error');
-    }
-    return success;
-  }, [ensureEditable, links, categories, searchMode, externalSearchSources, aiConfig, siteSettings, privateVaultCipher, createBackup, notify, buildSyncData]);
-
-  const handleManualPull = useCallback(async () => {
-    const localMeta = getLocalSyncMeta();
-    const localVersion = localMeta?.version ?? 0;
-    const localUpdatedAt = typeof localMeta?.updatedAt === 'number' ? localMeta.updatedAt : 0;
-    const localDeviceId = localMeta?.deviceId || getDeviceId();
-    const cloudData = await pullFromCloud();
-    // 严格检查云端数据：必须是非空数组
-    const hasValidCloudData = cloudData && 
-      Array.isArray(cloudData.links) && cloudData.links.length > 0 &&
-      Array.isArray(cloudData.categories) && cloudData.categories.length > 0;
-    
-    if (hasValidCloudData) {
-      if ((cloudData as any).siteSettings?.siteMode === 'webmaster') {
-        handleSyncComplete(cloudData);
-        return;
-      }
-      if (cloudData.meta.version !== localVersion) {
-        const localData = buildSyncData(
-          links,
-          categories,
-          { mode: searchMode, externalSources: externalSearchSources },
-          aiConfig,
-          siteSettings,
-          privateVaultCipher || undefined
-        );
-        handleSyncConflict({
-          localData: { ...localData, meta: { updatedAt: localUpdatedAt, deviceId: localDeviceId, version: localVersion } },
-          remoteData: cloudData
-        });
-        return;
-      }
-      handleSyncComplete(cloudData);
-    }
-  }, [pullFromCloud, handleSyncComplete, getLocalSyncMeta, links, categories, searchMode, externalSearchSources, aiConfig, siteSettings, privateVaultCipher, buildSyncData, handleSyncConflict]);
-
-  const handleSyncPasswordChange = useCallback((nextPassword: string) => {
-    const trimmed = (nextPassword && typeof nextPassword === 'string') ? String(nextPassword).trim() : '';
-    if (trimmed === lastSyncPasswordRef.current) return;
-    lastSyncPasswordRef.current = trimmed;
-
-    if (syncPasswordRefreshTimerRef.current) {
-      clearTimeout(syncPasswordRefreshTimerRef.current);
-      syncPasswordRefreshTimerRef.current = null;
-    }
-
-    if (!trimmed) {
-      isSyncPasswordRefreshingRef.current = false;
-      return;
-    }
-
-    cancelPendingSync();
-    isSyncPasswordRefreshingRef.current = true;
-    syncPasswordRefreshIdRef.current += 1;
-    const refreshId = syncPasswordRefreshIdRef.current;
-    syncPasswordRefreshTimerRef.current = setTimeout(() => {
-      syncPasswordRefreshTimerRef.current = null;
-      handleManualPull()
-        .finally(() => {
-          if (syncPasswordRefreshIdRef.current === refreshId) {
-            isSyncPasswordRefreshingRef.current = false;
-            refreshRemoteAuth();
-          }
-        });
-    }, 600);
-  }, [cancelPendingSync, handleManualPull, refreshRemoteAuth]);
-
-  const handleViewPasswordChange = useCallback((nextPassword: string) => {
-    const trimmed = (nextPassword && typeof nextPassword === 'string') ? String(nextPassword).trim() : '';
-    if (trimmed === lastViewPasswordRef.current) return;
-    lastViewPasswordRef.current = trimmed;
-
-    if (viewPasswordRefreshTimerRef.current) {
-      clearTimeout(viewPasswordRefreshTimerRef.current);
-      viewPasswordRefreshTimerRef.current = null;
-    }
-
-    viewPasswordRefreshIdRef.current += 1;
-    const refreshId = viewPasswordRefreshIdRef.current;
-    viewPasswordRefreshTimerRef.current = setTimeout(() => {
-      viewPasswordRefreshTimerRef.current = null;
-      handleManualPull().finally(() => {
-        if (viewPasswordRefreshIdRef.current === refreshId) {
-          refreshRemoteAuth();
-        }
-      });
-    }, 600);
-  }, [handleManualPull, refreshRemoteAuth]);
-
-  useEffect(() => {
-    return () => {
-      if (syncPasswordRefreshTimerRef.current) {
-        clearTimeout(syncPasswordRefreshTimerRef.current);
-      }
-      if (viewPasswordRefreshTimerRef.current) {
-        clearTimeout(viewPasswordRefreshTimerRef.current);
-      }
-    };
-  }, []);
-
-  const handleRestoreBackup = useCallback(async (backupKey: string) => {
-    if (!ensureEditable('恢复备份')) return false;
-    const confirmed = await confirm({
-      title: '恢复云端备份',
-      message: '此操作将用所选备份覆盖本地数据，并在云端创建一个回滚点。',
-      confirmText: '恢复',
-      cancelText: '取消',
-      variant: 'danger'
-    });
-    if (!confirmed) return false;
-
-    const restoredData = await restoreBackup(backupKey);
-    if (!restoredData) {
-      notify('恢复失败，请稍后重试', 'error');
-      return false;
-    }
-
-    handleSyncComplete(restoredData);
-    prevSyncDataRef.current = JSON.stringify(buildSyncData(
-      restoredData.links,
-      restoredData.categories,
-      restoredData.searchConfig,
-      restoredData.aiConfig,
-      restoredData.siteSettings,
-      restoredData.privateVault
-    ));
-    notify('已恢复到所选备份，并创建回滚点', 'success');
-    return true;
-  }, [ensureEditable, confirm, restoreBackup, handleSyncComplete, notify, buildSyncData]);
-
-  const handleDeleteBackup = useCallback(async (backupKey: string) => {
-    if (!ensureEditable('删除备份')) return false;
-    const confirmed = await confirm({
-      title: '删除备份',
-      message: '确定要删除此备份吗?此操作无法撤销。',
-      confirmText: '删除',
-      cancelText: '取消',
-      variant: 'danger'
-    });
-    if (!confirmed) return false;
-
-    const success = await deleteBackup(backupKey);
-    if (!success) {
-      notify('删除失败，请稍后重试', 'error');
-      return false;
-    }
-
-    notify('备份已删除', 'success');
-    return true;
-  }, [ensureEditable, confirm, deleteBackup, notify]);
+    autoUnlockAttemptedRef.current = false;
+  }, [privacyGroupEnabled, privacyAutoUnlockEnabled]);
 
   // === Render ===
   return (
@@ -1497,25 +1049,13 @@ function App() {
           closeOnBackdrop={closeOnBackdrop}
         />
 
-        {/* Sync Conflict Modal */}
-        <SyncConflictModal
-          isOpen={syncConflictOpen}
-          conflict={currentConflict}
-          onResolve={handleResolveConflict}
-          onClose={() => setSyncConflictOpen(false)}
-          closeOnBackdrop={closeOnBackdrop}
-        />
-
       {/* Sync Status Indicator - Fixed bottom right */}
       <div className="fixed bottom-4 right-4 z-30">
         <SyncStatusIndicator
-          status={isReadOnly && (syncStatus === 'error' || syncStatus === 'pending') ? 'idle' : syncStatus}
-          lastSyncTime={lastSyncTime}
-          onManualSync={isReadOnly ? undefined : () => {
-            if (!ensureEditable('同步')) return;
-            handleManualSync();
-          }}
-          onManualPull={handleManualPull}
+          status={'idle'}
+          lastSyncTime={null}
+          onManualSync={undefined}
+          onManualPull={undefined}
         />
       </div>
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Bot, Globe, Palette, Database } from 'lucide-react';
-import { AIConfig, LinkItem, SiteSettings, SyncStatus } from '../../types';
+import { AIConfig, LinkItem, SiteSettings } from '../../types';
 import SiteTab from './settings/SiteTab';
 import AITab from './settings/AITab';
 import AppearanceTab from './settings/AppearanceTab';
@@ -15,10 +15,6 @@ interface SettingsModalProps {
   links: LinkItem[];
   onUpdateLinks: (links: LinkItem[]) => void;
   onOpenImport: () => void;
-  onCreateBackup: () => Promise<boolean>;
-  onRestoreBackup: (backupKey: string) => Promise<boolean>;
-  onDeleteBackup: (backupKey: string) => Promise<boolean>;
-  onSyncPasswordChange: (password: string) => void;
   onViewPasswordChange: (password: string) => void;
   useSeparatePrivacyPassword: boolean;
   onMigratePrivacyMode: (payload: { useSeparatePassword: boolean; oldPassword: string; newPassword: string }) => Promise<boolean>;
@@ -26,8 +22,6 @@ interface SettingsModalProps {
   onTogglePrivacyGroup: (enabled: boolean) => void;
   privacyAutoUnlockEnabled: boolean;
   onTogglePrivacyAutoUnlock: (enabled: boolean) => void;
-  syncStatus?: SyncStatus;
-  lastSyncTime?: number | null;
   webmasterUnlocked?: boolean;
   onWebmasterUnlockedChange?: (unlocked: boolean) => void;
   readOnly?: boolean;
@@ -43,10 +37,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   links,
   onUpdateLinks,
   onOpenImport,
-  onCreateBackup,
-  onRestoreBackup,
-  onDeleteBackup,
-  onSyncPasswordChange,
   onViewPasswordChange,
   useSeparatePrivacyPassword,
   onMigratePrivacyMode,
@@ -54,8 +44,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   onTogglePrivacyGroup,
   privacyAutoUnlockEnabled,
   onTogglePrivacyAutoUnlock,
-  syncStatus,
-  lastSyncTime,
   webmasterUnlocked,
   onWebmasterUnlockedChange,
   readOnly = false,
@@ -207,10 +195,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             <DataTab
               onOpenImport={onOpenImport}
               onClose={onClose}
-              onCreateBackup={onCreateBackup}
-              onRestoreBackup={onRestoreBackup}
-              onDeleteBackup={onDeleteBackup}
-              onSyncPasswordChange={onSyncPasswordChange}
               onViewPasswordChange={onViewPasswordChange}
               useSeparatePrivacyPassword={useSeparatePrivacyPassword}
               onMigratePrivacyMode={onMigratePrivacyMode}
@@ -218,8 +202,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               onTogglePrivacyGroup={onTogglePrivacyGroup}
               privacyAutoUnlockEnabled={privacyAutoUnlockEnabled}
               onTogglePrivacyAutoUnlock={onTogglePrivacyAutoUnlock}
-              syncStatus={syncStatus}
-              lastSyncTime={lastSyncTime}
               siteSettings={localSiteSettings}
               onSiteSettingChange={handleSiteChange}
               webmasterUnlocked={webmasterUnlocked}
