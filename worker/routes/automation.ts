@@ -220,7 +220,7 @@ function calculateNextRun(cronExpr: string) {
 // ==========================================
 // Cron定时触发器（每分钟执行）
 // ==========================================
-export async function automationScheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+export async function automationScheduled(event: any, env: Env, ctx: ExecutionContext) {
   const { results } = await env.DB.prepare(`
     SELECT * FROM automation_tasks 
     WHERE enabled = 1 AND type = 'cron' AND next_run_at <= (strftime('%s', 'now') * 1000)

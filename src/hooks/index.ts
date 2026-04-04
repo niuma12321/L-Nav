@@ -13,3 +13,4 @@ export { useWidgetSystem } from './useWidgetSystem';
 export { useWebDAV } from './useWebDAV';
 export { useNotes } from './useNotes';
 export { useRouter } from './useRouter';
+export { useDialog } from '../components/ui/DialogProvider';

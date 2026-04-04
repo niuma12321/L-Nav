@@ -1026,7 +1026,6 @@ function App() {
           onRestoreBackup={handleRestoreBackup}
           onDeleteBackup={handleDeleteBackup}
           onSyncPasswordChange={handleSyncPasswordChange}
-          onViewPasswordChange={handleViewPasswordChange}
           useSeparatePrivacyPassword={useSeparatePrivacyPassword}
           onMigratePrivacyMode={handleMigratePrivacyMode}
           privacyGroupEnabled={privacyGroupEnabled}
