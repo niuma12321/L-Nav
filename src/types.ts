@@ -34,6 +34,10 @@ export interface SiteSettings {
   backgroundImage?: string;
   backgroundImageEnabled?: boolean;
   backgroundMotion?: boolean;
+  // Bing wallpaper settings
+  backgroundSource?: 'custom' | 'bing';
+  bingAutoUpdate?: boolean;
+  bingLastUpdate?: string;
 }
 
 export interface StickyNote {

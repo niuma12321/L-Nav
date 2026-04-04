@@ -1,5 +1,6 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { SiteSettings } from '../../../types';
+import { Image, RefreshCw, Clock } from 'lucide-react';
 
 interface AppearanceTabProps {
   settings: SiteSettings;
@@ -68,6 +69,8 @@ const hexToRgbString = (hex: string): string | null => {
 // ==============================================
 // 核心组件（缓存优化）
 // ==============================================
+const BING_API_URL = 'https://60s.viki.moe/v2/bing';
+
 const AppearanceTab: React.FC<AppearanceTabProps> = React.memo(({ settings, onChange }) => {
   // ==============================================
   // 状态计算（useMemo 缓存，避免重复计算）
@@ -75,6 +78,67 @@ const AppearanceTab: React.FC<AppearanceTabProps> = React.memo(({ settings, onCh
   const isBackgroundEnabled = useMemo(() => !!settings.backgroundImageEnabled, [settings.backgroundImageEnabled]);
   const isBackgroundMotionEnabled = useMemo(() => !!settings.backgroundMotion, [settings.backgroundMotion]);
   const accentHex = useMemo(() => rgbStringToHex(settings.accentColor || DEFAULT_ACCENT_COLOR), [settings.accentColor]);
+  
+  // 必应壁纸状态
+  const [bingLoading, setBingLoading] = useState(false);
+  const [bingData, setBingData] = useState<{cover_4k?: string; update_date?: string} | null>(null);
+  const isBingEnabled = useMemo(() => settings.backgroundSource === 'bing', [settings.backgroundSource]);
+  const isAutoUpdateEnabled = useMemo(() => !!settings.bingAutoUpdate, [settings.bingAutoUpdate]);
+
+  // 获取必应壁纸数据
+  const fetchBingWallpaper = useCallback(async () => {
+    setBingLoading(true);
+    try {
+      const response = await fetch(BING_API_URL);
+      if (!response.ok) throw new Error('获取失败');
+      const data = await response.json();
+      if (data.code === 200 && data.data) {
+        setBingData(data.data);
+        // 自动设置背景图
+        if (data.data.cover_4k) {
+          onChange('backgroundImage', data.data.cover_4k);
+        }
+        return data.data;
+      }
+    } catch (err) {
+      console.error('获取必应壁纸失败:', err);
+    } finally {
+      setBingLoading(false);
+    }
+    return null;
+  }, [onChange]);
+
+  // 首次加载时获取必应壁纸
+  useEffect(() => {
+    if (isBingEnabled && !settings.backgroundImage) {
+      fetchBingWallpaper();
+    }
+  }, [isBingEnabled, settings.backgroundImage, fetchBingWallpaper]);
+
+  // 自动更新检查
+  useEffect(() => {
+    if (!isBingEnabled || !isAutoUpdateEnabled) return;
+    
+    const checkAndUpdate = async () => {
+      const lastUpdate = settings.bingLastUpdate;
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      
+      // 如果今天还没更新过，则获取新壁纸
+      if (!lastUpdate || !lastUpdate.startsWith(today)) {
+        const data = await fetchBingWallpaper();
+        if (data?.update_date) {
+          onChange('bingLastUpdate', data.update_date);
+        }
+      }
+    };
+    
+    // 立即检查一次
+    checkAndUpdate();
+    
+    // 每小时检查一次（页面打开时）
+    const intervalId = setInterval(checkAndUpdate, 60 * 60 * 1000);
+    return () => clearInterval(intervalId);
+  }, [isBingEnabled, isAutoUpdateEnabled, settings.bingLastUpdate, fetchBingWallpaper, onChange]);
 
   // ==============================================
   // 回调函数（useCallback 缓存，防止子组件重渲染）
@@ -230,7 +294,7 @@ const AppearanceTab: React.FC<AppearanceTabProps> = React.memo(({ settings, onCh
         <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
           <div>
             <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">启用背景图</div>
-            <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">支持 URL / Base64 格式</div>
+            <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">支持 URL / Base64 / 必应壁纸</div>
           </div>
           <ToggleSwitch
             checked={isBackgroundEnabled}
@@ -239,40 +303,116 @@ const AppearanceTab: React.FC<AppearanceTabProps> = React.memo(({ settings, onCh
           />
         </div>
 
-        {/* 背景图输入框 */}
-        <div className="flex items-center gap-2">
-          <input
-            type="text"
-            value={settings.backgroundImage || ''}
-            onChange={(e) => handleBackgroundImageChange(e.target.value)}
-            placeholder="https://example.com/background.jpg"
-            disabled={!isBackgroundEnabled}
-            className={`flex-1 px-4 py-2.5 rounded-xl text-sm border transition-all ${
-              isBackgroundEnabled
-                ? 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none'
-                : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed opacity-70'
-            }`}
-          />
-          <button
-            type="button"
-            onClick={handleClearBackground}
-            disabled={!isBackgroundEnabled || !settings.backgroundImage}
-            className={`px-3 py-2.5 rounded-xl text-xs font-semibold transition-colors border ${
-              !isBackgroundEnabled || !settings.backgroundImage
-                ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 cursor-not-allowed opacity-70'
-                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
-            }`}
-          >
-            清空
-          </button>
-        </div>
+        {/* 背景源选择 */}
+        {isBackgroundEnabled && (
+          <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
+            <button
+              type="button"
+              onClick={() => onChange('backgroundSource', 'custom')}
+              className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-all ${
+                !isBingEnabled
+                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+              }`}
+            >
+              自定义链接
+            </button>
+            <button
+              type="button"
+              onClick={() => onChange('backgroundSource', 'bing')}
+              className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 ${
+                isBingEnabled
+                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+              }`}
+            >
+              <Image className="w-3.5 h-3.5" />
+              必应壁纸
+            </button>
+          </div>
+        )}
+
+        {/* 必应壁纸设置 */}
+        {isBackgroundEnabled && isBingEnabled && (
+          <div className="space-y-3 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Image className="w-4 h-4 text-blue-500" />
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">必应每日壁纸</span>
+              </div>
+              <button
+                type="button"
+                onClick={fetchBingWallpaper}
+                disabled={bingLoading}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-500 text-white hover:bg-blue-600 transition-colors disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${bingLoading ? 'animate-spin' : ''}`} />
+                {bingLoading ? '获取中...' : '立即获取'}
+              </button>
+            </div>
+            
+            {/* 自动更新选项 */}
+            <div className="flex items-center justify-between gap-4 pt-2 border-t border-slate-200 dark:border-slate-700">
+              <div className="flex items-center gap-2">
+                <Clock className="w-3.5 h-3.5 text-slate-400" />
+                <span className="text-xs text-slate-600 dark:text-slate-400">每日自动更新</span>
+              </div>
+              <ToggleSwitch
+                checked={isAutoUpdateEnabled}
+                onChange={() => onChange('bingAutoUpdate', !isAutoUpdateEnabled)}
+                label="每日自动更新必应壁纸"
+              />
+            </div>
+
+            {/* 显示更新日期 */}
+            {(bingData?.update_date || settings.bingLastUpdate) && (
+              <div className="text-xs text-slate-500 dark:text-slate-400">
+                更新时间: {bingData?.update_date || settings.bingLastUpdate}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 背景图输入框 - 仅自定义模式显示 */}
+        {isBackgroundEnabled && !isBingEnabled && (
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={settings.backgroundImage || ''}
+              onChange={(e) => handleBackgroundImageChange(e.target.value)}
+              placeholder="https://example.com/background.jpg"
+              className={`flex-1 px-4 py-2.5 rounded-xl text-sm border transition-all ${
+                isBackgroundEnabled
+                  ? 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none'
+                  : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed opacity-70'
+              }`}
+            />
+            <button
+              type="button"
+              onClick={handleClearBackground}
+              disabled={!isBackgroundEnabled || !settings.backgroundImage}
+              className={`px-3 py-2.5 rounded-xl text-xs font-semibold transition-colors border ${
+                !isBackgroundEnabled || !settings.backgroundImage
+                  ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 cursor-not-allowed opacity-70'
+                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
+              }`}
+            >
+              清空
+            </button>
+          </div>
+        )}
 
         {/* 背景图预览 */}
         {isBackgroundEnabled && settings.backgroundImage && (
           <div className="mt-2 p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/30">
-            <div className="text-xs text-slate-500 mb-2">预览</div>
+            <div className="text-xs text-slate-500 mb-2 flex items-center justify-between">
+              <span>预览</span>
+              {isBingEnabled && bingData?.title && (
+                <span className="text-slate-400 truncate max-w-[200px]">{bingData.title}</span>
+              )}
+            </div>
             <div 
-              className="w-full h-16 rounded-lg bg-cover bg-center" 
+              className="w-full h-20 rounded-lg bg-cover bg-center" 
               style={{ backgroundImage: `url(${settings.backgroundImage})` }}
             />
           </div>
