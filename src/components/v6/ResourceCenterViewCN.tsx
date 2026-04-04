@@ -266,6 +266,53 @@ const ResourceCenterViewCN: React.FC<ResourceCenterViewCNProps> = ({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* 统一设置入口下拉框 */}
+          <div className="relative">
+            <button
+              onClick={() => setShowSettingsDropdown(!showSettingsDropdown)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#181a1c] text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              <Settings className="w-4 h-4" />
+              <span className="text-sm font-medium">设置</span>
+              <ChevronDown className={`w-4 h-4 transition-transform ${showSettingsDropdown ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {showSettingsDropdown && (
+              <div className="absolute top-full right-0 mt-2 w-48 rounded-xl bg-[#181a1c] border border-white/10 shadow-xl z-50 py-1">
+                <button
+                  onClick={() => {
+                    onOpenSettings?.();
+                    setShowSettingsDropdown(false);
+                  }}
+                  className="w-full px-4 py-2 text-left text-sm text-slate-300 hover:text-white hover:bg-white/10 flex items-center gap-2"
+                >
+                  <Settings className="w-4 h-4" />
+                  网站设置
+                </button>
+                <button
+                  onClick={() => {
+                    onOpenMenuSettings?.();
+                    setShowSettingsDropdown(false);
+                  }}
+                  className="w-full px-4 py-2 text-left text-sm text-slate-300 hover:text-white hover:bg-white/10 flex items-center gap-2"
+                >
+                  <Menu className="w-4 h-4" />
+                  菜单配置
+                </button>
+                <button
+                  onClick={() => {
+                    onOpenWidgetSettings?.();
+                    setShowSettingsDropdown(false);
+                  }}
+                  className="w-full px-4 py-2 text-left text-sm text-slate-300 hover:text-white hover:bg-white/10 flex items-center gap-2"
+                >
+                  <Grid3X3 className="w-4 h-4" />
+                  组件配置
+                </button>
+              </div>
+            )}
+          </div>
+
           <button
             onClick={onImport}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#181a1c] text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
@@ -398,8 +445,10 @@ const ResourceCenterViewCN: React.FC<ResourceCenterViewCNProps> = ({
                       className="flex flex-col items-center gap-2 p-3 rounded-xl bg-[#181a1c] hover:bg-emerald-500/10 border border-white/5 hover:border-emerald-500/20 transition-all group"
                       title={link.title}
                     >
-                      <div className="w-10 h-10 rounded-lg bg-[#0d0e10] flex items-center justify-center">
-                        {link.icon ? (
+                      <div className="w-10 h-10 rounded-lg bg-[#0d0e10] flex items-center justify-center overflow-hidden">
+                        {link.icon && link.icon.includes('http') ? (
+                          <img src={link.icon} alt="" className="w-6 h-6 rounded" />
+                        ) : link.icon ? (
                           <span className="text-lg">{link.icon}</span>
                         ) : faviconUrl ? (
                           <img src={faviconUrl} alt="" className="w-6 h-6 rounded" />
@@ -446,8 +495,10 @@ const ResourceCenterViewCN: React.FC<ResourceCenterViewCNProps> = ({
                       className="flex flex-col items-center gap-2 p-3 rounded-xl bg-[#181a1c] hover:bg-white/5 border border-white/5 hover:border-white/10 transition-all group"
                       title={link.title}
                     >
-                      <div className="w-10 h-10 rounded-lg bg-[#0d0e10] flex items-center justify-center">
-                        {link.icon ? (
+                      <div className="w-10 h-10 rounded-lg bg-[#0d0e10] flex items-center justify-center overflow-hidden">
+                        {link.icon && link.icon.includes('http') ? (
+                          <img src={link.icon} alt="" className="w-6 h-6 rounded" />
+                        ) : link.icon ? (
                           <span className="text-lg">{link.icon}</span>
                         ) : faviconUrl ? (
                           <img src={faviconUrl} alt="" className="w-6 h-6 rounded" />

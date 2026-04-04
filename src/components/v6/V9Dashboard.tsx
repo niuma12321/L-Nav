@@ -59,6 +59,7 @@ import LabView from './LabView';
 import EmojiPicker from '../ui/EmojiPicker';
 import { useNotifications } from '../../hooks/useNotifications';
 import { NotificationDropdown } from './NotificationDropdown';
+import AutomationCenterView from './AutomationViewCN';
 
 interface V9DashboardProps {
   onAddResource?: () => void;

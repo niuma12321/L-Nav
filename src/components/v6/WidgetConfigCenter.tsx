@@ -200,24 +200,6 @@ const WidgetSettingsModal: React.FC<{
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-slate-500 mb-1 block">X 位置</label>
-              <input
-                type="number"
-                value={position.x}
-                onChange={(e) => setPosition({ ...position, x: parseInt(e.target.value) || 0 })}
-                className="w-full px-3 py-2 bg-[#0d0e10] rounded-lg border border-white/5 text-white text-sm"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-slate-500 mb-1 block">Y 位置</label>
-              <input
-                type="number"
-                value={position.y}
-                onChange={(e) => setPosition({ ...position, y: parseInt(e.target.value) || 0 })}
-                className="w-full px-3 py-2 bg-[#0d0e10] rounded-lg border border-white/5 text-white text-sm"
-              />
-            </div>
-            <div>
               <label className="text-xs text-slate-500 mb-1 block">宽度 (列数)</label>
               <input
                 type="number"
@@ -239,6 +221,12 @@ const WidgetSettingsModal: React.FC<{
                 className="w-full px-3 py-2 bg-[#0d0e10] rounded-lg border border-white/5 text-white text-sm"
               />
             </div>
+          </div>
+
+          <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+            <p className="text-xs text-blue-400">
+              💡 提示：在控制台中可以直接拖拽"我的小组件"来自由调整位置
+            </p>
           </div>
 
           <div className="pt-4 flex gap-2">

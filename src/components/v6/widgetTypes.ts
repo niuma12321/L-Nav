@@ -65,47 +65,6 @@ export interface StockConfig {
 
 export const DEFAULT_WIDGETS: WidgetConfig[] = [
   {
-    id: 'search-hub',
-    type: 'search-hub',
-    title: '搜索配置面板',
-    description: '管理多引擎搜索、搜索建议及隐私过滤设置。支持快速切换 Google、Baidu、GitHub 模式。',
-    icon: 'Search',
-    enabled: true,
-    isFixed: true, // 固定组件
-    position: {
-      desktop: { x: 0, y: 0, w: 4, h: 2 },
-      mobile: { order: 0 }
-    },
-    settings: {
-      engines: [
-        { id: 'google', name: 'Google', url: 'https://google.com/search', queryParam: 'q' },
-        { id: 'baidu', name: '百度', url: 'https://www.baidu.com/s', queryParam: 'wd' },
-        { id: 'github', name: 'GitHub', url: 'https://github.com/search', queryParam: 'q' }
-      ],
-      defaultEngine: 'google',
-      transparency: 0.95,
-      borderRadius: 12
-    }
-  },
-  {
-    id: 'stock-widget',
-    type: 'stock-widget',
-    title: '金融看板',
-    description: '实时追踪 NASDAQ、HKEX 股票行情及加密货币波动。内置 K 线图预览与资产组合摘要。',
-    icon: 'TrendingUp',
-    enabled: true,
-    isFixed: true, // 固定组件
-    position: {
-      desktop: { x: 4, y: 0, w: 4, h: 2 },
-      mobile: { order: 1 }
-    },
-    settings: {
-      symbols: ['sh000001', 'sz399001', 'sh000300'],
-      refreshInterval: 30,
-      showKLine: true
-    }
-  },
-  {
     id: 'weather',
     type: 'weather',
     title: '天气插件 Pro',
@@ -114,8 +73,8 @@ export const DEFAULT_WIDGETS: WidgetConfig[] = [
     enabled: true,
     isFixed: true, // 固定组件
     position: {
-      desktop: { x: 8, y: 0, w: 4, h: 2 },
-      mobile: { order: 2 }
+      desktop: { x: 0, y: 0, w: 4, h: 2 },
+      mobile: { order: 0 }
     },
     settings: {
       city: '北京',
@@ -133,29 +92,12 @@ export const DEFAULT_WIDGETS: WidgetConfig[] = [
     enabled: true,
     isFixed: true, // 固定组件
     position: {
-      desktop: { x: 0, y: 2, w: 4, h: 2 },
-      mobile: { order: 3 }
+      desktop: { x: 4, y: 0, w: 4, h: 2 },
+      mobile: { order: 1 }
     },
     settings: {
       maxItems: 5,
       showCompleted: false
-    }
-  },
-  {
-    id: 'news-feed',
-    type: 'news-feed',
-    title: '资讯流中心',
-    description: '聚合 RSS、科技头条及社交媒体热点。支持 AI 智能摘要功能，快速掌握资讯要点。',
-    icon: 'Newspaper',
-    enabled: true,
-    isFixed: true, // 固定组件
-    position: {
-      desktop: { x: 4, y: 2, w: 8, h: 2 },
-      mobile: { order: 4 }
-    },
-    settings: {
-      sources: ['tech', 'finance', 'rss'],
-      maxItems: 10
     }
   },
   {
@@ -167,8 +109,8 @@ export const DEFAULT_WIDGETS: WidgetConfig[] = [
     enabled: true,
     isFixed: true,
     position: {
-      desktop: { x: 0, y: 4, w: 8, h: 4 },
-      mobile: { order: 5 }
+      desktop: { x: 8, y: 0, w: 4, h: 2 },
+      mobile: { order: 2 }
     },
     settings: {}
   }
