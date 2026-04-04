@@ -80,17 +80,51 @@ const renderResourceIcon = (resource: Resource, size: number = 24) => {
     }
   }
   
-  // 其次显示 favicon
-  if (resource.favicon) {
-    return <img src={resource.favicon} alt="" className={`w-${size/4} h-${size/4} rounded`} style={{ width: size, height: size }} />;
+  // 其次显示 favicon - 使用Google Favicon服务
+  if (resource.url) {
+    try {
+      const url = resource.url.startsWith('http') ? resource.url : `https://${resource.url}`;
+      const domain = new URL(url).hostname;
+      const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+      return <img src={faviconUrl} alt="" className={`w-${size/4} h-${size/4} rounded`} style={{ width: size, height: size }} onError={(e) => {
+        // 加载失败时显示默认图标
+        e.currentTarget.style.display = 'none';
+      }} />;
+    } catch {
+      // URL解析失败，显示默认图标
+    }
   }
   
   // 默认图标
   return <Link2 className={`w-${size/4} h-${size/4} text-slate-500`} style={{ width: size, height: size }} />;
 };
 
+// 提取域名显示
+const getDisplayUrl = (url: string) => {
+  try {
+    const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`);
+    return urlObj.hostname.replace(/^www\./, '');
+  } catch {
+    return url.replace(/^https?:\/\//, '').split('/')[0];
+  }
+};
+
+// 获取分类颜色
+const getCategoryColor = (categoryId: string) => {
+  const colors: Record<string, string> = {
+    'dev': 'bg-blue-500/20 text-blue-400',
+    'design': 'bg-purple-500/20 text-purple-400',
+    'ai': 'bg-amber-500/20 text-amber-400',
+    'finance': 'bg-red-500/20 text-red-400',
+    'news': 'bg-cyan-500/20 text-cyan-400',
+    'learning': 'bg-green-500/20 text-green-400',
+    'entertainment': 'bg-pink-500/20 text-pink-400',
+    'uncategorized': 'bg-slate-500/20 text-slate-400'
+  };
+  return colors[categoryId] || 'bg-emerald-500/20 text-emerald-400';
+};
+
 interface ResourceCenterViewCNProps {
-  onAddResource?: () => void;
   onImport?: () => void;
   onPreviewLink?: (url: string) => void;
   onOpenSettings?: () => void;
@@ -379,74 +413,110 @@ const ResourceCenterViewCN: React.FC<ResourceCenterViewCNProps> = ({
         </div>
       </div>
 
-      {/* 置顶/常用 - 从控制台迁移过来的快捷访问区域 */}
+      {/* 置顶/常用 - 快捷访问区域 */}
       {(pinnedLinks.length > 0 || frequentLinks.length > 0) && (
-        <div className="space-y-4">
-          {/* 置顶链接 */}
+        <div className="flex flex-wrap items-center gap-2 p-3 rounded-xl bg-[#181a1c]/50 border border-white/5">
+          {/* 置顶链接 - 紧凑标签样式 */}
           {pinnedLinks.length > 0 && (
-            <div className="p-4 rounded-2xl bg-[#181a1c] border border-emerald-500/20">
-              <div className="flex items-center gap-2 mb-3">
-                <Pin className="w-4 h-4 text-emerald-400" />
-                <span className="text-sm font-medium text-emerald-400">置顶链接</span>
-                <span className="text-xs text-slate-500">{pinnedLinks.length}</span>
+            <>
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 shrink-0">
+                <Pin className="w-3 h-3" />
+                <span className="text-xs font-medium">置顶</span>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {pinnedLinks.map((link) => (
+              {pinnedLinks.map((link) => {
+                // 获取正确的favicon
+                const getFaviconUrl = (url: string) => {
+                  try {
+                    const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`);
+                    const domain = urlObj.hostname;
+                    return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+                  } catch {
+                    return '';
+                  }
+                };
+                const faviconUrl = link.favicon && !link.favicon.includes('faviconextractor') 
+                  ? link.favicon 
+                  : getFaviconUrl(link.url);
+                
+                return (
                   <a
                     key={link.id}
                     href={link.url.startsWith('http') ? link.url : `https://${link.url}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#0d0e10] hover:bg-emerald-500/10 hover:text-emerald-400 transition-colors group"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0d0e10] hover:bg-emerald-500/10 border border-transparent hover:border-emerald-500/20 transition-all group"
+                    title={link.title}
                   >
                     {link.icon ? (
-                      <span className="text-sm">{link.icon}</span>
+                      <span className="text-xs">{link.icon}</span>
+                    ) : faviconUrl ? (
+                      <img src={faviconUrl} alt="" className="w-3.5 h-3.5 rounded" />
                     ) : (
-                      <Globe className="w-3.5 h-3.5 text-slate-500 group-hover:text-emerald-400" />
+                      <Globe className="w-3 h-3 text-slate-500 group-hover:text-emerald-400" />
                     )}
-                    <span className="text-sm text-slate-300 group-hover:text-emerald-400 truncate max-w-[120px]">{link.title}</span>
+                    <span className="text-xs text-slate-300 group-hover:text-emerald-400 truncate max-w-[100px]">{link.title}</span>
                   </a>
-                ))}
-              </div>
-            </div>
+                );
+              })}
+            </>
           )}
           
-          {/* 常用链接 */}
+          {/* 分隔线 */}
+          {pinnedLinks.length > 0 && frequentLinks.length > 0 && (
+            <div className="w-px h-4 bg-white/10 mx-1" />
+          )}
+          
+          {/* 常用链接 - 紧凑标签样式 */}
           {frequentLinks.length > 0 && (
-            <div className="p-4 rounded-2xl bg-[#181a1c] border border-white/5">
-              <div className="flex items-center gap-2 mb-3">
-                <LayoutGrid className="w-4 h-4 text-slate-400" />
-                <span className="text-sm font-medium text-slate-300">常用链接</span>
-                <span className="text-xs text-slate-500">{frequentLinks.length}</span>
+            <>
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-500/10 text-slate-400 shrink-0">
+                <LayoutGrid className="w-3 h-3" />
+                <span className="text-xs font-medium">常用</span>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {frequentLinks.slice(0, 8).map((link) => (
+              {frequentLinks.slice(0, 6).map((link) => {
+                // 获取正确的favicon
+                const getFaviconUrl = (url: string) => {
+                  try {
+                    const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`);
+                    const domain = urlObj.hostname;
+                    return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+                  } catch {
+                    return '';
+                  }
+                };
+                const faviconUrl = link.favicon && !link.favicon.includes('faviconextractor') 
+                  ? link.favicon 
+                  : getFaviconUrl(link.url);
+                
+                return (
                   <a
                     key={link.id}
                     href={link.url.startsWith('http') ? link.url : `https://${link.url}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#0d0e10] hover:bg-white/5 transition-colors group"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0d0e10] hover:bg-white/5 border border-transparent hover:border-white/10 transition-all group"
+                    title={link.title}
                   >
                     {link.icon ? (
-                      <span className="text-sm">{link.icon}</span>
+                      <span className="text-xs">{link.icon}</span>
+                    ) : faviconUrl ? (
+                      <img src={faviconUrl} alt="" className="w-3.5 h-3.5 rounded" />
                     ) : (
-                      <Globe className="w-3.5 h-3.5 text-slate-500" />
+                      <Globe className="w-3 h-3 text-slate-500" />
                     )}
-                    <span className="text-sm text-slate-400 group-hover:text-slate-200 truncate max-w-[120px]">{link.title}</span>
+                    <span className="text-xs text-slate-400 group-hover:text-slate-200 truncate max-w-[100px]">{link.title}</span>
                   </a>
-                ))}
-                {frequentLinks.length > 8 && (
-                  <button
-                    onClick={() => setActiveCategory('all')}
-                    className="flex items-center gap-1 px-3 py-2 rounded-xl bg-[#0d0e10] text-slate-500 hover:text-emerald-400 transition-colors"
-                  >
-                    <span className="text-xs">+{frequentLinks.length - 8}</span>
-                    <ChevronRight className="w-3 h-3" />
-                  </button>
-                )}
-              </div>
-            </div>
+                );
+              })}
+              {frequentLinks.length > 6 && (
+                <button
+                  onClick={() => setActiveCategory('all')}
+                  className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-[#0d0e10] text-slate-500 hover:text-emerald-400 transition-colors"
+                >
+                  <span className="text-xs">+{frequentLinks.length - 6}</span>
+                </button>
+              )}
+            </>
           )}
         </div>
       )}
@@ -463,8 +533,8 @@ const ResourceCenterViewCN: React.FC<ResourceCenterViewCNProps> = ({
         </button>
       </div>
 
-      {/* Resources Grid */}
-      <div className={`grid gap-4 ${viewMode === 'grid' ? 'grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'grid-cols-1'}`}>
+      {/* 资源网格 - 响应式布局 */}
+      <div className={`grid gap-4 ${viewMode === 'grid' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5' : 'grid-cols-1'}`}>
         {filteredResources.map((resource) => (
           <ResourceCard 
             key={resource.id} 
@@ -663,13 +733,13 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resource, viewMode, onEdit,
         {resource.title}
       </h4>
       <p className="text-xs text-slate-500 mb-1 truncate" title={resource.url}>
-        {resource.url}
+        {getDisplayUrl(resource.url)}
       </p>
       <p className="text-sm text-slate-400 mb-4 line-clamp-2">{resource.description}</p>
 
       {/* Footer */}
       <div className="flex items-center justify-between">
-        <span className="px-2 py-1 rounded-full text-xs bg-blue-500/20 text-blue-400">
+        <span className={`px-2 py-1 rounded-full text-xs ${getCategoryColor(resource.categoryId)}`}>
           {categoryName}
         </span>
         <button 

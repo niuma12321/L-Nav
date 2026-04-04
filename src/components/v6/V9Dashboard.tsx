@@ -1430,87 +1430,47 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
                 </div>
               </div>
 
-              {/* Widget Grid with Layout Support */}
-              <div 
-                className="grid gap-4 auto-rows-min"
-                style={{ 
-                  gridTemplateColumns: 'repeat(12, minmax(0, 1fr))',
-                }}
-              >
-                {/* API 数据组件动态渲染 */}
-                {enabledWidgets.filter(w => w.type === 'api-data' && w.enabled).map(widget => {
-                  const position = widget.position?.desktop || { x: 0, y: 0, w: 4, h: 3 };
-                  return (
-                    <div 
-                      key={widget.id} 
-                      className="relative bg-[#181a1c] rounded-2xl border border-white/10 shadow-sm hover:shadow-md transition-shadow overflow-hidden p-4 resize-y"
-                      style={{ 
-                        gridColumn: `span ${Math.min(position.w, 12)}`,
-                        gridRow: `span ${Math.max(position.h, 2)}`,
-                        minHeight: `${position.h * 100}px`,
-                        maxHeight: '600px'
-                      }}
-                    >
-                      <APIDataWidget config={widget.settings.api} />
-                    </div>
-                  );
-                })}
-                
-                {/* Weather Widget */}
-                {enabledWidgets.some(w => w.type === 'weather' && w.enabled) && (
-                  <div 
-                    className="relative bg-[#181a1c] rounded-2xl border border-white/10 shadow-sm hover:shadow-md transition-shadow overflow-hidden p-4 resize-y"
-                    style={{ gridColumn: 'span 4', minHeight: '200px', maxHeight: '500px' }}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <Cloud className="w-4 h-4 text-emerald-400" />
-                      <span className="text-sm font-medium text-slate-300">天气</span>
-                    </div>
-                    <WeatherWidget />
-                  </div>
-                )}
-
-                {/* Todo Widget */}
-                {enabledWidgets.some(w => w.type === 'custom-links' && w.enabled) && (
-                  <div 
-                    className="relative bg-[#181a1c] rounded-2xl border border-white/10 shadow-sm hover:shadow-md transition-shadow overflow-hidden p-4 resize-y"
-                    style={{ gridColumn: 'span 4', minHeight: '200px', maxHeight: '500px' }}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <CheckSquare className="w-4 h-4 text-emerald-400" />
-                      <span className="text-sm font-medium text-slate-300">待办事项</span>
-                    </div>
-                    <TodoWidget />
-                  </div>
-                )}
-
-                {/* News/Stock Widget */}
-                {enabledWidgets.some(w => w.type === 'stock-widget' && w.enabled) && (
-                  <div 
-                    className="relative bg-[#181a1c] rounded-2xl border border-white/10 shadow-sm hover:shadow-md transition-shadow overflow-hidden p-4 resize-y"
-                    style={{ gridColumn: 'span 4', minHeight: '200px', maxHeight: '500px' }}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <TrendingUp className="w-4 h-4 text-emerald-400" />
-                      <span className="text-sm font-medium text-slate-300">热搜榜单</span>
-                    </div>
-                    <NewsWidget />
-                  </div>
-                )}
-
-                {/* News Feed Widget */}
-                {enabledWidgets.some(w => w.type === 'news-feed' && w.enabled) && (
-                  <div 
-                    className="relative bg-[#181a1c] rounded-2xl border border-white/10 shadow-sm hover:shadow-md transition-shadow overflow-hidden p-4 resize-y"
-                    style={{ gridColumn: 'span 8', minHeight: '200px', maxHeight: '500px' }}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <Pin className="w-4 h-4 text-emerald-400" />
-                      <span className="text-sm font-medium text-slate-300">资讯流</span>
-                    </div>
-                    <NewsFeedWidget />
-                  </div>
-                )}
+              {/* Widget Grid - 整齐网格布局 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {enabledWidgets
+                  .filter(w => w.enabled)
+                  .sort((a, b) => (a.order || 0) - (b.order || 0))
+                  .map(widget => {
+                    const position = widget.position || { x: 0, y: 0, w: 4, h: 3 };
+                    
+                    return (
+                      <div 
+                        key={widget.id}
+                        className="bg-[#181a1c] rounded-xl border border-white/5 hover:border-white/10 transition-all duration-200 overflow-hidden group"
+                      >
+                        {/* 组件头部 */}
+                        <div className="flex items-center justify-between px-3 py-2 border-b border-white/5">
+                          <div className="flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/60" />
+                            <span className="text-xs font-medium text-slate-400 group-hover:text-slate-300 transition-colors">
+                              {widget.name}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button className="p-1 rounded hover:bg-white/10 text-slate-500 hover:text-slate-300">
+                              <MoreVertical className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                        
+                        {/* 组件内容区 */}
+                        <div className="p-3">
+                          {widget.type === 'api-data' && widget.settings?.api && (
+                            <APIDataWidget config={widget.settings.api} />
+                          )}
+                          {widget.type === 'weather' && <WeatherWidget />}
+                          {widget.type === 'custom-links' && <TodoWidget />}
+                          {widget.type === 'stock-widget' && <NewsWidget />}
+                          {widget.type === 'news-feed' && <NewsFeedWidget />}
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
             </section>
 
