@@ -55,10 +55,24 @@ export function useContextMenu({
     const copyLinkToClipboard = useCallback(() => {
         if (!contextMenu.link) return;
 
-        navigator.clipboard.writeText(contextMenu.link.url)
-            .catch(err => {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(contextMenu.link.url)
+                .catch(err => {
+                    console.error('复制链接失败:', err);
+                });
+        } else {
+            // 降级方案：使用传统的 execCommand
+            const textArea = document.createElement('textarea');
+            textArea.value = contextMenu.link.url;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+            } catch (err) {
                 console.error('复制链接失败:', err);
-            });
+            }
+            document.body.removeChild(textArea);
+        }
 
         closeContextMenu();
     }, [contextMenu.link, closeContextMenu]);
