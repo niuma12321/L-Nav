@@ -666,7 +666,13 @@ const WidgetConfigCenter: React.FC = () => {
 
           {/* Add More Placeholder */}
           <button 
-            onClick={() => setShowAddWidgetModal(true)}
+            onClick={() => {
+              // Reset editing states to ensure we are in "add new" mode
+              setIsEditingCustomAPI(false);
+              setEditingWidget(null);
+              setEditingWidgetId(null);
+              setShowAddWidgetModal(true);
+            }}
             className="p-6 rounded-3xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-4 text-slate-500 hover:border-emerald-500/30 hover:text-emerald-400 transition-all min-h-[200px]"
           >
             <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center">
