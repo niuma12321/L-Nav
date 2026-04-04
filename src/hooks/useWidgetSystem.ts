@@ -1,14 +1,47 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { WidgetConfig, DEFAULT_WIDGETS } from '../components/v6/widgetTypes';
+import { 
+  initDefaultUser,
+  getUserStorageKey,
+  getCurrentUserId
+} from '../utils/constants';
 
 const WIDGETS_STORAGE_KEY = 'ynav-widgets-v9';
 const WIDGETS_SYNC_CHANNEL = 'ynav-widgets-sync';
 
 export function useWidgetSystem() {
+  // 确保有默认用户
+  const [currentUserId, setCurrentUserId] = useState<string>(() => {
+    if (typeof window === 'undefined') return '';
+    return initDefaultUser();
+  });
+  
   const [widgets, setWidgets] = useState<WidgetConfig[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const bcRef = useRef<BroadcastChannel | null>(null);
+
+  // 监听用户变化
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const checkUserChange = () => {
+      const newUserId = getCurrentUserId();
+      if (newUserId && newUserId !== currentUserId) {
+        console.log('[WidgetSystem] User changed from', currentUserId, 'to', newUserId);
+        setCurrentUserId(newUserId);
+        setIsLoaded(false);
+      }
+    };
+    
+    const interval = setInterval(checkUserChange, 1000);
+    return () => clearInterval(interval);
+  }, [currentUserId]);
+
+  // 获取当前用户的存储键
+  const getStorageKey = useCallback(() => {
+    return getUserStorageKey(WIDGETS_STORAGE_KEY);
+  }, [currentUserId]);
 
   // Initialize BroadcastChannel for cross-tab sync
   useEffect(() => {
@@ -34,7 +67,11 @@ export function useWidgetSystem() {
 
   // Load widgets from localStorage and merge with new default widgets
   useEffect(() => {
-    const stored = localStorage.getItem(WIDGETS_STORAGE_KEY);
+    if (!currentUserId) return;
+    
+    const storageKey = getStorageKey();
+    const stored = localStorage.getItem(storageKey);
+    
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
@@ -59,15 +96,16 @@ export function useWidgetSystem() {
       setWidgets(DEFAULT_WIDGETS);
     }
     setIsLoaded(true);
-  }, []);
+  }, [currentUserId, getStorageKey]);
 
   // Save widgets to localStorage and sync
   useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem(WIDGETS_STORAGE_KEY, JSON.stringify(widgets));
+    if (isLoaded && currentUserId) {
+      const storageKey = getStorageKey();
+      localStorage.setItem(storageKey, JSON.stringify(widgets));
       syncWidgets(widgets);
     }
-  }, [widgets, isLoaded, syncWidgets]);
+  }, [widgets, isLoaded, currentUserId, getStorageKey, syncWidgets]);
 
   const toggleWidget = useCallback((id: string) => {
     setWidgets(prev => prev.map(w => 
@@ -136,6 +174,7 @@ export function useWidgetSystem() {
     reorderWidgets,
     addWidget,
     removeWidget,
-    updateWidget
+    updateWidget,
+    currentUserId
   };
 }

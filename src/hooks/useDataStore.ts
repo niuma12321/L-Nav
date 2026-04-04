@@ -1,7 +1,16 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { LinkItem, Category, DEFAULT_CATEGORIES, INITIAL_LINKS } from '../types';
 import { arrayMove } from '@dnd-kit/sortable';
-import { LOCAL_STORAGE_KEY, FAVICON_CACHE_KEY } from '../utils/constants';
+import { 
+  LOCAL_STORAGE_KEY, 
+  FAVICON_CACHE_KEY,
+  initDefaultUser,
+  getUserStorageKey,
+  getCurrentUserId,
+  getUserData,
+  setUserData,
+  CURRENT_USER_KEY
+} from '../utils/constants';
 import { useDialog } from '../components/ui/DialogProvider';
 
 // 同步 API 基址
@@ -10,7 +19,43 @@ const SYNC_API_BASE = '/api/v1';
 // 添加全局调试日志
 console.log('[App] Initializing, localStorage keys:', Object.keys(localStorage));
 
+/**
+ * 数据迁移工具：将旧格式数据迁移到新格式
+ */
+const migrateLegacyData = () => {
+  if (typeof window === 'undefined') return;
+  
+  // 1. 初始化默认用户
+  const userId = initDefaultUser();
+  
+  // 2. 检查是否有旧数据需要迁移
+  const oldData = localStorage.getItem(LOCAL_STORAGE_KEY);
+  const userDataKey = getUserStorageKey('links_data');
+  const hasUserData = localStorage.getItem(userDataKey);
+  
+  if (oldData && !hasUserData) {
+    console.log('[DataStore] Migrating legacy data to user:', userId);
+    try {
+      const parsed = JSON.parse(oldData);
+      // 迁移到用户维度
+      localStorage.setItem(userDataKey, oldData);
+      console.log('[DataStore] Migration completed');
+    } catch (e) {
+      console.error('[DataStore] Migration failed:', e);
+    }
+  }
+};
+
+// 执行迁移
+migrateLegacyData();
+
 export const useDataStore = () => {
+    // 确保有默认用户
+    const [currentUserId, setCurrentUserId] = useState<string>(() => {
+        if (typeof window === 'undefined') return '';
+        return initDefaultUser();
+    });
+    
     const [links, setLinks] = useState<LinkItem[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
@@ -19,21 +64,46 @@ export const useDataStore = () => {
     const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const isInitializedRef = useRef(false);
 
+    // 监听用户变化
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        
+        const checkUserChange = () => {
+            const newUserId = getCurrentUserId();
+            if (newUserId && newUserId !== currentUserId) {
+                console.log('[DataStore] User changed from', currentUserId, 'to', newUserId);
+                setCurrentUserId(newUserId);
+                // 重新加载数据
+                isInitializedRef.current = false;
+                setIsLoaded(false);
+            }
+        };
+        
+        const interval = setInterval(checkUserChange, 1000);
+        return () => clearInterval(interval);
+    }, [currentUserId]);
+
+    // 获取当前用户的数据存储键
+    const getStorageKey = useCallback(() => {
+        return getUserStorageKey('links_data');
+    }, [currentUserId]);
+
     // 数据监控：确保数据永远不会为空
     useEffect(() => {
-        if (!isLoaded || isSyncing) {
+        if (!isLoaded || isSyncing || !currentUserId) {
             console.log('[DataStore] Not ready yet, skipping check');
             return;
         }
         
-        console.log('[DataStore] Data check - links:', links?.length, 'categories:', categories?.length);
+        console.log('[DataStore] Data check - links:', links?.length, 'categories:', categories?.length, 'user:', currentUserId);
         
         // 如果链接为空且不在同步中，恢复默认数据
         if ((!links || links.length === 0) && !isSyncing) {
-            console.warn('[DataStore] Links empty, restoring defaults');
+            console.warn('[DataStore] Links empty, restoring defaults for user:', currentUserId);
             setLinks(INITIAL_LINKS);
             setCategories(DEFAULT_CATEGORIES);
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ 
+            const storageKey = getStorageKey();
+            localStorage.setItem(storageKey, JSON.stringify({ 
                 links: INITIAL_LINKS, 
                 categories: DEFAULT_CATEGORIES 
             }));
@@ -41,10 +111,10 @@ export const useDataStore = () => {
         
         // 如果分类为空且不在同步中，恢复默认分类
         if ((!categories || categories.length === 0) && !isSyncing) {
-            console.warn('[DataStore] Categories empty, restoring defaults');
+            console.warn('[DataStore] Categories empty, restoring defaults for user:', currentUserId);
             setCategories(DEFAULT_CATEGORIES);
         }
-    }, [links, categories, isLoaded, isSyncing]);
+    }, [links, categories, isLoaded, isSyncing, currentUserId]);
 
     // 加载本地图标缓存
     const loadLinkIcons = useCallback((linksToLoad: LinkItem[]) => {
@@ -146,11 +216,14 @@ export const useDataStore = () => {
 
     // 初始化加载 - 以云端为真相源
     useEffect(() => {
+        if (!currentUserId) return;
+        
         const init = async () => {
-            console.log('[DataStore] Initializing...');
+            console.log('[DataStore] Initializing for user:', currentUserId);
             
             // 1. 先加载本地数据（快速显示）
-            const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+            const storageKey = getStorageKey();
+            const stored = localStorage.getItem(storageKey);
             let localLinks: LinkItem[] = [];
             let localCategories: Category[] = [];
             
@@ -163,7 +236,7 @@ export const useDataStore = () => {
                         setLinks(localLinks);
                         setCategories(localCategories);
                         loadLinkIcons(localLinks);
-                        console.log('[DataStore] Loaded from local:', localLinks.length, 'links');
+                        console.log('[DataStore] Loaded from local for user', currentUserId, ':', localLinks.length, 'links');
                     }
                 } catch (e) {
                     console.error('[DataStore] Failed to parse local data:', e);
@@ -176,7 +249,7 @@ export const useDataStore = () => {
                 setCategories(DEFAULT_CATEGORIES);
                 localLinks = INITIAL_LINKS;
                 localCategories = DEFAULT_CATEGORIES;
-                console.log('[DataStore] Using default data');
+                console.log('[DataStore] Using default data for user:', currentUserId);
             }
             
             setIsLoaded(true);
@@ -196,16 +269,16 @@ export const useDataStore = () => {
                 
                 setLinks(mergedLinks);
                 setCategories(mergedCategories);
-                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ 
+                localStorage.setItem(storageKey, JSON.stringify({ 
                     links: mergedLinks, 
                     categories: mergedCategories 
                 }));
-                console.log('[DataStore] Merged with cloud data - local:', localLinks.length, '+ cloud:', cloudOnlyLinks.length, '= total:', mergedLinks.length);
+                console.log('[DataStore] Merged with cloud data - user:', currentUserId, 'local:', localLinks.length, '+ cloud:', cloudOnlyLinks.length, '= total:', mergedLinks.length);
             } else {
                 // 云端无数据，上传本地数据
                 const success = await pushToCloud(localLinks, localCategories);
                 if (success) {
-                    console.log('[DataStore] Local data uploaded to cloud');
+                    console.log('[DataStore] Local data uploaded to cloud for user:', currentUserId);
                 }
             }
             
@@ -213,7 +286,7 @@ export const useDataStore = () => {
         };
         
         init();
-    }, [pullFromCloud, pushToCloud, loadLinkIcons]);
+    }, [pullFromCloud, pushToCloud, loadLinkIcons, currentUserId, getStorageKey]);
 
     // 修改后的 updateData - 同时更新本地和云端
     const updateData = useCallback((newLinks: LinkItem[], newCategories: Category[]) => {
@@ -221,14 +294,15 @@ export const useDataStore = () => {
         setLinks(newLinks);
         setCategories(newCategories);
 
-        // 2. Save to Local Cache
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ links: newLinks, categories: newCategories }));
+        // 2. Save to Local Cache (按用户维度)
+        const storageKey = getStorageKey();
+        localStorage.setItem(storageKey, JSON.stringify({ links: newLinks, categories: newCategories }));
         
         // 3. Sync to Cloud (debounced) - 只在初始化完成后同步
         if (isInitializedRef.current) {
             debouncedSync(newLinks, newCategories);
         }
-    }, [debouncedSync]);
+    }, [debouncedSync, getStorageKey]);
 
     const addLink = useCallback((data: Omit<LinkItem, 'id' | 'createdAt'>) => {
         let processedUrl = data.url;
@@ -441,6 +515,7 @@ export const useDataStore = () => {
         reorderPinnedLinks,
         deleteCategory,
         deleteCategories,
-        importData
+        importData,
+        currentUserId
     };
 };

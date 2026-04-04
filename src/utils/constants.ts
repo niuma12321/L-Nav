@@ -36,6 +36,10 @@ export const STORAGE_KEYS = {
   LAST_SYNC: 'ynav_last_sync',
   WEBMASTER_UNLOCKED: 'ynav_webmaster_unlocked',
 
+  // 用户系统 - 新增
+  CURRENT_USER: 'ynav_current_user',
+  USER_PROFILES: 'ynav_user_profiles',
+
   // 隐私保险箱
   PRIVATE_VAULT: 'ynav_private_vault_v1',
   PRIVACY_PASSWORD: 'ynav_privacy_password',
@@ -57,6 +61,8 @@ export const FAVICON_CACHE_KEY = STORAGE_KEYS.FAVICON_CACHE;
 export const SITE_SETTINGS_KEY = STORAGE_KEYS.SITE_SETTINGS;
 export const THEME_KEY = STORAGE_KEYS.THEME;
 
+export const CURRENT_USER_KEY = STORAGE_KEYS.CURRENT_USER;
+export const USER_PROFILES_KEY = STORAGE_KEYS.USER_PROFILES;
 export const DEVICE_ID_KEY = STORAGE_KEYS.DEVICE_ID;
 export const DEVICE_INFO_KEY = STORAGE_KEYS.DEVICE_INFO;
 export const SYNC_META_KEY = STORAGE_KEYS.SYNC_META;
@@ -247,4 +253,151 @@ export const getFormattedDeviceName = (deviceId?: string): string => {
   if (!deviceId) return '未知设备';
   const info = getDeviceInfo();
   return `${info.browser} (${info.os})`;
+};
+
+// ==============================================
+// 👤 用户系统 - 按用户维度存储数据
+// ==============================================
+
+/** 用户配置接口 */
+export interface UserProfile {
+  id: string;
+  name: string;
+  avatar?: string;
+  createdAt: number;
+  lastActiveAt: number;
+}
+
+/**
+ * 获取当前用户ID
+ */
+export const getCurrentUserId = (): string | null => {
+  if (!isBrowser) return null;
+  return localStorage.getItem(CURRENT_USER_KEY);
+};
+
+/**
+ * 设置当前用户
+ */
+export const setCurrentUser = (userId: string, userName?: string): void => {
+  if (!isBrowser) return;
+  
+  // 保存当前用户
+  localStorage.setItem(CURRENT_USER_KEY, userId);
+  
+  // 更新或创建用户配置
+  const profiles = getUserProfiles();
+  const existing = profiles.find(p => p.id === userId);
+  
+  if (!existing) {
+    const newProfile: UserProfile = {
+      id: userId,
+      name: userName || `用户 ${userId.slice(-4)}`,
+      createdAt: Date.now(),
+      lastActiveAt: Date.now()
+    };
+    profiles.push(newProfile);
+    localStorage.setItem(USER_PROFILES_KEY, JSON.stringify(profiles));
+  } else {
+    // 更新最后活跃时间
+    existing.lastActiveAt = Date.now();
+    localStorage.setItem(USER_PROFILES_KEY, JSON.stringify(profiles));
+  }
+};
+
+/**
+ * 获取所有用户配置
+ */
+export const getUserProfiles = (): UserProfile[] => {
+  if (!isBrowser) return [];
+  
+  const stored = localStorage.getItem(USER_PROFILES_KEY);
+  if (!stored) return [];
+  
+  try {
+    return JSON.parse(stored);
+  } catch {
+    return [];
+  }
+};
+
+/**
+ * 获取当前用户的存储键前缀
+ */
+export const getUserStoragePrefix = (): string => {
+  const userId = getCurrentUserId();
+  if (!userId) return '';
+  return `user_${userId}_`;
+};
+
+/**
+ * 获取带用户前缀的存储键
+ */
+export const getUserStorageKey = (baseKey: string): string => {
+  const prefix = getUserStoragePrefix();
+  if (!prefix) return baseKey;
+  return `${prefix}${baseKey}`;
+};
+
+/**
+ * 安全获取用户数据
+ */
+export const getUserData = <T>(key: string, defaultValue: T): T => {
+  if (!isBrowser) return defaultValue;
+  
+  const userKey = getUserStorageKey(key);
+  const stored = localStorage.getItem(userKey);
+  
+  if (!stored) return defaultValue;
+  
+  try {
+    return JSON.parse(stored);
+  } catch {
+    return defaultValue;
+  }
+};
+
+/**
+ * 安全设置用户数据
+ */
+export const setUserData = <T>(key: string, value: T): void => {
+  if (!isBrowser) return;
+  
+  const userKey = getUserStorageKey(key);
+  localStorage.setItem(userKey, JSON.stringify(value));
+};
+
+/**
+ * 清除用户数据
+ */
+export const clearUserData = (key: string): void => {
+  if (!isBrowser) return;
+  
+  const userKey = getUserStorageKey(key);
+  localStorage.removeItem(userKey);
+};
+
+/**
+ * 初始化默认用户 (首次访问)
+ */
+export const initDefaultUser = (): string => {
+  const existingUser = getCurrentUserId();
+  if (existingUser) return existingUser;
+  
+  // 生成默认用户ID
+  const defaultUserId = `default_${Date.now()}`;
+  setCurrentUser(defaultUserId, '默认用户');
+  
+  return defaultUserId;
+};
+
+/**
+ * 切换用户并迁移数据
+ */
+export const switchUser = (userId: string): void => {
+  setCurrentUser(userId);
+  // 强制刷新页面以加载新用户的数据
+  if (isBrowser) {
+    window.location.reload();
+  }
 };

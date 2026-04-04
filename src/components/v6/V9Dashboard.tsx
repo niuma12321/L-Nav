@@ -1191,7 +1191,6 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
     { id: 'dashboard', label: '控制台', icon: LayoutDashboard },
     { id: 'resources', label: '资源中心', icon: FolderOpen },
     { id: 'rss', label: 'RSS阅读', icon: Rss },
-    { id: 'widgets', label: '组件配置', icon: Grid3X3 },
     { id: 'automation', label: '自动化调度', icon: RefreshCw },
     { id: 'smart-home', label: '智能家居', icon: House },
     { id: 'labs', label: '实验室', icon: FlaskConical },
@@ -1260,28 +1259,6 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
 
             {/* 右侧操作区 */}
             <div className="flex items-center gap-2">
-              {/* 编辑布局按钮 */}
-              <button
-                onClick={toggleEditMode}
-                className={`hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl transition-all ${
-                  editMode 
-                    ? 'bg-emerald-500 text-[#0d0e10] font-semibold' 
-                    : 'text-slate-400 hover:text-white hover:bg-white/5'
-                }`}
-              >
-                <Grid3X3 className="w-4 h-4" />
-                <span className="text-sm font-medium">{editMode ? '完成' : '编辑'}</span>
-              </button>
-
-              {/* 导航菜单编辑按钮 */}
-              <button
-                onClick={() => setNavEditModalOpen(true)}
-                className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all"
-              >
-                <Menu className="w-4 h-4" />
-                <span className="text-sm font-medium">菜单</span>
-              </button>
-
               {/* 主题切换 */}
               <button className="p-2 rounded-xl text-slate-400 hover:text-emerald-400 hover:bg-white/5 transition-all">
                 <Monitor className="w-5 h-5" />
