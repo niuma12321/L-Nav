@@ -1,7 +1,6 @@
 import { getAssetFromKV, serveSinglePageApp } from '@cloudflare/kv-asset-handler';
 import automation, { automationScheduled } from './routes/automation';
 import smartHome from './routes/smart-home';
-import notifications from './routes/notifications';
 
 export interface Env {
   YNAV_WORKER_KV: KVNamespace;
@@ -204,19 +203,9 @@ async function handleAPI(request: Request, env: Env, ctx: ExecutionContext): Pro
     return smartHome.fetch(request, env, ctx);
   }
 
-  // 通知中心 API
+  // 通知中心 API - 直接在主路由中处理
   if (path.startsWith('/api/v1/notifications')) {
-    try {
-      // 直接使用原始请求调用 Hono 路由
-      const response = await notifications.fetch(request, env, ctx);
-      return response;
-    } catch (err: any) {
-      console.error('[Notifications Route Error]', err);
-      return new Response(JSON.stringify({ error: err.message }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
-    }
+    return handleNotificationsAPI(request, env, ctx);
   }
 
   return new Response(JSON.stringify({ error: 'Not found' }), {
@@ -775,6 +764,187 @@ async function handleProxyAPI(request: Request): Promise<Response> {
     return new Response(JSON.stringify({ 
       error: error instanceof Error ? error.message : 'Proxy request failed'
     }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+}
+
+// 通知中心 API - 直接在主路由中处理
+async function handleNotificationsAPI(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  const url = new URL(request.url);
+  const path = url.pathname;
+  const method = request.method;
+  
+  try {
+    // GET /api/v1/notifications/settings
+    if (path === '/api/v1/notifications/settings' && method === 'GET') {
+      const userId = url.searchParams.get('userId');
+      if (!userId) {
+        return new Response(JSON.stringify({ error: 'missing userId' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
+      let settings = await env.YNAV_D1.prepare(
+        'SELECT * FROM notification_settings WHERE user_id = ?'
+      ).bind(userId).first();
+
+      // 如果没有配置，返回默认值
+      if (!settings) {
+        settings = {
+          user_id: userId,
+          email_to: '',
+          smtp_host: '',
+          smtp_port: 465,
+          smtp_user: '',
+          smtp_pass: '',
+          vapid_public_key: '',
+          vapid_private_key: '',
+          webhook_url: '',
+          webhook_headers: '{}',
+          feishu_webhook: '',
+          feishu_secret: '',
+          dingtalk_webhook: '',
+          dingtalk_secret: '',
+          wecom_webhook: '',
+          serverchan_sckey: '',
+          success_browser: 1,
+          success_email: 0,
+          success_webhook: 0,
+          success_feishu: 0,
+          success_dingtalk: 0,
+          success_wecom: 0,
+          success_wechat: 0,
+          fail_browser: 1,
+          fail_email: 1,
+          fail_webhook: 1,
+          fail_feishu: 1,
+          fail_dingtalk: 1,
+          fail_wecom: 1,
+          fail_wechat: 1,
+          alert_browser: 1,
+          alert_email: 1,
+          alert_webhook: 1,
+          alert_feishu: 1,
+          alert_dingtalk: 1,
+          alert_wecom: 1,
+          alert_wechat: 1,
+          notice_browser: 1,
+          notice_email: 0,
+          notice_webhook: 0,
+          notice_feishu: 0,
+          notice_dingtalk: 0,
+          notice_wecom: 0,
+          notice_wechat: 0,
+        };
+      }
+
+      return new Response(JSON.stringify(settings), {
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
+    // GET /api/v1/notifications/unread-count
+    if (path === '/api/v1/notifications/unread-count' && method === 'GET') {
+      const userId = url.searchParams.get('userId');
+      if (!userId) {
+        return new Response(JSON.stringify({ count: 0 }), {
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
+      const result = await env.YNAV_D1.prepare(
+        'SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0'
+      ).bind(userId).first();
+
+      return new Response(JSON.stringify({ count: result?.count || 0 }), {
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
+    // GET /api/v1/notifications - 获取通知列表
+    if (path === '/api/v1/notifications' && method === 'GET') {
+      const userId = url.searchParams.get('userId');
+      const isRead = url.searchParams.get('isRead');
+      const type = url.searchParams.get('type');
+      const limit = Number(url.searchParams.get('limit')) || 50;
+      const offset = Number(url.searchParams.get('offset')) || 0;
+
+      if (!userId) {
+        return new Response(JSON.stringify({ error: 'missing userId' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
+      let query = 'SELECT * FROM notifications WHERE user_id = ?';
+      const params: any[] = [userId];
+
+      if (isRead !== null) {
+        query += ' AND is_read = ?';
+        params.push(isRead === '1' ? 1 : 0);
+      }
+
+      if (type) {
+        query += ' AND type = ?';
+        params.push(type);
+      }
+
+      query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+      params.push(limit, offset);
+
+      const { results } = await env.YNAV_D1.prepare(query).bind(...params).all();
+
+      const unreadResult = await env.YNAV_D1.prepare(
+        'SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0'
+      ).bind(userId).first();
+
+      return new Response(JSON.stringify({
+        notifications: results,
+        unreadCount: unreadResult?.count || 0,
+        total: results.length
+      }), {
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
+    // POST /api/v1/notifications/settings - 保存配置
+    if (path === '/api/v1/notifications/settings' && method === 'POST') {
+      const body = await request.json() as any;
+      const { userId, ...data } = body;
+      if (!userId) {
+        return new Response(JSON.stringify({ error: 'missing userId' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
+      const keys = Object.keys(data);
+      const values = Object.values(data);
+
+      const columns = ['user_id', ...keys].join(', ');
+      const placeholders = values.map(() => '?').join(', ');
+
+      await env.YNAV_D1.prepare(
+        `INSERT OR REPLACE INTO notification_settings (${columns}) VALUES (?, ${placeholders})`
+      ).bind(userId, ...values).run();
+
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
+    // 未匹配的路由返回 404
+    return new Response(JSON.stringify({ error: 'Not found' }), {
+      status: 404,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+
+  } catch (err: any) {
+    console.error('[Notifications API Error]', err);
+    return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
