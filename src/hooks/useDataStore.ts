@@ -18,6 +18,17 @@ export const useDataStore = () => {
     const { notify } = useDialog();
     const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const isFirstLoadRef = useRef(true);
+    const linksRef = useRef<LinkItem[]>([]);
+    const categoriesRef = useRef<Category[]>([]);
+
+    // 保持 refs 同步
+    useEffect(() => {
+        linksRef.current = links;
+    }, [links]);
+
+    useEffect(() => {
+        categoriesRef.current = categories;
+    }, [categories]);
 
     // 数据监控：确保数据永远不会为空
     useEffect(() => {
@@ -167,8 +178,10 @@ export const useDataStore = () => {
                 // 如果云端有数据，合并到本地
                 if (cloudLinks.length > 0 || cloudCategories.length > 0) {
                     // 合并策略：以云端为准，本地补充
-                    const mergedLinks = mergeLinks(links, cloudLinks);
-                    const mergedCategories = mergeCategories(categories, cloudCategories);
+                    const currentLinks = linksRef.current;
+                    const currentCategories = categoriesRef.current;
+                    const mergedLinks = mergeLinks(currentLinks, cloudLinks);
+                    const mergedCategories = mergeCategories(currentCategories, cloudCategories);
                     
                     setLinks(mergedLinks);
                     setCategories(mergedCategories);
@@ -188,7 +201,7 @@ export const useDataStore = () => {
         } finally {
             setIsSyncing(false);
         }
-    }, [links, categories, mergeLinks, mergeCategories, pushToCloud]);
+    }, [mergeLinks, mergeCategories, pushToCloud]);
 
     // 初始化加载：先本地，后云端同步
     useEffect(() => {
@@ -234,7 +247,7 @@ export const useDataStore = () => {
         };
         
         loadData();
-    }, [pullFromCloud, loadLinkIcons]);
+    }, []);
 
     // 修改后的 updateData - 同时更新本地和云端
     const updateData = useCallback((newLinks: LinkItem[], newCategories: Category[]) => {

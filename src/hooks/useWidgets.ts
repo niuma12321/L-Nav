@@ -21,6 +21,12 @@ export function useWidgets(): UseWidgetsReturn {
   const [isSyncing, setIsSyncing] = useState(false);
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isFirstLoadRef = useRef(true);
+  const widgetsRef = useRef<WidgetConfig[]>([]);
+
+  // 保持 refs 同步
+  useEffect(() => {
+    widgetsRef.current = widgets;
+  }, [widgets]);
 
   // 合并小组件（云端优先，补充本地独有）
   const mergeWidgets = useCallback((local: WidgetConfig[], cloud: WidgetConfig[]): WidgetConfig[] => {
@@ -90,7 +96,8 @@ export function useWidgets(): UseWidgetsReturn {
         
         // 如果云端有数据，合并到本地
         if (cloudWidgets.length > 0) {
-          const mergedWidgets = mergeWidgets(widgets, cloudWidgets);
+          const currentWidgets = widgetsRef.current;
+          const mergedWidgets = mergeWidgets(currentWidgets, cloudWidgets);
           
           setWidgets(mergedWidgets);
           localStorage.setItem(WIDGET_STORAGE_KEY, JSON.stringify(mergedWidgets));
@@ -106,7 +113,7 @@ export function useWidgets(): UseWidgetsReturn {
     } finally {
       setIsSyncing(false);
     }
-  }, [widgets, mergeWidgets, pushToCloud]);
+  }, [mergeWidgets, pushToCloud]);
 
   // 从 localStorage 加载小组件配置
   useEffect(() => {
@@ -132,7 +139,7 @@ export function useWidgets(): UseWidgetsReturn {
       // 从云端拉取并合并
       (async () => { await pullFromCloud(); })();
     }
-  }, [pullFromCloud]);
+  }, []);
 
   // 保存到 localStorage 并同步到云端
   useEffect(() => {
