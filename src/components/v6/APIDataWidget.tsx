@@ -221,7 +221,8 @@ export const APIDataWidget: React.FC<APIDataWidgetProps> = ({ config }) => {
         clearInterval(intervalId);
       }
     };
-  }, [fetchData, config.refreshInterval]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [config.apiUrl, config.refreshInterval]); // 只依赖 API URL 和刷新间隔
 
   const renderContent = () => {
     if (loading && data.length === 0) {
