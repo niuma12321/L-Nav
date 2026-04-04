@@ -859,6 +859,11 @@ function App() {
     notify('备份已删除', 'success');
   }, [notify]);
 
+  const handleSyncPasswordChange = useCallback((password: string) => {
+    setSyncPassword(password);
+    notify('同步密码已更新', 'success');
+  }, [setSyncPassword, notify]);
+
   const handleTogglePrivacyGroup = useCallback((enabled: boolean) => {
     setPrivacyGroupEnabled(enabled);
     localStorage.setItem(PRIVACY_GROUP_ENABLED_KEY, enabled ? '1' : '0');
