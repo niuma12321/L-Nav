@@ -977,15 +977,13 @@ async function handleNotificationsAPI(request: Request, env: Env, ctx: Execution
       }
 
       // 获取用户设置
-      let settings = await env.YNAV_D1.prepare(
+      let dbSettings = await env.YNAV_D1.prepare(
         'SELECT * FROM notification_settings WHERE user_id = ?'
       ).bind(userId).first();
 
-      // 如果没有数据库设置，尝试从请求中获取测试配置
-      if (!settings) {
-        settings = body.settings || {};
-        console.log('[Test Push] No DB settings, using request settings:', Object.keys(settings));
-      }
+      // 优先使用请求中传递的最新设置（合并数据库和请求的设置）
+      const settings = { ...dbSettings, ...body.settings };
+      console.log('[Test Push] Merged settings, using telegram_chat_id:', settings.telegram_chat_id);
 
       const title = 'L-Nav 测试推送';
       const content = `这是一条通过 [${channel}] 渠道发送的测试通知`;
