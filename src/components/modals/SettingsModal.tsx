@@ -222,7 +222,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             onClick={handleSave}
             disabled={readOnly}
             title={readOnly ? '站长模式：访客只读，需验证站长密码后才能保存' : undefined}
-            className="w-full bg-slate-900 dark:bg-accent text-white font-bold py-3.5 px-4 rounded-xl hover:bg-slate-800 dark:hover:bg-accent/90 transition-all shadow-lg shadow-slate-200 dark:shadow-none active:scale-[0.99] text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-slate-900 dark:bg-emerald-500 text-white font-bold py-3.5 px-4 rounded-xl hover:bg-slate-800 dark:hover:bg-emerald-400 transition-all shadow-lg shadow-slate-200 dark:shadow-none active:scale-[0.99] text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Save size={16} />
             <span>保存设置</span>

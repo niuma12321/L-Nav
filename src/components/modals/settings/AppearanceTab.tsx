@@ -383,7 +383,7 @@ const AppearanceTab: React.FC<AppearanceTabProps> = React.memo(({ settings, onCh
               placeholder="https://example.com/background.jpg"
               className={`flex-1 px-4 py-2.5 rounded-xl text-sm border transition-all ${
                 isBackgroundEnabled
-                  ? 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none'
+                  ? 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none'
                   : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed opacity-70'
               }`}
             />
