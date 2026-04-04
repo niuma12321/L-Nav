@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Loader2, RefreshCw, Globe, AlertCircle, FileText, X, ExternalLink } from 'lucide-react';
+import { Loader2, RefreshCw, Globe, AlertCircle, FileText, ExternalLink } from 'lucide-react';
 import type { APIDataConfig } from './widgetTypes';
+import { getRenderer } from './APIRenderers';
 
 interface APIDataWidgetProps {
   config: APIDataConfig;
@@ -254,6 +255,14 @@ export const APIDataWidget: React.FC<APIDataWidgetProps> = ({ config }) => {
           {config.emptyText || '暂无数据'}
         </div>
       );
+    }
+
+    // 如果配置了自定义渲染器，优先使用
+    if (config.renderer) {
+      const CustomRenderer = getRenderer(config.renderer);
+      if (CustomRenderer) {
+        return <CustomRenderer data={data} />;
+      }
     }
 
     // HTML纯文本显示

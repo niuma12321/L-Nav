@@ -181,6 +181,9 @@ export interface APIDataConfig {
   };
   maxItems: number;
   emptyText: string;
+  // 自定义渲染器标识，如 '60s-news', 'douyin-hot', 'bing-wallpaper' 等
+  // 如果指定了 renderer，将使用对应的自定义渲染组件替代默认 displayType 渲染
+  renderer?: string;
 }
 
 export interface CustomAPIWidgetSettings {
@@ -250,6 +253,7 @@ export const API_60S_PERIODIC: API60sPreset[] = [
       refreshInterval: 3600,
       dataPath: 'data.news',
       displayType: 'list',
+      renderer: '60s-news',
       fields: { title: '' },
       maxItems: 15,
       emptyText: '今日资讯加载中...'
@@ -270,6 +274,7 @@ export const API_60S_PERIODIC: API60sPreset[] = [
       refreshInterval: 3600,
       dataPath: 'data',
       displayType: 'list',
+      renderer: 'ai-news',
       fields: { title: 'title', value: 'source', link: 'link' },
       maxItems: 10,
       emptyText: 'AI资讯加载中...'
@@ -290,6 +295,7 @@ export const API_60S_PERIODIC: API60sPreset[] = [
       refreshInterval: 1800,
       dataPath: 'data',
       displayType: 'list',
+      renderer: 'it-news',
       fields: { title: 'title', value: 'time', link: 'link' },
       maxItems: 10,
       emptyText: 'IT资讯加载中...'
@@ -310,6 +316,7 @@ export const API_60S_PERIODIC: API60sPreset[] = [
       refreshInterval: 7200,
       dataPath: 'data',
       displayType: 'card',
+      renderer: 'bing-wallpaper',
       fields: { title: 'title', image: 'cover', subtitle: 'description' },
       maxItems: 1,
       emptyText: '壁纸加载中...'
@@ -330,6 +337,7 @@ export const API_60S_PERIODIC: API60sPreset[] = [
       refreshInterval: 3600,
       dataPath: 'data',
       displayType: 'table',
+      renderer: 'exchange-rate',
       fields: { title: 'currency', value: 'rate', subtitle: 'update_time' },
       maxItems: 10,
       emptyText: '汇率加载中...'
@@ -350,6 +358,7 @@ export const API_60S_PERIODIC: API60sPreset[] = [
       refreshInterval: 3600,
       dataPath: 'data.items',
       displayType: 'list',
+      renderer: 'history-today',
       fields: { title: 'title', subtitle: 'year', value: 'description', link: 'link' },
       maxItems: 5,
       emptyText: '历史事件加载中...'
@@ -370,6 +379,7 @@ export const API_60S_PERIODIC: API60sPreset[] = [
       refreshInterval: 86400,
       dataPath: 'data',
       displayType: 'media-list',
+      renderer: 'epic-games',
       fields: { title: 'title', image: 'cover', subtitle: 'description', value: 'end_date', link: 'link' },
       maxItems: 5,
       emptyText: '游戏列表加载中...'
@@ -394,6 +404,7 @@ export const API_60S_UTILITY: API60sPreset[] = [
       refreshInterval: 1800,
       dataPath: 'data',
       displayType: 'table',
+      renderer: 'gold-price',
       fields: { title: 'name', value: 'price', subtitle: 'change' },
       maxItems: 10,
       emptyText: '金价加载中...'
@@ -414,6 +425,7 @@ export const API_60S_UTILITY: API60sPreset[] = [
       refreshInterval: 3600,
       dataPath: 'data',
       displayType: 'table',
+      renderer: 'oil-price',
       fields: { title: 'region', value: 'price_92', subtitle: 'price_95' },
       maxItems: 10,
       emptyText: '油价加载中...'
@@ -434,6 +446,7 @@ export const API_60S_UTILITY: API60sPreset[] = [
       refreshInterval: 3600,
       dataPath: 'data',
       displayType: 'text',
+      renderer: 'moyu-daily',
       fields: { title: 'content' },
       maxItems: 1,
       emptyText: '摸鱼日报加载中...'
@@ -454,6 +467,7 @@ export const API_60S_UTILITY: API60sPreset[] = [
       refreshInterval: 1800,
       dataPath: 'data',
       displayType: 'card',
+      renderer: 'weather',
       fields: { title: 'city', value: 'temp', subtitle: 'weather', image: 'icon' },
       maxItems: 1,
       emptyText: '天气加载中...'
@@ -474,6 +488,7 @@ export const API_60S_UTILITY: API60sPreset[] = [
       refreshInterval: 3600,
       dataPath: 'data.forecast',
       displayType: 'list',
+      renderer: 'weather-forecast',
       fields: { title: 'date', value: 'temp', subtitle: 'weather' },
       maxItems: 3,
       emptyText: '天气预报加载中...'
@@ -494,6 +509,7 @@ export const API_60S_UTILITY: API60sPreset[] = [
       refreshInterval: 0,
       dataPath: 'data',
       displayType: 'text',
+      renderer: 'ip-info',
       fields: { title: 'ip', subtitle: 'location' },
       maxItems: 1,
       emptyText: 'IP信息加载中...'
@@ -518,6 +534,7 @@ export const API_60S_TRENDING: API60sPreset[] = [
       refreshInterval: 600,
       dataPath: 'data',
       displayType: 'media-list',
+      renderer: 'douyin-hot',
       fields: { title: 'title', value: 'hot_value', image: 'cover', link: 'link', subtitle: 'active_time' },
       maxItems: 10,
       emptyText: '热搜加载中...'
@@ -538,6 +555,7 @@ export const API_60S_TRENDING: API60sPreset[] = [
       refreshInterval: 600,
       dataPath: 'data',
       displayType: 'list',
+      renderer: 'xiaohongshu-hot',
       fields: { title: 'title', value: 'score', link: 'link' },
       maxItems: 10,
       emptyText: '热点加载中...'
@@ -558,6 +576,7 @@ export const API_60S_TRENDING: API60sPreset[] = [
       refreshInterval: 600,
       dataPath: 'data',
       displayType: 'list',
+      renderer: 'bilibili-hot',
       fields: { title: 'title', value: 'hot_value', link: 'link' },
       maxItems: 10,
       emptyText: '热搜加载中...'
@@ -578,6 +597,7 @@ export const API_60S_TRENDING: API60sPreset[] = [
       refreshInterval: 300,
       dataPath: 'data',
       displayType: 'list',
+      renderer: 'weibo-hot',
       fields: { title: 'title', value: 'hot_value', link: 'link' },
       maxItems: 10,
       emptyText: '热搜加载中...'
@@ -598,6 +618,7 @@ export const API_60S_TRENDING: API60sPreset[] = [
       refreshInterval: 600,
       dataPath: 'data',
       displayType: 'list',
+      renderer: 'zhihu-hot',
       fields: { title: 'title', value: 'hot_value_desc', link: 'link' },
       maxItems: 10,
       emptyText: '话题加载中...'
@@ -618,6 +639,7 @@ export const API_60S_TRENDING: API60sPreset[] = [
       refreshInterval: 300,
       dataPath: 'data',
       displayType: 'list',
+      renderer: 'baidu-hot',
       fields: { title: 'title', value: 'hot_value', link: 'link' },
       maxItems: 10,
       emptyText: '热搜加载中...'
@@ -638,6 +660,7 @@ export const API_60S_TRENDING: API60sPreset[] = [
       refreshInterval: 300,
       dataPath: 'data',
       displayType: 'list',
+      renderer: 'quark-hot',
       fields: { title: 'title', value: 'hot_value', link: 'link' },
       maxItems: 10,
       emptyText: '热点加载中...'
@@ -658,6 +681,7 @@ export const API_60S_TRENDING: API60sPreset[] = [
       refreshInterval: 600,
       dataPath: 'data',
       displayType: 'list',
+      renderer: 'dongchedi-hot',
       fields: { title: 'title', value: 'hot_value', link: 'link' },
       maxItems: 10,
       emptyText: '热搜加载中...'
@@ -678,6 +702,7 @@ export const API_60S_TRENDING: API60sPreset[] = [
       refreshInterval: 300,
       dataPath: 'data',
       displayType: 'list',
+      renderer: 'toutiao-hot',
       fields: { title: 'title', value: 'hot_value', link: 'link' },
       maxItems: 10,
       emptyText: '热搜加载中...'
@@ -698,6 +723,7 @@ export const API_60S_TRENDING: API60sPreset[] = [
       refreshInterval: 600,
       dataPath: 'data',
       displayType: 'list',
+      renderer: 'hackernews-hot',
       fields: { title: 'title', value: 'points', link: 'link' },
       maxItems: 10,
       emptyText: '热帖加载中...'
@@ -722,6 +748,7 @@ export const API_60S_ENTERTAINMENT: API60sPreset[] = [
       refreshInterval: 0,
       dataPath: 'data',
       displayType: 'text',
+      renderer: 'random-quote',
       fields: { title: 'hitokoto', subtitle: 'from' },
       maxItems: 1,
       emptyText: '一言加载中...'
@@ -742,6 +769,7 @@ export const API_60S_ENTERTAINMENT: API60sPreset[] = [
       refreshInterval: 0,
       dataPath: 'data',
       displayType: 'text',
+      renderer: 'random-joke',
       fields: { title: 'content' },
       maxItems: 1,
       emptyText: '段子加载中...'
@@ -762,6 +790,7 @@ export const API_60S_ENTERTAINMENT: API60sPreset[] = [
       refreshInterval: 0,
       dataPath: 'data',
       displayType: 'text',
+      renderer: 'random-cold-joke',
       fields: { title: 'content' },
       maxItems: 1,
       emptyText: '冷笑话加载中...'
@@ -782,6 +811,7 @@ export const API_60S_ENTERTAINMENT: API60sPreset[] = [
       refreshInterval: 0,
       dataPath: 'data',
       displayType: 'text',
+      renderer: 'random-fortune',
       fields: { title: 'fortune', subtitle: 'lucky_color' },
       maxItems: 1,
       emptyText: '运势加载中...'
@@ -802,6 +832,7 @@ export const API_60S_ENTERTAINMENT: API60sPreset[] = [
       refreshInterval: 0,
       dataPath: 'data',
       displayType: 'text',
+      renderer: 'kfc-v50',
       fields: { title: 'content' },
       maxItems: 1,
       emptyText: '文案加载中...'
