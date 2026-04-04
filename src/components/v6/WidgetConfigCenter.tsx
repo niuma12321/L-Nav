@@ -262,7 +262,6 @@ const WidgetSettingsModal: React.FC<{
 const WidgetConfigCenter: React.FC = () => {
   const { widgets, toggleWidget, updateWidgetPosition, addWidget, removeWidget, updateWidget } = useWidgetSystem();
   const [previewMode, setPreviewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
-  const [showAddWidgetModal, setShowAddWidgetModal] = useState(false);
   const [show60sAPIModal, setShow60sAPIModal] = useState(false);
   const [editingWidget, setEditingWidget] = useState<WidgetConfig | null>(null);
   const [settingsWidget, setSettingsWidget] = useState<WidgetConfig | null>(null);
@@ -410,12 +409,10 @@ const WidgetConfigCenter: React.FC = () => {
     }
     setApiConfigTab('basic');
     setHeadersRawMode(false);
-    setShowAddWidgetModal(true);
   };
 
   // 关闭弹窗时重置表单
   const handleCloseModal = () => {
-    setShowAddWidgetModal(false);
     setEditingWidget(null);
     setIsEditingCustomAPI(false);
     setEditingWidgetId(null);
