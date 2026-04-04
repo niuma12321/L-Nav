@@ -167,7 +167,9 @@ export interface APIDataConfig {
   apiUrl: string;
   method: 'GET' | 'POST';
   headers?: Record<string, string>;
-  body?: string;
+  body?: any;
+  bodyType?: 'none' | 'json' | 'form-data' | 'x-www-form-urlencoded';
+  queryParams?: Array<{ key: string; value: string }>;
   refreshInterval: number; // 秒，0表示不自动刷新
   dataPath: string; // 数据路径，如 'data.items' 或 'results'
   displayType: 'list' | 'table' | 'card' | 'text';

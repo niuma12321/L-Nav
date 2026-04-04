@@ -355,29 +355,58 @@ const WidgetConfigCenter: React.FC = () => {
         setApiHeaders('');
       }
       
-      // 解析body
+      // 解析body和bodyType
+      if (api.bodyType) {
+        setBodyType(api.bodyType);
+      } else if (api.body) {
+        // 兼容旧数据，根据body类型推断
+        if (typeof api.body === 'string') {
+          setBodyType('json');
+        } else if (typeof api.body === 'object') {
+          setBodyType('json');
+        } else {
+          setBodyType('none');
+        }
+      } else {
+        setBodyType(api.method === 'GET' || api.method === 'DELETE' ? 'none' : 'json');
+      }
+      
       if (api.body) {
         if (typeof api.body === 'string') {
           try {
             const parsed = JSON.parse(api.body);
-            setBodyType('json');
             setBodyRawJson(JSON.stringify(parsed, null, 2));
           } catch {
-            setBodyType('none');
-            setBodyRawJson('');
+            setBodyRawJson(api.body);
           }
         } else if (typeof api.body === 'object') {
-          setBodyType('json');
           setBodyRawJson(JSON.stringify(api.body, null, 2));
         }
       } else {
-        setBodyType(api.method === 'GET' || api.method === 'DELETE' ? 'none' : 'json');
         setBodyRawJson('');
       }
       setBodyFormData([]);
       
-      // Query参数从URL解析
-      setQueryParams([]);
+      // Query参数从配置加载或从URL解析
+      if (api.queryParams && api.queryParams.length > 0) {
+        setQueryParams(api.queryParams.map((p, index) => ({
+          id: `param-${index}-${Date.now()}`,
+          key: p.key,
+          value: p.value
+        })));
+      } else {
+        // 尝试从URL解析query参数
+        try {
+          const urlObj = new URL(api.apiUrl);
+          const params: Array<{ key: string; value: string; id: string }> = [];
+          urlObj.searchParams.forEach((value, key) => {
+            params.push({ id: `param-${params.length}-${Date.now()}`, key, value });
+          });
+          setQueryParams(params);
+        } catch {
+          setQueryParams([]);
+        }
+      }
     }
     setApiConfigTab('basic');
     setHeadersRawMode(false);
@@ -501,6 +530,8 @@ const WidgetConfigCenter: React.FC = () => {
         method: apiMethod,
         headers: Object.keys(parsedHeaders).length > 0 ? parsedHeaders : undefined,
         body: parsedBody,
+        bodyType: bodyType,
+        queryParams: validParams.map(p => ({ key: p.key.trim(), value: p.value })),
         refreshInterval: refreshInterval,
         dataPath: dataPath || '',
         displayType: displayType as any,
@@ -521,7 +552,10 @@ const WidgetConfigCenter: React.FC = () => {
           ...editingWidget,
           title: newWidgetTitle,
           description: newWidgetDesc,
-          settings: { api: apiConfig }
+          settings: { 
+            ...editingWidget.settings,
+            api: apiConfig 
+          }
         };
         updateWidget(updatedWidget);
       } else {
