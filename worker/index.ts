@@ -82,6 +82,65 @@ async function initializeDB(db: D1Database): Promise<void> {
       event_data TEXT,
       created_at INTEGER DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT DEFAULT 'default',
+      type TEXT,
+      title TEXT NOT NULL,
+      content TEXT,
+      related_type TEXT,
+      related_id TEXT,
+      is_read INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS notification_settings (
+      user_id TEXT PRIMARY KEY,
+      email_to TEXT DEFAULT '',
+      smtp_host TEXT DEFAULT '',
+      smtp_port INTEGER DEFAULT 465,
+      smtp_user TEXT DEFAULT '',
+      smtp_pass TEXT DEFAULT '',
+      vapid_public_key TEXT DEFAULT '',
+      vapid_private_key TEXT DEFAULT '',
+      webhook_url TEXT DEFAULT '',
+      webhook_headers TEXT DEFAULT '{}',
+      feishu_webhook TEXT DEFAULT '',
+      feishu_secret TEXT DEFAULT '',
+      dingtalk_webhook TEXT DEFAULT '',
+      dingtalk_secret TEXT DEFAULT '',
+      wecom_webhook TEXT DEFAULT '',
+      serverchan_sckey TEXT DEFAULT '',
+      success_browser INTEGER DEFAULT 1,
+      success_email INTEGER DEFAULT 0,
+      success_webhook INTEGER DEFAULT 0,
+      success_feishu INTEGER DEFAULT 0,
+      success_dingtalk INTEGER DEFAULT 0,
+      success_wecom INTEGER DEFAULT 0,
+      success_wechat INTEGER DEFAULT 0,
+      fail_browser INTEGER DEFAULT 1,
+      fail_email INTEGER DEFAULT 1,
+      fail_webhook INTEGER DEFAULT 1,
+      fail_feishu INTEGER DEFAULT 1,
+      fail_dingtalk INTEGER DEFAULT 1,
+      fail_wecom INTEGER DEFAULT 1,
+      fail_wechat INTEGER DEFAULT 1,
+      alert_browser INTEGER DEFAULT 1,
+      alert_email INTEGER DEFAULT 1,
+      alert_webhook INTEGER DEFAULT 1,
+      alert_feishu INTEGER DEFAULT 1,
+      alert_dingtalk INTEGER DEFAULT 1,
+      alert_wecom INTEGER DEFAULT 1,
+      alert_wechat INTEGER DEFAULT 1,
+      notice_browser INTEGER DEFAULT 1,
+      notice_email INTEGER DEFAULT 0,
+      notice_webhook INTEGER DEFAULT 0,
+      notice_feishu INTEGER DEFAULT 0,
+      notice_dingtalk INTEGER DEFAULT 0,
+      notice_wecom INTEGER DEFAULT 0,
+      notice_wechat INTEGER DEFAULT 0
+    );
   `);
 }
 
