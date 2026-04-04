@@ -236,18 +236,24 @@ async function handleSyncAPI(request: Request, env: Env): Promise<Response> {
                         (categories.results && categories.results.length > 0);
 
       if (hasD1Data) {
-        // 从 KV 获取 widgets 数据（widgets 结构复杂，适合存 KV）
+        // 从 KV 获取 widgets 和 RSS 数据（结构复杂，适合存 KV）
         const kvData = await env.YNAV_WORKER_KV.get('ynav:data:v1', 'text');
         let widgets = [];
+        let rssSources = [];
+        let rssItems = [];
         if (kvData) {
           const parsed = JSON.parse(kvData);
           widgets = parsed.widgets || parsed.data?.widgets || [];
+          rssSources = parsed.rssSources || parsed.data?.rssSources || [];
+          rssItems = parsed.rssItems || parsed.data?.rssItems || [];
         }
 
         const syncData = {
           links: links.results || [],
           categories: categories.results || [],
           widgets: widgets,
+          rssSources: rssSources,
+          rssItems: rssItems,
           settings: settings || {},
           meta: { version: 1, updatedAt: Date.now(), deviceId: 'cloud' }
         };
@@ -270,14 +276,14 @@ async function handleSyncAPI(request: Request, env: Env): Promise<Response> {
       });
     }
     const parsed = JSON.parse(kvData);
-    // KV 存储格式可能是: { links, categories, ... } 或 { data: { links, categories, ... }, expectedVersion: ... }
+    // KV 存储格式可能是: { links, categories, rssSources, rssItems, ... } 或 { data: { ... }, expectedVersion: ... }
     // 提取实际的同步数据
     let responseData;
-    if (parsed.data && (parsed.data.links || parsed.data.categories)) {
-      // 格式: { data: { links, categories, ... }, expectedVersion: ... }
+    if (parsed.data && (parsed.data.links || parsed.data.categories || parsed.data.rssSources)) {
+      // 格式: { data: { links, categories, rssSources, ... }, expectedVersion: ... }
       responseData = parsed.data;
-    } else if (parsed.links || parsed.categories) {
-      // 格式: { links, categories, ... }
+    } else if (parsed.links || parsed.categories || parsed.rssSources) {
+      // 格式: { links, categories, rssSources, ... }
       responseData = parsed;
     } else {
       responseData = parsed;

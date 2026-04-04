@@ -14,84 +14,26 @@ import {
   X,
   Loader2,
   Upload,
-  FileText
+  FileText,
+  Cloud
 } from 'lucide-react';
-
-// RSS 源类型
-interface RSSSource {
-  id: string;
-  title: string;
-  url: string;
-  description?: string;
-  favicon?: string;
-  addedAt: number;
-  lastFetched?: number;
-  error?: string;
-}
-
-// RSS 条目类型
-interface RSSItem {
-  id: string;
-  title: string;
-  link: string;
-  description?: string;
-  pubDate?: string;
-  author?: string;
-  sourceId: string;
-  sourceTitle: string;
-}
-
-// 默认 RSS 源
-const DEFAULT_SOURCES: RSSSource[] = [
-  {
-    id: 'default-1',
-    title: '阮一峰的网络日志',
-    url: 'https://feeds.feedburner.com/ruanyifeng',
-    description: '科技爱好者周刊',
-    addedAt: Date.now()
-  },
-  {
-    id: 'default-2',
-    title: 'V2EX',
-    url: 'https://www.v2ex.com/index.xml',
-    description: '创意工作者社区',
-    addedAt: Date.now()
-  }
-];
+import { useRSSSync, RSSSource, RSSItem, DEFAULT_RSS_SOURCES } from '../../hooks/useRSSSync';
 
 // RSS 代理 API 端点
 const RSS_PROXY_API = '/api/v1/rss';
 
-// 本地存储键
-const RSS_SOURCES_KEY = 'ynav_rss_sources';
-const RSS_ITEMS_KEY = 'ynav_rss_items_cache';
-
 const RSSReaderViewCN: React.FC = () => {
-  // RSS 源列表
-  const [sources, setSources] = useState<RSSSource[]>(() => {
-    const saved = localStorage.getItem(RSS_SOURCES_KEY);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return DEFAULT_SOURCES;
-      }
-    }
-    return DEFAULT_SOURCES;
-  });
-
-  // RSS 条目
-  const [items, setItems] = useState<RSSItem[]>(() => {
-    const saved = localStorage.getItem(RSS_ITEMS_KEY);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return [];
-      }
-    }
-    return [];
-  });
+  // 使用云端同步 Hook
+  const { 
+    sources, 
+    items, 
+    updateSources, 
+    updateItems, 
+    markItemRead,
+    isLoading: isSyncLoading,
+    isSyncing,
+    forceSync 
+  } = useRSSSync();
 
   // 加载状态
   const [loading, setLoading] = useState(false);
@@ -113,17 +55,15 @@ const RSSReaderViewCN: React.FC = () => {
   // 展开/折叠源
   const [expandedSources, setExpandedSources] = useState<Set<string>>(new Set());
 
-  // 保存 RSS 源到本地存储
+  // 保存 RSS 源
   const saveSources = useCallback((newSources: RSSSource[]) => {
-    setSources(newSources);
-    localStorage.setItem(RSS_SOURCES_KEY, JSON.stringify(newSources));
-  }, []);
+    updateSources(newSources);
+  }, [updateSources]);
 
-  // 保存 RSS 条目到本地存储
+  // 保存 RSS 条目
   const saveItems = useCallback((newItems: RSSItem[]) => {
-    setItems(newItems);
-    localStorage.setItem(RSS_ITEMS_KEY, JSON.stringify(newItems));
-  }, []);
+    updateItems(newItems);
+  }, [updateItems]);
 
   // 解析 RSS XML
   const parseRSS = (xmlText: string, sourceId: string, sourceTitle: string): RSSItem[] => {
@@ -516,6 +456,17 @@ const RSSReaderViewCN: React.FC = () => {
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             <span className="text-sm hidden sm:inline">刷新</span>
+          </button>
+
+          {/* 同步按钮 */}
+          <button
+            onClick={forceSync}
+            disabled={isSyncing}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#181a1c] border border-white/10 text-slate-300 hover:text-white hover:border-blue-500/50 transition-all disabled:opacity-50"
+            title="同步到云端"
+          >
+            <Cloud className={`w-4 h-4 ${isSyncing ? 'animate-pulse' : ''}`} />
+            <span className="text-sm hidden sm:inline">{isSyncing ? '同步中...' : '同步'}</span>
           </button>
 
           {/* 添加按钮 */}
