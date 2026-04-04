@@ -62,7 +62,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     closeOnBackdrop: siteSettings?.closeOnBackdrop ?? false,
     backgroundImage: siteSettings?.backgroundImage || '',
     backgroundImageEnabled: siteSettings?.backgroundImageEnabled ?? false,
-    backgroundMotion: siteSettings?.backgroundMotion ?? false
+    backgroundMotion: siteSettings?.backgroundMotion ?? false,
+    backgroundSource: siteSettings?.backgroundSource || 'custom',
+    bingAutoUpdate: siteSettings?.bingAutoUpdate ?? false,
+    bingLastUpdate: siteSettings?.bingLastUpdate
   }));
 
   useEffect(() => {
@@ -79,7 +82,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         closeOnBackdrop: siteSettings?.closeOnBackdrop ?? false,
         backgroundImage: siteSettings?.backgroundImage || '',
         backgroundImageEnabled: siteSettings?.backgroundImageEnabled ?? false,
-        backgroundMotion: siteSettings?.backgroundMotion ?? false
+        backgroundMotion: siteSettings?.backgroundMotion ?? false,
+        backgroundSource: siteSettings?.backgroundSource || 'custom',
+        bingAutoUpdate: siteSettings?.bingAutoUpdate ?? false,
+        bingLastUpdate: siteSettings?.bingLastUpdate
       });
       setActiveTab('site');
     }

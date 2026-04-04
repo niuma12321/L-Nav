@@ -1753,6 +1753,8 @@ const WidgetConfigCenter: React.FC = () => {
                     method: apiMethod,
                     headers: Object.keys(parsedHeaders).length > 0 ? parsedHeaders : undefined,
                     body: parsedBody,
+                    bodyType: bodyType,
+                    queryParams: validParams.map(p => ({ key: p.key.trim(), value: p.value })),
                     refreshInterval: refreshInterval,
                     dataPath: dataPath,
                     displayType: displayType as any,
