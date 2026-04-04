@@ -948,6 +948,26 @@ async function handleNotificationsAPI(request: Request, env: Env, ctx: Execution
       });
     }
 
+    // POST /api/v1/notifications/test - 测试推送
+    if (path === '/api/v1/notifications/test' && method === 'POST') {
+      const body = await request.json() as any;
+      const { channel } = body;
+      
+      // 创建一条测试通知
+      await env.YNAV_D1.prepare(`
+        INSERT INTO notifications (user_id, type, title, content, is_read, created_at)
+        VALUES (?, 'system_notice', '测试通知', ?, 0, datetime('now'))
+      `).bind('default', `这是一条通过 ${channel || '未知渠道'} 发送的测试通知`).run();
+
+      return new Response(JSON.stringify({ 
+        ok: true, 
+        message: '测试通知已发送',
+        channel: channel || 'unknown'
+      }), {
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
     // 未匹配的路由返回 404
     return new Response(JSON.stringify({ error: 'Not found' }), {
       status: 404,
