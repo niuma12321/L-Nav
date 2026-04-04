@@ -337,6 +337,44 @@ export const APIDataWidget: React.FC<APIDataWidgetProps> = ({ config }) => {
           </div>
         );
 
+      case 'card':
+        return (
+          <div className="space-y-4 overflow-y-auto max-h-[300px]">
+            {data.map((item, index) => {
+              const imageUrl = config.fields.image ? getFieldValue(item, config.fields.image) : '';
+              const title = config.fields.title ? getFieldValue(item, config.fields.title) : '';
+              const subtitle = config.fields.subtitle ? getFieldValue(item, config.fields.subtitle) : '';
+              
+              return (
+                <div key={index} className="rounded-xl overflow-hidden bg-[#0d0e10]">
+                  {imageUrl && (
+                    <div className="relative w-full aspect-video">
+                      <img 
+                        src={imageUrl} 
+                        alt={title || 'Image'} 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
+                  {(title || subtitle) && (
+                    <div className="p-3">
+                      {title && (
+                        <p className="text-sm font-medium text-white mb-1">{title}</p>
+                      )}
+                      {subtitle && (
+                        <p className="text-xs text-slate-400">{subtitle}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        );
+
       case 'text':
       default:
         return (
