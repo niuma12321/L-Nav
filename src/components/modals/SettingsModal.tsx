@@ -87,7 +87,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         bingAutoUpdate: siteSettings?.bingAutoUpdate ?? false,
         bingLastUpdate: siteSettings?.bingLastUpdate
       });
-      setActiveTab('site');
     }
   }, [isOpen, config, siteSettings]);
 
