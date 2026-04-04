@@ -175,9 +175,18 @@ async function handleSyncAPI(request: Request, env: Env): Promise<Response> {
                         (categories.results && categories.results.length > 0);
 
       if (hasD1Data) {
+        // 从 KV 获取 widgets 数据（widgets 结构复杂，适合存 KV）
+        const kvData = await env.YNAV_WORKER_KV.get('ynav:data:v1', 'text');
+        let widgets = [];
+        if (kvData) {
+          const parsed = JSON.parse(kvData);
+          widgets = parsed.widgets || parsed.data?.widgets || [];
+        }
+
         const syncData = {
           links: links.results || [],
           categories: categories.results || [],
+          widgets: widgets,
           settings: settings || {},
           meta: { version: 1, updatedAt: Date.now(), deviceId: 'cloud' }
         };
