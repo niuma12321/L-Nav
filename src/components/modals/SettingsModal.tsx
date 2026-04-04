@@ -49,7 +49,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   readOnly = false,
   closeOnBackdrop = true
 }) => {
-  const [activeTab, setActiveTab] = useState<'site' | 'ai' | 'appearance' | 'data'>('site');
+  const [activeTab, setActiveTab] = useState<'site' | 'ai' | 'appearance' | 'data'>(() => {
+    return (localStorage.getItem('ynav-settings-active-tab') as any) || 'site';
+  });
+
+  // 持久化 activeTab 到 localStorage
+  useEffect(() => {
+    localStorage.setItem('ynav-settings-active-tab', activeTab);
+  }, [activeTab]);
+
   const [localConfig, setLocalConfig] = useState<AIConfig>(config);
   const [localSiteSettings, setLocalSiteSettings] = useState<SiteSettings>(() => ({
     title: siteSettings?.title || '元启 - AI 智能导航',

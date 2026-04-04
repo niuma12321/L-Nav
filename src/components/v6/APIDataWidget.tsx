@@ -490,14 +490,22 @@ export const APIDataWidget: React.FC<APIDataWidgetProps> = ({ config }) => {
       default:
         return (
           <div className="space-y-2 overflow-y-auto max-h-[300px]">
-            {data.map((item, index) => (
-              <div
-                key={index}
-                className="p-3 rounded-lg bg-[#0d0e10] text-sm text-slate-300"
-              >
-                {getItemDisplayText(item, config.fields.title)}
-              </div>
-            ))}
+            {data.map((item, index) => {
+              const titleText = getItemDisplayText(item, config.fields.title);
+              const subtitleText = config.fields.subtitle ? getFieldValue(item, config.fields.subtitle) : '';
+              
+              return (
+                <div
+                  key={index}
+                  className="p-4 rounded-xl bg-[#0d0e10] text-sm text-slate-300 leading-relaxed"
+                >
+                  <p className="text-slate-200">{titleText}</p>
+                  {subtitleText && (
+                    <p className="text-xs text-slate-500 mt-2">—— {subtitleText}</p>
+                  )}
+                </div>
+              );
+            })}
           </div>
         );
     }
