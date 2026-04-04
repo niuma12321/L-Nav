@@ -171,7 +171,7 @@ export interface APIDataConfig {
   queryParams?: Array<{ key: string; value: string }>;
   refreshInterval: number; // 秒，0表示不自动刷新
   dataPath: string; // 数据路径，如 'data.items' 或 'results'
-  displayType: 'list' | 'table' | 'card' | 'text';
+  displayType: 'list' | 'table' | 'card' | 'text' | 'media-list';
   fields: {
     title: string;
     value?: string;
@@ -305,7 +305,7 @@ export const API_60S_TRENDING: API60sPreset[] = [
   {
     id: 'douyin-hot',
     name: '抖音热搜',
-    description: '抖音实时热搜榜',
+    description: '抖音实时热搜榜，带封面图片和热度值',
     category: 'trending',
     categoryLabel: '热门榜单',
     icon: 'Flame',
@@ -316,8 +316,8 @@ export const API_60S_TRENDING: API60sPreset[] = [
       method: 'GET',
       refreshInterval: 600,
       dataPath: 'data',
-      displayType: 'list',
-      fields: { title: 'title', value: 'hot_value', link: 'link' },
+      displayType: 'media-list',
+      fields: { title: 'title', value: 'hot_value', image: 'cover', link: 'link', subtitle: 'active_time' },
       maxItems: 10,
       emptyText: '热搜加载中...'
     }

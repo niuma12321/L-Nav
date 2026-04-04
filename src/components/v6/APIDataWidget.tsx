@@ -124,7 +124,6 @@ export const APIDataWidget: React.FC<APIDataWidgetProps> = ({ config }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
-  const [inlineBrowser, setInlineBrowser] = useState<{ isOpen: boolean; url: string; title: string }>({ isOpen: false, url: '', title: '' });
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -288,23 +287,29 @@ export const APIDataWidget: React.FC<APIDataWidgetProps> = ({ config }) => {
               const linkUrl = config.fields.link ? getFieldValue(item, config.fields.link) : '';
               const titleText = getItemDisplayText(item, config.fields.title);
               
-              return (
-                <div
+              return linkUrl ? (
+                <a
                   key={index}
-                  className={`flex items-start gap-3 p-3 rounded-lg bg-[#0d0e10] hover:bg-[#1a1c1f] transition-colors ${linkUrl ? 'cursor-pointer group' : ''}`}
-                  onClick={() => {
-                    if (linkUrl) {
-                      setInlineBrowser({ isOpen: true, url: linkUrl, title: titleText });
-                    }
-                  }}
+                  href={linkUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-start gap-3 p-3 rounded-lg bg-[#0d0e10] hover:bg-[#1a1c1f] transition-colors group cursor-pointer"
                 >
                   <span className="text-xs text-slate-500 mt-0.5">{index + 1}</span>
                   <p className="text-sm text-slate-300 flex-1 leading-relaxed group-hover:text-emerald-400 transition-colors">
                     {titleText}
                   </p>
-                  {linkUrl && (
-                    <ExternalLink className="w-3.5 h-3.5 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity mt-0.5" />
-                  )}
+                  <ExternalLink className="w-3.5 h-3.5 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity mt-0.5" />
+                </a>
+              ) : (
+                <div
+                  key={index}
+                  className="flex items-start gap-3 p-3 rounded-lg bg-[#0d0e10]"
+                >
+                  <span className="text-xs text-slate-500 mt-0.5">{index + 1}</span>
+                  <p className="text-sm text-slate-300 flex-1 leading-relaxed">
+                    {titleText}
+                  </p>
                 </div>
               );
             })}
@@ -348,6 +353,80 @@ export const APIDataWidget: React.FC<APIDataWidgetProps> = ({ config }) => {
                 ))}
               </tbody>
             </table>
+          </div>
+        );
+
+      case 'media-list':
+        return (
+          <div className="space-y-3 overflow-y-auto max-h-[300px]">
+            {data.map((item, index) => {
+              const imageUrl = config.fields.image ? getFieldValue(item, config.fields.image) : '';
+              const title = config.fields.title ? getItemDisplayText(item, config.fields.title) : '';
+              const value = config.fields.value ? getFieldValue(item, config.fields.value) : '';
+              const subtitle = config.fields.subtitle ? getFieldValue(item, config.fields.subtitle) : '';
+              const linkUrl = config.fields.link ? getFieldValue(item, config.fields.link) : '';
+              
+              const content = (
+                <div className="flex items-start gap-3">
+                  {/* Cover Image */}
+                  {imageUrl && (
+                    <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-[#0d0e10] shrink-0">
+                      <img 
+                        src={imageUrl} 
+                        alt={title} 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
+                  
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-slate-300 leading-relaxed line-clamp-2 mb-1">
+                      {title}
+                    </p>
+                    <div className="flex items-center gap-3 text-xs">
+                      {value && (
+                        <span className="text-emerald-400 font-medium">
+                          {value}
+                        </span>
+                      )}
+                      {subtitle && (
+                        <span className="text-slate-500">
+                          {subtitle}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* External Link Icon */}
+                  {linkUrl && (
+                    <ExternalLink className="w-4 h-4 text-slate-500 shrink-0 mt-1" />
+                  )}
+                </div>
+              );
+              
+              return linkUrl ? (
+                <a
+                  key={index}
+                  href={linkUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block p-3 rounded-xl bg-[#0d0e10] hover:bg-[#1a1c1f] transition-colors group cursor-pointer"
+                >
+                  {content}
+                </a>
+              ) : (
+                <div
+                  key={index}
+                  className="p-3 rounded-xl bg-[#0d0e10]"
+                >
+                  {content}
+                </div>
+              );
+            })}
           </div>
         );
 
@@ -448,52 +527,6 @@ export const APIDataWidget: React.FC<APIDataWidgetProps> = ({ config }) => {
           <span>每 {config.refreshInterval} 秒自动刷新</span>
         )}
       </div>
-
-      {/* Inline Browser Modal */}
-      {inlineBrowser.isOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#181a1c] rounded-2xl border border-white/10 w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden shadow-2xl">
-            {/* Browser Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-[#0d0e10]">
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                <Globe className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span className="text-sm text-slate-300 truncate" title={inlineBrowser.title}>
-                  {inlineBrowser.title}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <a
-                  href={inlineBrowser.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs bg-white/5 text-slate-300 hover:bg-white/10 hover:text-emerald-400 transition-colors"
-                  title="在新窗口打开"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  新窗口
-                </a>
-                <button
-                  onClick={() => setInlineBrowser({ isOpen: false, url: '', title: '' })}
-                  className="p-2 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
-                  title="关闭"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-            
-            {/* Browser Content */}
-            <div className="flex-1 bg-white">
-              <iframe
-                src={inlineBrowser.url}
-                className="w-full h-full border-0"
-                sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-                title={inlineBrowser.title}
-              />
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

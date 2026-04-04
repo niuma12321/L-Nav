@@ -231,7 +231,7 @@ const AppearanceTab: React.FC<AppearanceTabProps> = React.memo(({ settings, onCh
       type="button"
       onClick={onChange}
       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 ${
-        checked ? 'bg-accent' : 'bg-slate-300 dark:bg-slate-600'
+        checked ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'
       }`}
       aria-pressed={checked}
       aria-label={label}
