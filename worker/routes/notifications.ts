@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import type { Env } from '../index';
 
 const notifications = new Hono<{ Bindings: Env }>();
 
@@ -32,9 +33,9 @@ notifications.get('/', async (c) => {
   query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
   params.push(limit, offset);
 
-  const { results } = await c.env.DB.prepare(query).bind(...params).all();
+  const { results } = await c.env.YNAV_D1.prepare(query).bind(...params).all();
 
-  const unreadResult = await c.env.DB.prepare(
+  const unreadResult = await c.env.YNAV_D1.prepare(
     'SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0'
   ).bind(userId).first();
 
@@ -50,7 +51,7 @@ notifications.get('/unread-count', async (c) => {
   const userId = c.req.query('userId');
   if (!userId) return c.json({ count: 0 });
 
-  const result = await c.env.DB.prepare(
+  const result = await c.env.YNAV_D1.prepare(
     'SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0'
   ).bind(userId).first();
 
@@ -65,7 +66,7 @@ notifications.get('/unread-count', async (c) => {
 notifications.post('/:id/read', async (c) => {
   const id = c.req.param('id');
   const userId = c.req.query('userId');
-  await c.env.DB.prepare(
+  await c.env.YNAV_D1.prepare(
     'UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?'
   ).bind(id, userId).run();
   return c.json({ success: true });
@@ -74,7 +75,7 @@ notifications.post('/:id/read', async (c) => {
 // 标记全部已读
 notifications.post('/read-all', async (c) => {
   const userId = c.req.query('userId');
-  await c.env.DB.prepare(
+  await c.env.YNAV_D1.prepare(
     'UPDATE notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0'
   ).bind(userId).run();
   return c.json({ success: true });
@@ -84,7 +85,7 @@ notifications.post('/read-all', async (c) => {
 notifications.delete('/:id', async (c) => {
   const id = c.req.param('id');
   const userId = c.req.query('userId');
-  await c.env.DB.prepare(
+  await c.env.YNAV_D1.prepare(
     'DELETE FROM notifications WHERE id = ? AND user_id = ?'
   ).bind(id, userId).run();
   return c.json({ success: true });
@@ -93,7 +94,7 @@ notifications.delete('/:id', async (c) => {
 // 清空所有已读
 notifications.delete('/clear-read', async (c) => {
   const userId = c.req.query('userId');
-  await c.env.DB.prepare(
+  await c.env.YNAV_D1.prepare(
     'DELETE FROM notifications WHERE user_id = ? AND is_read = 1'
   ).bind(userId).run();
   return c.json({ success: true });
@@ -108,7 +109,7 @@ notifications.get('/settings', async (c) => {
   const userId = c.req.query('userId');
   if (!userId) return c.json({ error: 'missing userId' }, 400);
 
-  let settings = await c.env.DB.prepare(
+  let settings = await c.env.YNAV_D1.prepare(
     'SELECT * FROM notification_settings WHERE user_id = ?'
   ).bind(userId).first();
 
@@ -182,7 +183,7 @@ notifications.post('/settings', async (c) => {
   const columns = ['user_id', ...keys].join(', ');
   const placeholders = values.map(() => '?').join(', ');
 
-  await c.env.DB.prepare(
+  await c.env.YNAV_D1.prepare(
     `INSERT OR REPLACE INTO notification_settings (${columns}) VALUES (?, ${placeholders})`
   ).bind(userId, ...values).run();
 
@@ -194,7 +195,7 @@ notifications.post('/test', async (c) => {
   const { userId, channel } = await c.req.json();
   if (!userId || !channel) return c.json({ error: 'invalid params' }, 400);
 
-  const settings = await c.env.DB.prepare(
+  const settings = await c.env.YNAV_D1.prepare(
     'SELECT * FROM notification_settings WHERE user_id = ?'
   ).bind(userId).first();
 
@@ -225,14 +226,14 @@ notifications.post('/create', async (c) => {
   if (!userId || !type || !title) return c.json({ error: 'invalid params' }, 400);
 
   // 存储通知
-  await c.env.DB.prepare(
+  await c.env.YNAV_D1.prepare(
     `INSERT INTO notifications (user_id, type, title, content, related_type, related_id, is_read, created_at)
      VALUES (?, ?, ?, ?, ?, ?, 0, datetime('now'))`
   ).bind(userId, type, title, content, relatedType || null, relatedId || null).run();
 
   // 异步推送
   c.executionCtx.waitUntil((async () => {
-    const settings = await c.env.DB.prepare(
+    const settings = await c.env.YNAV_D1.prepare(
       'SELECT * FROM notification_settings WHERE user_id = ?'
     ).bind(userId).first();
 
@@ -341,7 +342,7 @@ export async function createNotification(
   relatedId: string | undefined,
   env: Env
 ) {
-  const result = await env.DB.prepare(
+  const result = await env.YNAV_D1.prepare(
     `INSERT INTO notifications (user_id, type, title, content, related_type, related_id)
      VALUES (?, ?, ?, ?, ?, ?)`
   ).bind(userId, type, title, content, relatedType, relatedId).run();
