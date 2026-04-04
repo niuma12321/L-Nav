@@ -44,6 +44,10 @@ export interface FullNotificationSettings {
   // 微信（Server酱）
   serverchan_sckey: string;
 
+  // Telegram 机器人
+  telegram_bot_token: string;
+  telegram_chat_id: string;
+
   // 任务成功开关
   success_browser: number;
   success_email: number;
@@ -52,6 +56,7 @@ export interface FullNotificationSettings {
   success_dingtalk: number;
   success_wecom: number;
   success_wechat: number;
+  success_telegram: number;
 
   // 任务失败开关
   fail_browser: number;
@@ -61,6 +66,7 @@ export interface FullNotificationSettings {
   fail_dingtalk: number;
   fail_wecom: number;
   fail_wechat: number;
+  fail_telegram: number;
 
   // 设备告警开关
   alert_browser: number;
@@ -70,6 +76,7 @@ export interface FullNotificationSettings {
   alert_dingtalk: number;
   alert_wecom: number;
   alert_wechat: number;
+  alert_telegram: number;
 
   // 系统通知开关
   notice_browser: number;
@@ -79,6 +86,7 @@ export interface FullNotificationSettings {
   notice_dingtalk: number;
   notice_wecom: number;
   notice_wechat: number;
+  notice_telegram: number;
 }
 
 export function useNotifications(userId?: string) {

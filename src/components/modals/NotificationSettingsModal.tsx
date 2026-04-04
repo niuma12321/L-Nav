@@ -11,6 +11,7 @@ const channelList = [
   { key: 'dingtalk', label: '钉钉', icon: MessageSquare },
   { key: 'wecom', label: '企业微信', icon: Briefcase },
   { key: 'wechat', label: '微信', icon: AlertCircle },
+  { key: 'telegram', label: 'Telegram', icon: MessageSquare },
 ];
 
 // 通知类型分组
@@ -328,6 +329,39 @@ export function NotificationSettingsModal({ userId, onClose }: NotificationSetti
                   测试微信推送
                 </button>
               </div>
+
+              {/* Telegram */}
+              <div className="rounded-xl bg-gray-800/50 p-5 border border-gray-700/50">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-sky-500/20 rounded-lg">
+                    <MessageSquare className="w-5 h-5 text-sky-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">Telegram 机器人</h3>
+                    <p className="text-xs text-gray-400">通过 Bot 发送消息</p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <input 
+                    className="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" 
+                    placeholder="Bot Token (如: 123456789:ABCdefGHIjklMNOpqrsTUVwxyz)" 
+                    value={settings.telegram_bot_token} 
+                    onChange={e => saveSettings({ ...settings, telegram_bot_token: e.target.value })} 
+                  />
+                  <input 
+                    className="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" 
+                    placeholder="Chat ID (如: 123456789 或 -1001234567890)" 
+                    value={settings.telegram_chat_id} 
+                    onChange={e => saveSettings({ ...settings, telegram_chat_id: e.target.value })} 
+                  />
+                </div>
+                <button 
+                  onClick={() => handleTest('telegram')} 
+                  className="mt-3 text-sm bg-sky-500/10 text-sky-400 px-4 py-2 rounded-lg hover:bg-sky-500/20 transition-colors"
+                >
+                  测试 Telegram 推送
+                </button>
+              </div>
             </div>
           )}
 
@@ -342,7 +376,7 @@ export function NotificationSettingsModal({ userId, onClose }: NotificationSetti
                       <p className="text-xs text-gray-400">{g.desc}</p>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-3">
                     {channelList.map(ch => {
                       const key = `${g.prefix}_${ch.key}` as keyof typeof settings;
                       const checked = !!settings[key];

@@ -105,6 +105,8 @@ async function initializeDB(db: D1Database): Promise<void> {
       dingtalk_secret TEXT DEFAULT '',
       wecom_webhook TEXT DEFAULT '',
       serverchan_sckey TEXT DEFAULT '',
+      telegram_bot_token TEXT DEFAULT '',
+      telegram_chat_id TEXT DEFAULT '',
       success_browser INTEGER DEFAULT 1,
       success_email INTEGER DEFAULT 0,
       success_webhook INTEGER DEFAULT 0,
@@ -112,6 +114,7 @@ async function initializeDB(db: D1Database): Promise<void> {
       success_dingtalk INTEGER DEFAULT 0,
       success_wecom INTEGER DEFAULT 0,
       success_wechat INTEGER DEFAULT 0,
+      success_telegram INTEGER DEFAULT 0,
       fail_browser INTEGER DEFAULT 1,
       fail_email INTEGER DEFAULT 1,
       fail_webhook INTEGER DEFAULT 1,
@@ -119,6 +122,7 @@ async function initializeDB(db: D1Database): Promise<void> {
       fail_dingtalk INTEGER DEFAULT 1,
       fail_wecom INTEGER DEFAULT 1,
       fail_wechat INTEGER DEFAULT 1,
+      fail_telegram INTEGER DEFAULT 0,
       alert_browser INTEGER DEFAULT 1,
       alert_email INTEGER DEFAULT 1,
       alert_webhook INTEGER DEFAULT 1,
@@ -126,13 +130,15 @@ async function initializeDB(db: D1Database): Promise<void> {
       alert_dingtalk INTEGER DEFAULT 1,
       alert_wecom INTEGER DEFAULT 1,
       alert_wechat INTEGER DEFAULT 1,
+      alert_telegram INTEGER DEFAULT 0,
       notice_browser INTEGER DEFAULT 1,
       notice_email INTEGER DEFAULT 0,
       notice_webhook INTEGER DEFAULT 0,
       notice_feishu INTEGER DEFAULT 0,
       notice_dingtalk INTEGER DEFAULT 0,
       notice_wecom INTEGER DEFAULT 0,
-      notice_wechat INTEGER DEFAULT 0
+      notice_wechat INTEGER DEFAULT 0,
+      notice_telegram INTEGER DEFAULT 0
     )`)
   ];
 
@@ -1040,6 +1046,27 @@ async function handleNotificationsAPI(request: Request, env: Env, ctx: Execution
                 text: { content: `[${title}] ${content}` }
               })
             });
+          }
+        } else if (channel === 'telegram') {
+          if (!settings.telegram_bot_token || !settings.telegram_chat_id) {
+            return new Response(JSON.stringify({ error: 'Telegram Bot Token 或 Chat ID 未配置' }), {
+              status: 400,
+              headers: { 'Content-Type': 'application/json', ...corsHeaders }
+            });
+          }
+          // 发送到 Telegram Bot
+          const resp = await fetch(`https://api.telegram.org/bot${settings.telegram_bot_token}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: settings.telegram_chat_id,
+              text: `<b>${title}</b>\n\n${content}`,
+              parse_mode: 'HTML'
+            })
+          });
+          const result = await resp.json();
+          if (!result.ok) {
+            throw new Error(result.description || 'Telegram API error');
           }
         }
 
