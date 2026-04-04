@@ -33,7 +33,8 @@ import {
   MapPin,
   Navigation,
   Newspaper,
-  Rss
+  Rss,
+  MoreVertical
 } from 'lucide-react';
 import { useWidgetSystem } from '../../hooks/useWidgetSystem';
 
