@@ -13,7 +13,8 @@ export type WidgetType =
   | 'automation-tasks' // 待执行任务
   | 'automation-logs' // 执行日志
   | 'smart-home-status' // 设备状态
-  | 'smart-home-quick'; // 快捷控制
+  | 'smart-home-quick' // 快捷控制
+  | 'embedded-news'; // 内嵌新闻组件
 
 export interface WidgetConfig {
   id: string;

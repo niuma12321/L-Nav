@@ -52,7 +52,7 @@ import NavEditModal from '../modals/NavEditModal';
 import ResourceCenterViewCN from './ResourceCenterViewCN';
 import RSSReaderViewCN from './RSSReaderViewCN';
 import WidgetConfigCenter from './WidgetConfigCenter';
-import { AutomationCenterView } from '../automation/AutomationCenterView';
+import { EmbeddedNewsWidget } from './EmbeddedNewsWidget';
 import { SmartHomeView } from '../smartHome/SmartHomeView';
 import { NotificationsViewCN } from './NotificationsViewCN';
 import LabView from './LabView';
@@ -1437,12 +1437,16 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
                   .filter(w => w.enabled)
                   .sort((a, b) => (a.order || 0) - (b.order || 0))
                   .map(widget => {
-                    const position = widget.position || { x: 0, y: 0, w: 4, h: 3 };
+                    const desktopPosition = widget.position?.desktop || { x: 0, y: 0, w: 4, h: 3 };
+                    // 使用w和h来确定网格列跨度
+                    const colSpan = desktopPosition.w <= 2 ? 1 : desktopPosition.w <= 4 ? 2 : desktopPosition.w <= 6 ? 3 : 4;
                     
                     return (
                       <div 
                         key={widget.id}
-                        className="bg-[#181a1c] rounded-xl border border-white/5 hover:border-white/10 transition-all duration-200 overflow-hidden group"
+                        className={`bg-[#181a1c] rounded-xl border border-white/5 hover:border-white/10 transition-all duration-200 overflow-hidden group ${
+                          colSpan === 1 ? '' : colSpan === 2 ? 'md:col-span-2' : colSpan === 3 ? 'md:col-span-3' : 'md:col-span-4'
+                        }`}
                       >
                         {/* 组件头部 */}
                         <div className="flex items-center justify-between px-3 py-2 border-b border-white/5">
@@ -1468,6 +1472,7 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
                           {widget.type === 'custom-links' && <TodoWidget />}
                           {widget.type === 'stock-widget' && <NewsWidget />}
                           {widget.type === 'news-feed' && <NewsFeedWidget />}
+                          {widget.type === 'embedded-news' && <EmbeddedNewsWidget />}
                         </div>
                       </div>
                     );
