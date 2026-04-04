@@ -175,29 +175,20 @@ const SiteTab: React.FC<SiteTabProps> = ({ settings, onChange }) => {
             <div className="h-px bg-slate-100 dark:bg-slate-800" />
 
             <div>
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">弹窗交互</label>
-                <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-                    <div>
-                        <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">点击遮罩关闭弹窗</div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">关闭可避免误触</div>
+                <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">部署说明</label>
+                <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                    <div className="flex items-start gap-3">
+                        <div className="shrink-0 w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-800/50 flex items-center justify-center">
+                            <span className="text-amber-600 dark:text-amber-400 text-sm">⚠️</span>
+                        </div>
+                        <div>
+                            <div className="text-sm font-semibold text-amber-800 dark:text-amber-400 mb-1">仅支持 Cloudflare Pages 部署</div>
+                            <div className="text-xs text-amber-700 dark:text-amber-500/80 leading-relaxed">
+                                本项目专为 Cloudflare Pages 优化，请勿部署到其他平台（如 Vercel、Netlify 等）。<br/>
+                                部署到其他平台可能导致功能异常或性能问题。
+                            </div>
+                        </div>
                     </div>
-                    <button
-                        type="button"
-                        onClick={() => onChange('closeOnBackdrop', !closeOnBackdrop)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${closeOnBackdrop
-                            ? 'bg-accent'
-                            : 'bg-slate-300 dark:bg-slate-600'
-                            }`}
-                        aria-pressed={closeOnBackdrop}
-                        aria-label="点击遮罩关闭弹窗"
-                    >
-                        <span
-                            className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform ${closeOnBackdrop
-                                ? 'translate-x-5'
-                                : 'translate-x-1'
-                                }`}
-                        />
-                    </button>
                 </div>
             </div>
         </div>
