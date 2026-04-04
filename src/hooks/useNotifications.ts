@@ -211,15 +211,21 @@ export function useNotifications(userId?: string) {
 
   // 测试推送
   const testPush = async (channel: string) => {
-    if (!uid) return;
+    if (!uid || !settings) return;
     try {
-      await fetch(`${API_BASE}/test`, {
+      const res = await fetch(`${API_BASE}/test`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: uid, channel })
+        body: JSON.stringify({ userId: uid, channel, settings })
       });
+      const data = await res.json();
+      if (!data.ok) {
+        throw new Error(data.error || 'Push failed');
+      }
+      return data;
     } catch (e) {
       console.error('测试推送失败', e);
+      throw e;
     }
   };
 

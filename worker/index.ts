@@ -930,28 +930,38 @@ async function handleNotificationsAPI(request: Request, env: Env, ctx: Execution
 
     // POST /api/v1/notifications/settings - 保存配置
     if (path === '/api/v1/notifications/settings' && method === 'POST') {
-      const body = await request.json() as any;
-      const { userId, ...data } = body;
-      if (!userId) {
-        return new Response(JSON.stringify({ error: 'missing userId' }), {
-          status: 400,
+      try {
+        const body = await request.json() as any;
+        const { userId, ...data } = body;
+        if (!userId) {
+          return new Response(JSON.stringify({ error: 'missing userId' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+
+        const keys = Object.keys(data);
+        const values = Object.values(data);
+
+        const columns = ['user_id', ...keys].join(', ');
+        const placeholders = values.map(() => '?').join(', ');
+
+        console.log('[Save Settings] userId:', userId, 'keys:', keys);
+
+        await env.YNAV_D1.prepare(
+          `INSERT OR REPLACE INTO notification_settings (${columns}) VALUES (?, ${placeholders})`
+        ).bind(userId, ...values).run();
+
+        return new Response(JSON.stringify({ ok: true }), {
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      } catch (err: any) {
+        console.error('[Save Settings Error]', err);
+        return new Response(JSON.stringify({ error: err.message }), {
+          status: 500,
           headers: { 'Content-Type': 'application/json', ...corsHeaders }
         });
       }
-
-      const keys = Object.keys(data);
-      const values = Object.values(data);
-
-      const columns = ['user_id', ...keys].join(', ');
-      const placeholders = values.map(() => '?').join(', ');
-
-      await env.YNAV_D1.prepare(
-        `INSERT OR REPLACE INTO notification_settings (${columns}) VALUES (?, ${placeholders})`
-      ).bind(userId, ...values).run();
-
-      return new Response(JSON.stringify({ ok: true }), {
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
     }
 
     // POST /api/v1/notifications/test - 测试推送
@@ -967,15 +977,14 @@ async function handleNotificationsAPI(request: Request, env: Env, ctx: Execution
       }
 
       // 获取用户设置
-      const settings = await env.YNAV_D1.prepare(
+      let settings = await env.YNAV_D1.prepare(
         'SELECT * FROM notification_settings WHERE user_id = ?'
       ).bind(userId).first();
 
+      // 如果没有数据库设置，尝试从请求中获取测试配置
       if (!settings) {
-        return new Response(JSON.stringify({ error: 'No notification settings found' }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json', ...corsHeaders }
-        });
+        settings = body.settings || {};
+        console.log('[Test Push] No DB settings, using request settings:', Object.keys(settings));
       }
 
       const title = 'L-Nav 测试推送';
