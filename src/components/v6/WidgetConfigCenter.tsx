@@ -1502,9 +1502,10 @@ const WidgetConfigCard: React.FC<{
         {/* Toggle Switch */}
         <button 
           onClick={onToggle}
-          className={`w-12 h-6 rounded-full transition-colors relative ${widget.enabled ? 'bg-emerald-500' : 'bg-slate-600'}`}
+          className={`w-14 h-7 rounded-full transition-all duration-200 relative flex items-center ${widget.enabled ? 'bg-emerald-500 shadow-emerald-500/20 shadow-lg' : 'bg-slate-600 hover:bg-slate-500'}`}
+          title={widget.enabled ? '点击禁用' : '点击启用'}
         >
-          <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${widget.enabled ? 'left-7' : 'left-1'}`} />
+          <span className={`w-5 h-5 rounded-full bg-white shadow-md transition-all duration-200 ${widget.enabled ? 'translate-x-8' : 'translate-x-1'}`} />
         </button>
       </div>
 
