@@ -240,7 +240,7 @@ export function useNotifications(userId?: string) {
 
   // 监听新通知并触发桌面推送
   useEffect(() => {
-    if (Notification.permission !== 'granted') return;
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
 
     const shownNotifications = new Set<number>();
     
