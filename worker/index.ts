@@ -27,11 +27,11 @@ function handleCORS(request: Request): Response {
 }
 
 // ==========================================
-// D1 数据库初始化
+// D1 数据库初始化 - 使用 batch 批量执行
 // ==========================================
 async function initializeDB(db: D1Database): Promise<void> {
   const statements = [
-    `CREATE TABLE IF NOT EXISTS links (
+    db.prepare(`CREATE TABLE IF NOT EXISTS links (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
       url TEXT NOT NULL,
@@ -45,16 +45,16 @@ async function initializeDB(db: D1Database): Promise<void> {
       created_at INTEGER,
       updated_at INTEGER,
       user_id TEXT DEFAULT 'default'
-    )`,
-    `CREATE TABLE IF NOT EXISTS categories (
+    )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS categories (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       icon TEXT,
       is_hidden INTEGER DEFAULT 0,
       order_index INTEGER DEFAULT 0,
       user_id TEXT DEFAULT 'default'
-    )`,
-    `CREATE TABLE IF NOT EXISTS user_settings (
+    )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS user_settings (
       user_id TEXT PRIMARY KEY,
       theme TEXT DEFAULT 'dark',
       sync_password_hash TEXT,
@@ -62,22 +62,22 @@ async function initializeDB(db: D1Database): Promise<void> {
       ai_config TEXT,
       site_settings TEXT,
       updated_at INTEGER
-    )`,
-    `CREATE TABLE IF NOT EXISTS backups (
+    )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS backups (
       id TEXT PRIMARY KEY,
       name TEXT,
       size INTEGER,
       r2_key TEXT,
       created_at INTEGER,
       user_id TEXT DEFAULT 'default'
-    )`,
-    `CREATE TABLE IF NOT EXISTS analytics (
+    )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS analytics (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       event_type TEXT,
       event_data TEXT,
       created_at INTEGER DEFAULT CURRENT_TIMESTAMP
-    )`,
-    `CREATE TABLE IF NOT EXISTS notifications (
+    )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS notifications (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id TEXT DEFAULT 'default',
       type TEXT,
@@ -87,8 +87,8 @@ async function initializeDB(db: D1Database): Promise<void> {
       related_id TEXT,
       is_read INTEGER DEFAULT 0,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
-    )`,
-    `CREATE TABLE IF NOT EXISTS notification_settings (
+    )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS notification_settings (
       user_id TEXT PRIMARY KEY,
       email_to TEXT DEFAULT '',
       smtp_host TEXT DEFAULT '',
@@ -133,15 +133,21 @@ async function initializeDB(db: D1Database): Promise<void> {
       notice_dingtalk INTEGER DEFAULT 0,
       notice_wecom INTEGER DEFAULT 0,
       notice_wechat INTEGER DEFAULT 0
-    )`
+    )`)
   ];
 
-  for (const sql of statements) {
-    try {
-      await db.exec(sql);
-    } catch (e) {
-      console.error('[D1 Init Error]', e);
-      // 继续执行其他语句
+  try {
+    await db.batch(statements);
+    console.log('[D1] All tables created successfully');
+  } catch (e) {
+    console.error('[D1 Init Error]', e);
+    // 如果 batch 失败，尝试逐个执行
+    for (const stmt of statements) {
+      try {
+        await stmt.run();
+      } catch (err) {
+        console.error('[D1 Init Single Error]', err);
+      }
     }
   }
 }
