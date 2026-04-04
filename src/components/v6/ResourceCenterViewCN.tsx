@@ -13,7 +13,12 @@ import {
   ChevronDown,
   Edit3,
   Trash2,
-  Globe
+  Globe,
+  Pin,
+  LayoutGrid,
+  Settings,
+  Menu,
+  ChevronRight
 } from 'lucide-react';
 
 interface Category {
@@ -88,6 +93,9 @@ interface ResourceCenterViewCNProps {
   onAddResource?: () => void;
   onImport?: () => void;
   onPreviewLink?: (url: string) => void;
+  onOpenSettings?: () => void;
+  onOpenMenuSettings?: () => void;
+  onOpenWidgetSettings?: () => void;
   onEditLink?: (link: any) => void;
   onDeleteLink?: (id: string) => void;
   links?: Array<{
@@ -111,6 +119,9 @@ const ResourceCenterViewCN: React.FC<ResourceCenterViewCNProps> = ({
   onAddResource,
   onImport,
   onPreviewLink,
+  onOpenSettings,
+  onOpenMenuSettings,
+  onOpenWidgetSettings,
   onEditLink,
   onDeleteLink,
   links = [],
@@ -122,6 +133,7 @@ const ResourceCenterViewCN: React.FC<ResourceCenterViewCNProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showCategoryMenu, setShowCategoryMenu] = useState(false);
+  const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
 
   // 将真实的 links 数据转换为 Resource 格式
   const resources = useMemo(() => {
@@ -200,6 +212,15 @@ const ResourceCenterViewCN: React.FC<ResourceCenterViewCNProps> = ({
 
   const activeCategoryData = categoryList.find(c => c.id === activeCategory);
 
+  // 置顶和常用链接计算
+  const pinnedLinks = useMemo(() => {
+    return links.filter(link => link.pinned && !link.hidden).slice(0, 8);
+  }, [links]);
+
+  const frequentLinks = useMemo(() => {
+    return links.filter(link => !link.pinned && !link.hidden).slice(0, 8);
+  }, [links]);
+
   return (
     <div className="space-y-6">
       {/* Debug Panel - 可视化调试信息 */}
@@ -210,15 +231,64 @@ const ResourceCenterViewCN: React.FC<ResourceCenterViewCNProps> = ({
         </p>
       </div>
       
-      {/* Header Section */}
+      {/* Header Section - 添加统一设置入口 */}
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white mb-2">数字资源中心</h1>
           <p className="text-sm text-slate-400">
-            高效整理您的数字化资产，从开发工具到灵感采集，一站式管理您的工作流。
+            高效整理您的数字化资产，一站式管理您的工作流。
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          {/* 统一设置下拉框 */}
+          <div className="relative">
+            <button
+              onClick={() => setShowSettingsDropdown(!showSettingsDropdown)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#181a1c] text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              <Settings className="w-4 h-4" />
+              <span className="text-sm font-medium">设置</span>
+              <ChevronDown className={`w-4 h-4 transition-transform ${showSettingsDropdown ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {showSettingsDropdown && (
+              <div className="absolute top-full right-0 mt-2 w-48 rounded-xl bg-[#181a1c] border border-white/10 shadow-xl z-50 py-1">
+                <button
+                  onClick={() => {
+                    onOpenSettings?.();
+                    setShowSettingsDropdown(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+                >
+                  <Globe className="w-4 h-4" />
+                  网站设置
+                </button>
+                <button
+                  onClick={() => {
+                    onOpenMenuSettings?.();
+                    setShowSettingsDropdown(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+                >
+                  <Menu className="w-4 h-4" />
+                  菜单配置
+                </button>
+                <button
+                  onClick={() => {
+                    onOpenWidgetSettings?.();
+                    setShowSettingsDropdown(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                  组件配置
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="w-px h-6 bg-white/10 mx-1" />
+
           <button
             onClick={onImport}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#181a1c] text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
@@ -231,7 +301,7 @@ const ResourceCenterViewCN: React.FC<ResourceCenterViewCNProps> = ({
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 text-[#0d0e10] font-medium hover:bg-emerald-400 transition-colors"
           >
             <Plus className="w-4 h-4" />
-            <span className="text-sm">添加新链接</span>
+            <span className="text-sm">添加</span>
           </button>
         </div>
       </div>
@@ -316,6 +386,78 @@ const ResourceCenterViewCN: React.FC<ResourceCenterViewCNProps> = ({
           </div>
         </div>
       </div>
+
+      {/* 置顶/常用 - 从控制台迁移过来的快捷访问区域 */}
+      {(pinnedLinks.length > 0 || frequentLinks.length > 0) && (
+        <div className="space-y-4">
+          {/* 置顶链接 */}
+          {pinnedLinks.length > 0 && (
+            <div className="p-4 rounded-2xl bg-[#181a1c] border border-emerald-500/20">
+              <div className="flex items-center gap-2 mb-3">
+                <Pin className="w-4 h-4 text-emerald-400" />
+                <span className="text-sm font-medium text-emerald-400">置顶链接</span>
+                <span className="text-xs text-slate-500">{pinnedLinks.length}</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {pinnedLinks.map((link) => (
+                  <a
+                    key={link.id}
+                    href={link.url.startsWith('http') ? link.url : `https://${link.url}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#0d0e10] hover:bg-emerald-500/10 hover:text-emerald-400 transition-colors group"
+                  >
+                    {link.icon ? (
+                      <span className="text-sm">{link.icon}</span>
+                    ) : (
+                      <Globe className="w-3.5 h-3.5 text-slate-500 group-hover:text-emerald-400" />
+                    )}
+                    <span className="text-sm text-slate-300 group-hover:text-emerald-400 truncate max-w-[120px]">{link.title}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* 常用链接 */}
+          {frequentLinks.length > 0 && (
+            <div className="p-4 rounded-2xl bg-[#181a1c] border border-white/5">
+              <div className="flex items-center gap-2 mb-3">
+                <LayoutGrid className="w-4 h-4 text-slate-400" />
+                <span className="text-sm font-medium text-slate-300">常用链接</span>
+                <span className="text-xs text-slate-500">{frequentLinks.length}</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {frequentLinks.slice(0, 8).map((link) => (
+                  <a
+                    key={link.id}
+                    href={link.url.startsWith('http') ? link.url : `https://${link.url}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#0d0e10] hover:bg-white/5 transition-colors group"
+                  >
+                    {link.icon ? (
+                      <span className="text-sm">{link.icon}</span>
+                    ) : (
+                      <Globe className="w-3.5 h-3.5 text-slate-500" />
+                    )}
+                    <span className="text-sm text-slate-400 group-hover:text-slate-200 truncate max-w-[120px]">{link.title}</span>
+                  </a>
+                ))}
+                {frequentLinks.length > 8 && (
+                  <button
+                    onClick={() => setActiveCategory('all')}
+                    className="flex items-center gap-1 px-3 py-2 rounded-xl bg-[#0d0e10] text-slate-500 hover:text-emerald-400 transition-colors"
+                  >
+                    <span className="text-xs">+{frequentLinks.length - 8}</span>
+                    <ChevronRight className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* AI Recommendations Banner */}
       <div className="flex items-center gap-3 p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 to-emerald-500/10 border border-amber-500/20">

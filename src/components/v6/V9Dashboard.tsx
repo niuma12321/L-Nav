@@ -1514,50 +1514,6 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
               </div>
             </section>
 
-            {/* 置顶/常用 */}
-            <section>
-              <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/5">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-emerald-500/10">
-                    <Pin className="w-4 h-4 text-emerald-400" />
-                  </div>
-                  <h2 className="text-lg font-bold text-white">置顶 / 常用</h2>
-                </div>
-                <div className="flex items-center gap-3 text-xs text-slate-400">
-                  <span className="px-2 py-1 rounded-full bg-white/5">38 站点</span>
-                  <span className="px-2 py-1 rounded-full bg-white/5">8 分类</span>
-                  <span className="px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400">8 置顶</span>
-                </div>
-              </div>
-
-              {/* 动态渲染链接卡片 */}
-              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-                {links.length > 0 ? (
-                  links.filter(link => !link.hidden).slice(0, 10).map((link) => (
-                    <LinkCard 
-                      key={link.id}
-                      id={link.id}
-                      title={link.title} 
-                      url={link.url} 
-                      icon={link.icon}
-                      description={link.description}
-                      color="bg-emerald-500/20 text-emerald-400"
-                      isHidden={link.hidden}
-                      onEdit={() => onEditLink?.(link)}
-                    />
-                  ))
-                ) : (
-                  // 默认示例链接
-                  <>
-                    <LinkCard id="demo1" title="PanHub" url="https://sou.678870.xyz" color="bg-indigo-500/20 text-indigo-400" isHidden />
-                    <LinkCard id="demo2" title="盘搜" url="https://pansou.nas.678870.xyz" icon="🌐" color="bg-teal-500/20 text-teal-400" isHidden />
-                    <LinkCard id="demo3" title="GitHub" url="https://github.com" description="代码托管平台" color="bg-cyan-500/20 text-cyan-400" />
-                    <LinkCard id="demo4" title="React" url="https://react.dev" description="构建Web用户界面的库" color="bg-fuchsia-500/20 text-fuchsia-400" />
-                  </>
-                )}
-              </div>
-            </section>
-
             {/* 一言 Footer */}
             <footer className="pt-8 pb-4 flex justify-center">
               <div className="flex items-center gap-2 text-xs text-slate-400">
@@ -1590,6 +1546,9 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
               setPreviewUrl(url);
               setIsPreviewOpen(true);
             }}
+            onOpenSettings={onOpenSettings}
+            onOpenMenuSettings={() => setNavEditModalOpen(true)}
+            onOpenWidgetSettings={() => setActiveView('widgets')}
             links={links}
             categories={categories}
           />
