@@ -125,7 +125,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/50 backdrop-blur-sm overflow-y-auto p-4"
       onClick={handleBackdropClick}
     >
-      <div className="w-full max-w-2xl mx-4 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden my-auto">
+      <div 
+        className="w-full max-w-2xl mx-4 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden my-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex justify-between items-center px-6 py-5 border-b border-slate-100 dark:border-slate-800/50 shrink-0">
           <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">

@@ -50,6 +50,7 @@ import {
   AlignLeft
 } from 'lucide-react';
 import { useWidgetSystem } from '../../hooks/useWidgetSystem';
+import { WidgetPosition } from '../../types/widgets';
 import { 
   WidgetConfig, 
   DEFAULT_WIDGETS, 
@@ -170,20 +171,24 @@ const WidgetSettingsModal: React.FC<{
   widget: WidgetConfig | null;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (id: string, position: any) => void;
+  onSave: (id: string, position: WidgetPosition) => void;
 }> = ({ widget, isOpen, onClose, onSave }) => {
-  const [position, setPosition] = useState({ x: 0, y: 0, w: 4, h: 2 });
+  const [position, setPosition] = useState<WidgetPosition>({ x: 0, y: 0, w: 4, h: 2 });
 
   React.useEffect(() => {
     if (widget) {
-      setPosition(widget.position.desktop);
+      setPosition(widget.position);
     }
   }, [widget]);
 
   if (!isOpen || !widget) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div className="bg-[#181a1c] rounded-2xl border border-white/10 w-full max-w-md p-6 shadow-2xl my-auto">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-bold text-white">组件设置 - {widget.title}</h3>
@@ -245,7 +250,7 @@ const WidgetSettingsModal: React.FC<{
             </button>
             <button
               onClick={() => {
-                onSave(widget.id, { desktop: position });
+                onSave(widget.id, position);
                 onClose();
               }}
               className="flex-1 px-4 py-2.5 rounded-xl bg-emerald-500 text-[#0d0e10] font-medium hover:bg-emerald-400 transition-colors text-sm"
@@ -757,7 +762,7 @@ const WidgetConfigCenter: React.FC = () => {
               'grid-cols-4'
             }`}>
               {widgets.filter(w => w.enabled).map((widget) => {
-                const position = widget.position.desktop;
+                const position = widget.position;
                 const colSpan = previewMode === 'desktop' 
                   ? Math.min(position.w, 12) 
                   : previewMode === 'tablet' 
@@ -1502,7 +1507,7 @@ const WidgetConfigCard: React.FC<{
                 <span className="px-1.5 py-0.5 rounded bg-slate-700 text-slate-400 text-[10px]">固定</span>
               )}
             </div>
-            <p className="text-xs text-slate-500">{widget.position.desktop.w}×{widget.position.desktop.h} 栅格</p>
+            <p className="text-xs text-slate-500">{widget.position.w}×{widget.position.h} 栅格</p>
           </div>
         </div>
         
