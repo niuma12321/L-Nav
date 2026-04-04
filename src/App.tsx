@@ -1,6 +1,10 @@
 import React, { useMemo, useEffect, useState, useCallback, useRef } from 'react';
 import { LinkItem, Category } from './types';
 
+// === Constants for removed sync feature ===
+const syncStatus = 'idle' as const;
+const lastSyncTime = null;
+
 // 同步导入所有组件，避免懒加载Promise问题
 import LinkModal from './components/modals/LinkModal';
 import CategoryManagerModal from './components/modals/CategoryManagerModal';
@@ -97,7 +101,11 @@ function App() {
   // === Notes ===
   const { notes, addNote, updateNote, deleteNote, importNotes } = useNotes();
 
+  const autoUnlockAttemptedRef = useRef(false);
+
   // === Widgets ===
+  const [dataBackupOpen, setDataBackupOpen] = useState(false);
+
   // === Private Vault ===
   const [privateVaultCipher, setPrivateVaultCipher] = useState<string | null>(null);
   const [privateLinks, setPrivateLinks] = useState<LinkItem[]>([]);
@@ -860,9 +868,9 @@ function App() {
   }, [notify]);
 
   const handleSyncPasswordChange = useCallback((password: string) => {
-    setSyncPassword(password);
+    localStorage.setItem(VIEW_PASSWORD_KEY, password);
     notify('同步密码已更新', 'success');
-  }, [setSyncPassword, notify]);
+  }, [notify]);
 
   const handleTogglePrivacyGroup = useCallback((enabled: boolean) => {
     setPrivacyGroupEnabled(enabled);
