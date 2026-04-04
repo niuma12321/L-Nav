@@ -20,33 +20,12 @@ export function useWidgets(): UseWidgetsReturn {
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isFirstLoadRef = useRef(true);
-  const widgetsRef = useRef<WidgetConfig[]>([]);
-
-  // 保持 refs 同步
-  useEffect(() => {
-    widgetsRef.current = widgets;
-  }, [widgets]);
-
-  // 合并小组件（云端优先，补充本地独有）
-  const mergeWidgets = useCallback((local: WidgetConfig[], cloud: WidgetConfig[]): WidgetConfig[] => {
-    const merged = [...cloud];
-    const cloudIds = new Set(cloud.map(w => w.id));
-    
-    // 添加本地独有的小组件
-    local.forEach(localWidget => {
-      if (!cloudIds.has(localWidget.id)) {
-        merged.push(localWidget);
-      }
-    });
-    
-    return merged;
-  }, []);
+  const isInitializedRef = useRef(false);
 
   // 推送到云端
   const pushToCloud = useCallback(async (widgetsToPush: WidgetConfig[]) => {
     try {
-      console.log('[Widgets] Pushing to cloud...');
+      console.log('[Widgets] Pushing to cloud:', widgetsToPush.length, 'widgets');
       
       const response = await fetch(`${SYNC_API_BASE}/sync`, {
         method: 'POST',
@@ -58,14 +37,36 @@ export function useWidgets(): UseWidgetsReturn {
         })
       });
       
-      const responseJson = await response.json();
-      console.log('[Widgets] Push result:', responseJson);
+      const result = await response.json();
+      console.log('[Widgets] Push result:', result);
       
-      if (responseJson.success) {
-        console.log('[Widgets] Synced to cloud successfully');
-      }
+      return result.success;
     } catch (e) {
       console.error('[Widgets] Failed to push to cloud:', e);
+      return false;
+    }
+  }, []);
+
+  // 从云端拉取 - 以云端为唯一真相源
+  const pullFromCloud = useCallback(async (): Promise<WidgetConfig[]> => {
+    try {
+      setIsSyncing(true);
+      console.log('[Widgets] Pulling from cloud...');
+      
+      const response = await fetch(`${SYNC_API_BASE}/sync`);
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        const cloudWidgets = result.data.widgets || [];
+        console.log('[Widgets] Cloud data:', cloudWidgets.length, 'widgets');
+        return cloudWidgets;
+      }
+      return [];
+    } catch (e) {
+      console.error('[Widgets] Failed to pull from cloud:', e);
+      return [];
+    } finally {
+      setIsSyncing(false);
     }
   }, []);
 
@@ -77,82 +78,72 @@ export function useWidgets(): UseWidgetsReturn {
     
     syncTimeoutRef.current = setTimeout(() => {
       pushToCloud(newWidgets);
-    }, 3000); // 3秒后同步
+    }, 2000); // 2秒后同步
   }, [pushToCloud]);
 
-  // 从云端拉取
-  const pullFromCloud = useCallback(async () => {
-    try {
-      setIsSyncing(true);
-      console.log('[Widgets] Pulling from cloud...');
-      
-      const response = await fetch(`${SYNC_API_BASE}/sync`);
-      const responseJson = await response.json();
-      
-      if (responseJson.success && responseJson.data) {
-        const cloudWidgets = responseJson.data.widgets || [];
-        
-        console.log('[Widgets] Cloud data:', cloudWidgets.length, 'widgets');
-        
-        // 如果云端有数据，合并到本地
-        if (cloudWidgets.length > 0) {
-          const currentWidgets = widgetsRef.current;
-          const mergedWidgets = mergeWidgets(currentWidgets, cloudWidgets);
-          
-          setWidgets(mergedWidgets);
-          localStorage.setItem(WIDGET_STORAGE_KEY, JSON.stringify(mergedWidgets));
-          
-          console.log('[Widgets] Merged with cloud:', mergedWidgets.length, 'widgets');
-          
-          // 推送合并后的数据到云端统一
-          await pushToCloud(mergedWidgets);
-        }
-      }
-    } catch (e) {
-      console.error('[Widgets] Failed to pull from cloud:', e);
-    } finally {
-      setIsSyncing(false);
-    }
-  }, [mergeWidgets, pushToCloud]);
-
-  // 从 localStorage 加载小组件配置
+  // 初始化加载 - 以云端为真相源
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(WIDGET_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setWidgets(parsed);
-        } else {
-          setWidgets(DEFAULT_WIDGETS);
-        }
-      } else {
-        setWidgets(DEFAULT_WIDGETS);
-      }
-    } catch (error) {
-      console.error('加载小组件配置失败:', error);
-      setWidgets(DEFAULT_WIDGETS);
-    } finally {
-      setIsLoading(false);
-      isFirstLoadRef.current = false;
+    const init = async () => {
+      console.log('[Widgets] Initializing...');
       
-      // 从云端拉取并合并
-      (async () => { await pullFromCloud(); })();
-    }
-  }, []);
+      // 1. 先加载本地数据（快速显示）
+      const stored = localStorage.getItem(WIDGET_STORAGE_KEY);
+      let localWidgets: WidgetConfig[] = [];
+      
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            localWidgets = parsed;
+            setWidgets(localWidgets);
+            console.log('[Widgets] Loaded from local:', localWidgets.length, 'widgets');
+          }
+        } catch (e) {
+          console.error('[Widgets] Failed to parse local data:', e);
+        }
+      }
+      
+      if (localWidgets.length === 0) {
+        setWidgets(DEFAULT_WIDGETS);
+        localWidgets = DEFAULT_WIDGETS;
+        console.log('[Widgets] Using default widgets');
+      }
+      
+      setIsLoading(false);
+      
+      // 2. 从云端拉取最新数据
+      const cloudWidgets = await pullFromCloud();
+      
+      if (cloudWidgets.length > 0) {
+        // 云端有数据，完全以云端为准（覆盖本地）
+        setWidgets(cloudWidgets);
+        localStorage.setItem(WIDGET_STORAGE_KEY, JSON.stringify(cloudWidgets));
+        console.log('[Widgets] Overridden with cloud data:', cloudWidgets.length, 'widgets');
+      } else {
+        // 云端无数据，上传本地数据
+        const success = await pushToCloud(localWidgets);
+        if (success) {
+          console.log('[Widgets] Local data uploaded to cloud');
+        }
+      }
+      
+      isInitializedRef.current = true;
+    };
+    
+    init();
+  }, [pullFromCloud, pushToCloud]);
 
   // 保存到 localStorage 并同步到云端
   useEffect(() => {
-    if (!isLoading && widgets.length > 0) {
+    if (!isLoading && isInitializedRef.current && widgets.length > 0) {
       try {
         localStorage.setItem(WIDGET_STORAGE_KEY, JSON.stringify(widgets));
+        console.log('[Widgets] Saved to localStorage');
         
-        // 同步到云端（防抖）
-        if (!isFirstLoadRef.current) {
-          debouncedSync(widgets);
-        }
+        // 同步到云端
+        debouncedSync(widgets);
       } catch (error) {
-        console.error('[Widgets] 保存失败:', error);
+        console.error('[Widgets] Failed to save:', error);
       }
     }
   }, [widgets, isLoading, debouncedSync]);

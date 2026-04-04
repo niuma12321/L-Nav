@@ -17,31 +17,19 @@ export const useDataStore = () => {
     const [isSyncing, setIsSyncing] = useState(false);
     const { notify } = useDialog();
     const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const isFirstLoadRef = useRef(true);
-    const linksRef = useRef<LinkItem[]>([]);
-    const categoriesRef = useRef<Category[]>([]);
-
-    // 保持 refs 同步
-    useEffect(() => {
-        linksRef.current = links;
-    }, [links]);
-
-    useEffect(() => {
-        categoriesRef.current = categories;
-    }, [categories]);
+    const isInitializedRef = useRef(false);
 
     // 数据监控：确保数据永远不会为空
     useEffect(() => {
-        if (!isLoaded) {
-            console.log('[DataStore] Not loaded yet, skipping check');
+        if (!isLoaded || isSyncing) {
+            console.log('[DataStore] Not ready yet, skipping check');
             return;
         }
         
         console.log('[DataStore] Data check - links:', links?.length, 'categories:', categories?.length);
-        console.log('[DataStore] localStorage data:', localStorage.getItem(LOCAL_STORAGE_KEY)?.substring(0, 200));
         
-        // 如果链接为空，恢复默认数据
-        if (!links || links.length === 0) {
+        // 如果链接为空且不在同步中，恢复默认数据
+        if ((!links || links.length === 0) && !isSyncing) {
             console.warn('[DataStore] Links empty, restoring defaults');
             setLinks(INITIAL_LINKS);
             setCategories(DEFAULT_CATEGORIES);
@@ -51,12 +39,12 @@ export const useDataStore = () => {
             }));
         }
         
-        // 如果分类为空，恢复默认分类
-        if (!categories || categories.length === 0) {
+        // 如果分类为空且不在同步中，恢复默认分类
+        if ((!categories || categories.length === 0) && !isSyncing) {
             console.warn('[DataStore] Categories empty, restoring defaults');
             setCategories(DEFAULT_CATEGORIES);
         }
-    }, [links, categories, isLoaded]);
+    }, [links, categories, isLoaded, isSyncing]);
 
     // 加载本地图标缓存
     const loadLinkIcons = useCallback((linksToLoad: LinkItem[]) => {
@@ -94,39 +82,10 @@ export const useDataStore = () => {
 
     // ===== 云端同步功能 =====
     
-    // 合并链接（云端优先，补充本地独有）
-    const mergeLinks = useCallback((local: LinkItem[], cloud: LinkItem[]): LinkItem[] => {
-        const merged = [...cloud];
-        const cloudIds = new Set(cloud.map(l => l.id));
-        
-        // 添加本地独有的链接
-        local.forEach(localLink => {
-            if (!cloudIds.has(localLink.id)) {
-                merged.push(localLink);
-            }
-        });
-        
-        return merged;
-    }, []);
-
-    // 合并分类（云端优先）
-    const mergeCategories = useCallback((local: Category[], cloud: Category[]): Category[] => {
-        const merged = [...cloud];
-        const cloudIds = new Set(cloud.map(c => c.id));
-        
-        local.forEach(localCat => {
-            if (!cloudIds.has(localCat.id)) {
-                merged.push(localCat);
-            }
-        });
-        
-        return merged;
-    }, []);
-
     // 推送数据到云端
     const pushToCloud = useCallback(async (linksToPush: LinkItem[], categoriesToPush: Category[]) => {
         try {
-            console.log('[DataStore] Pushing to cloud...');
+            console.log('[DataStore] Pushing to cloud:', linksToPush.length, 'links,', categoriesToPush.length, 'categories');
             
             const response = await fetch(`${SYNC_API_BASE}/sync`, {
                 method: 'POST',
@@ -140,26 +99,14 @@ export const useDataStore = () => {
             const result = await response.json();
             console.log('[DataStore] Push result:', result);
             
-            if (result.success) {
-                console.log('[DataStore] Synced to cloud successfully');
-            }
+            return result.success;
         } catch (e) {
             console.error('[DataStore] Failed to push to cloud:', e);
+            return false;
         }
     }, []);
 
-    // 延迟同步（防抖）
-    const debouncedSync = useCallback((newLinks: LinkItem[], newCategories: Category[]) => {
-        if (syncTimeoutRef.current) {
-            clearTimeout(syncTimeoutRef.current);
-        }
-        
-        syncTimeoutRef.current = setTimeout(() => {
-            pushToCloud(newLinks, newCategories);
-        }, 3000); // 3秒后同步
-    }, [pushToCloud]);
-
-    // 从云端拉取数据
+    // 从云端拉取 - 以云端为唯一真相源
     const pullFromCloud = useCallback(async () => {
         try {
             setIsSyncing(true);
@@ -175,40 +122,34 @@ export const useDataStore = () => {
                 
                 console.log('[DataStore] Cloud data:', cloudLinks.length, 'links,', cloudCategories.length, 'categories');
                 
-                // 如果云端有数据，合并到本地
-                if (cloudLinks.length > 0 || cloudCategories.length > 0) {
-                    // 合并策略：以云端为准，本地补充
-                    const currentLinks = linksRef.current;
-                    const currentCategories = categoriesRef.current;
-                    const mergedLinks = mergeLinks(currentLinks, cloudLinks);
-                    const mergedCategories = mergeCategories(currentCategories, cloudCategories);
-                    
-                    setLinks(mergedLinks);
-                    setCategories(mergedCategories);
-                    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ 
-                        links: mergedLinks, 
-                        categories: mergedCategories 
-                    }));
-                    
-                    console.log('[DataStore] Merged with cloud:', mergedLinks.length, 'links,', mergedCategories.length, 'categories');
-                    
-                    // 推送合并后的数据到云端统一
-                    await pushToCloud(mergedLinks, mergedCategories);
-                }
+                return { links: cloudLinks, categories: cloudCategories };
             }
+            return { links: [], categories: [] };
         } catch (e) {
             console.error('[DataStore] Failed to pull from cloud:', e);
+            return { links: [], categories: [] };
         } finally {
             setIsSyncing(false);
         }
-    }, [mergeLinks, mergeCategories, pushToCloud]);
+    }, []);
 
-    // 初始化加载：先本地，后云端同步
+    // 延迟同步（防抖）
+    const debouncedSync = useCallback((newLinks: LinkItem[], newCategories: Category[]) => {
+        if (syncTimeoutRef.current) {
+            clearTimeout(syncTimeoutRef.current);
+        }
+        
+        syncTimeoutRef.current = setTimeout(() => {
+            pushToCloud(newLinks, newCategories);
+        }, 2000); // 2秒后同步
+    }, [pushToCloud]);
+
+    // 初始化加载 - 以云端为真相源
     useEffect(() => {
-        const loadData = async () => {
+        const init = async () => {
             console.log('[DataStore] Initializing...');
             
-            // 先加载本地数据
+            // 1. 先加载本地数据（快速显示）
             const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
             let localLinks: LinkItem[] = [];
             let localCategories: Category[] = [];
@@ -233,21 +174,38 @@ export const useDataStore = () => {
             if (localLinks.length === 0) {
                 setLinks(INITIAL_LINKS);
                 setCategories(DEFAULT_CATEGORIES);
-                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({
-                    links: INITIAL_LINKS,
-                    categories: DEFAULT_CATEGORIES
-                }));
+                localLinks = INITIAL_LINKS;
+                localCategories = DEFAULT_CATEGORIES;
+                console.log('[DataStore] Using default data');
             }
             
             setIsLoaded(true);
-            isFirstLoadRef.current = false;
             
-            // 从云端拉取并合并
-            await pullFromCloud();
+            // 2. 从云端拉取最新数据
+            const cloudData = await pullFromCloud();
+            
+            if (cloudData.links.length > 0 || cloudData.categories.length > 0) {
+                // 云端有数据，完全以云端为准（覆盖本地）
+                setLinks(cloudData.links);
+                setCategories(cloudData.categories);
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ 
+                    links: cloudData.links, 
+                    categories: cloudData.categories 
+                }));
+                console.log('[DataStore] Overridden with cloud data');
+            } else {
+                // 云端无数据，上传本地数据
+                const success = await pushToCloud(localLinks, localCategories);
+                if (success) {
+                    console.log('[DataStore] Local data uploaded to cloud');
+                }
+            }
+            
+            isInitializedRef.current = true;
         };
         
-        loadData();
-    }, []);
+        init();
+    }, [pullFromCloud, pushToCloud, loadLinkIcons]);
 
     // 修改后的 updateData - 同时更新本地和云端
     const updateData = useCallback((newLinks: LinkItem[], newCategories: Category[]) => {
@@ -258,8 +216,8 @@ export const useDataStore = () => {
         // 2. Save to Local Cache
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ links: newLinks, categories: newCategories }));
         
-        // 3. Sync to Cloud (debounced)
-        if (!isFirstLoadRef.current) {
+        // 3. Sync to Cloud (debounced) - 只在初始化完成后同步
+        if (isInitializedRef.current) {
             debouncedSync(newLinks, newCategories);
         }
     }, [debouncedSync]);
