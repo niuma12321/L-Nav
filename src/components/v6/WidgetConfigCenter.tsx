@@ -453,7 +453,7 @@ const WidgetConfigCenter: React.FC = () => {
         }
       } else {
         // 键值对模式
-        headersKeyValue.forEach(item => {
+        (headersKeyValue || []).forEach(item => {
           if (item.key.trim()) {
             parsedHeaders[item.key.trim()] = item.value;
           }
@@ -474,7 +474,7 @@ const WidgetConfigCenter: React.FC = () => {
           }
         } else if (bodyType === 'form-data' || bodyType === 'x-www-form-urlencoded') {
           const formDataObj: Record<string, string> = {};
-          bodyFormData.forEach(item => {
+          (bodyFormData || []).forEach(item => {
             if (item.key.trim()) {
               formDataObj[item.key.trim()] = item.value;
             }
@@ -958,7 +958,7 @@ const WidgetConfigCenter: React.FC = () => {
                           if (!headersRawMode) {
                             // 切换到Raw模式，转换键值对为JSON
                             const obj: Record<string, string> = {};
-                            headersKeyValue.forEach(item => {
+                            (headersKeyValue || []).forEach(item => {
                               if (item.key.trim()) obj[item.key] = item.value;
                             });
                             setApiHeaders(JSON.stringify(obj, null, 2));

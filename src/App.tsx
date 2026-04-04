@@ -1224,19 +1224,19 @@ function App() {
           links={links}
           categories={categories}
           onPin={(ids) => {
-            ids.forEach(id => togglePinStore(id));
-            notify(`${ids.length} 个链接已置顶`, 'success');
+            (ids || []).forEach(id => togglePinStore(id));
+            notify(`${ids?.length || 0} 个链接已置顶`, 'success');
             setMobileBulkEditOpen(false);
           }}
           onMove={(ids, categoryId) => {
-            notify(`${ids.length} 个链接已移动`, 'success');
+            notify(`${ids?.length || 0} 个链接已移动`, 'success');
             setMobileBulkEditOpen(false);
           }}
           onDelete={(ids) => {
-            confirm({ title: '确认删除', message: `确定要删除 ${ids.length} 个链接吗？` }).then((confirmed) => {
+            confirm({ title: '确认删除', message: `确定要删除 ${ids?.length || 0} 个链接吗？` }).then((confirmed) => {
               if (confirmed) {
-                ids.forEach(id => deleteLink(id));
-                notify(`${ids.length} 个链接已删除`, 'success');
+                (ids || []).forEach(id => deleteLink(id));
+                notify(`${ids?.length || 0} 个链接已删除`, 'success');
               }
             });
           }}

@@ -38,7 +38,11 @@ export function useWidgetSystem() {
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
-        setWidgets(parsed);
+        if (Array.isArray(parsed)) {
+          setWidgets(parsed);
+        } else {
+          setWidgets(DEFAULT_WIDGETS);
+        }
       } catch {
         setWidgets(DEFAULT_WIDGETS);
       }
