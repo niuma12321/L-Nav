@@ -14,7 +14,8 @@ export type WidgetType =
   | 'automation-logs' // 执行日志
   | 'smart-home-status' // 设备状态
   | 'smart-home-quick' // 快捷控制
-  | 'embedded-news'; // 内嵌新闻组件
+  | 'embedded-news' // 内嵌新闻组件
+  | 'custom-url'; // 自定义URL内嵌组件
 
 export interface WidgetConfig {
   id: string;
@@ -161,6 +162,32 @@ export const createAPIWidget = (apiConfig: APIDataConfig): WidgetConfig => ({
   },
   settings: {
     api: apiConfig
+  }
+});
+
+// 自定义URL组件配置接口
+export interface CustomURLConfig {
+  url: string;
+  title: string;
+  height?: number;
+}
+
+// 创建自定义URL组件
+export const createCustomURLWidget = (config: CustomURLConfig): WidgetConfig => ({
+  id: `custom-url-${Date.now()}`,
+  type: 'custom-url',
+  title: config.title,
+  description: `内嵌页面: ${config.url}`,
+  icon: 'Globe',
+  enabled: true,
+  isFixed: false,
+  position: {
+    desktop: { x: 0, y: 0, w: 4, h: 4 },
+    mobile: { order: 0 }
+  },
+  settings: {
+    url: config.url,
+    height: config.height || 300
   }
 });
 

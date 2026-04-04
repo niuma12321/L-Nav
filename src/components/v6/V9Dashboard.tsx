@@ -1147,7 +1147,8 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
     editMode, 
     setEditMode,
     toggleWidget,
-    updateWidgetPosition 
+    updateWidgetPosition,
+    reorderWidgets
   } = useWidgetSystem();
 
   useEffect(() => {
@@ -1409,20 +1410,44 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
                 </div>
               </div>
 
-              {/* Widget Grid - 整齐网格布局 */}
+              {/* Widget Grid - 支持拖拽排序 */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {enabledWidgets
                   .filter(w => w.enabled)
                   .sort((a, b) => (a.order || 0) - (b.order || 0))
-                  .map(widget => {
+                  .map((widget, index) => {
                     const desktopPosition = widget.position?.desktop || { x: 0, y: 0, w: 4, h: 3 };
-                    // 使用w和h来确定网格列跨度
                     const colSpan = desktopPosition.w <= 2 ? 1 : desktopPosition.w <= 4 ? 2 : desktopPosition.w <= 6 ? 3 : 4;
                     
                     return (
                       <div 
                         key={widget.id}
-                        className={`bg-[#181a1c] rounded-xl border border-white/5 hover:border-white/10 transition-all duration-200 overflow-hidden group ${
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData('widgetId', widget.id);
+                          e.dataTransfer.effectAllowed = 'move';
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = 'move';
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          const draggedId = e.dataTransfer.getData('widgetId');
+                          if (draggedId && draggedId !== widget.id) {
+                            const currentWidgets = enabledWidgets.filter(w => w.enabled).sort((a, b) => (a.order || 0) - (b.order || 0));
+                            const draggedIndex = currentWidgets.findIndex(w => w.id === draggedId);
+                            const targetIndex = currentWidgets.findIndex(w => w.id === widget.id);
+                            
+                            if (draggedIndex !== -1 && targetIndex !== -1) {
+                              const newOrder = [...currentWidgets];
+                              const [removed] = newOrder.splice(draggedIndex, 1);
+                              newOrder.splice(targetIndex, 0, removed);
+                              reorderWidgets(newOrder.map(w => w.id));
+                            }
+                          }
+                        }}
+                        className={`bg-[#181a1c] rounded-xl border border-white/5 hover:border-emerald-500/30 transition-all duration-200 overflow-hidden group cursor-move ${
                           colSpan === 1 ? '' : colSpan === 2 ? 'md:col-span-2' : colSpan === 3 ? 'md:col-span-3' : 'md:col-span-4'
                         }`}
                       >
@@ -1431,8 +1456,9 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
                           <div className="flex items-center gap-2">
                             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/60" />
                             <span className="text-xs font-medium text-slate-400 group-hover:text-slate-300 transition-colors">
-                              {widget.name}
+                              {widget.title}
                             </span>
+                            <span className="text-[10px] text-slate-600">⋮⋮</span>
                           </div>
                           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button className="p-1 rounded hover:bg-white/10 text-slate-500 hover:text-slate-300">
@@ -1448,9 +1474,14 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
                           )}
                           {widget.type === 'weather' && <WeatherWidget />}
                           {widget.type === 'custom-links' && <TodoWidget />}
-                          {widget.type === 'stock-widget' && <NewsWidget />}
-                          {widget.type === 'news-feed' && <NewsFeedWidget />}
                           {widget.type === 'embedded-news' && <EmbeddedNewsWidget />}
+                          {widget.type === 'custom-url' && widget.settings?.url && (
+                            <iframe 
+                              src={widget.settings.url} 
+                              className="w-full h-[300px] rounded-lg border-0"
+                              sandbox="allow-scripts allow-same-origin"
+                            />
+                          )}
                         </div>
                       </div>
                     );

@@ -328,8 +328,17 @@ export const OilPriceRenderer: React.FC<{ data: any[] }> = ({ data }) => {
 // 数据结构: { data: { moyuQuote: "string content" } }
 // ==========================================
 export const MoyuDailyRenderer: React.FC<{ data: any[] }> = ({ data }) => {
-  // data.moyuQuote is a string
-  const content = typeof data[0] === 'string' ? data[0] : (data[0]?.moyuQuote || '');
+  // data 可能是 [{moyuQuote: "content"}] 或 ["content"]
+  let content = '';
+  
+  if (data && data.length > 0) {
+    const firstItem = data[0];
+    if (typeof firstItem === 'string') {
+      content = firstItem;
+    } else if (typeof firstItem === 'object' && firstItem !== null) {
+      content = firstItem.moyuQuote || firstItem.content || firstItem.title || '';
+    }
+  }
 
   if (!content) {
     return (
