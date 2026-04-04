@@ -3,59 +3,75 @@ import type { Env } from '../index';
 
 const notifications = new Hono<{ Bindings: Env }>();
 
+// 错误处理中间件
+notifications.onError((err, c) => {
+  console.error('[Notifications Error]', err);
+  return c.json({ error: 'Internal Server Error', message: err.message }, 500);
+});
+
 // ==========================================
 // 1. 通知查询接口
 // ==========================================
 
 // 获取通知列表（支持分页、筛选）
 notifications.get('/', async (c) => {
-  const userId = c.req.query('userId');
-  const isRead = c.req.query('isRead');
-  const type = c.req.query('type');
-  const limit = Number(c.req.query('limit')) || 50;
-  const offset = Number(c.req.query('offset')) || 0;
+  try {
+    const userId = c.req.query('userId');
+    const isRead = c.req.query('isRead');
+    const type = c.req.query('type');
+    const limit = Number(c.req.query('limit')) || 50;
+    const offset = Number(c.req.query('offset')) || 0;
 
-  if (!userId) return c.json({ error: 'missing userId' }, 400);
+    if (!userId) return c.json({ error: 'missing userId' }, 400);
 
-  let query = 'SELECT * FROM notifications WHERE user_id = ?';
-  const params: any[] = [userId];
+    let query = 'SELECT * FROM notifications WHERE user_id = ?';
+    const params: any[] = [userId];
 
-  if (isRead !== undefined) {
-    query += ' AND is_read = ?';
-    params.push(isRead === '1' ? 1 : 0);
+    if (isRead !== undefined) {
+      query += ' AND is_read = ?';
+      params.push(isRead === '1' ? 1 : 0);
+    }
+
+    if (type) {
+      query += ' AND type = ?';
+      params.push(type);
+    }
+
+    query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+    params.push(limit, offset);
+
+    const { results } = await c.env.YNAV_D1.prepare(query).bind(...params).all();
+
+    const unreadResult = await c.env.YNAV_D1.prepare(
+      'SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0'
+    ).bind(userId).first();
+
+    return c.json({
+      notifications: results,
+      unreadCount: unreadResult?.count || 0,
+      total: results.length
+    });
+  } catch (err: any) {
+    console.error('[Notifications GET / Error]', err);
+    return c.json({ error: err.message }, 500);
   }
-
-  if (type) {
-    query += ' AND type = ?';
-    params.push(type);
-  }
-
-  query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
-  params.push(limit, offset);
-
-  const { results } = await c.env.YNAV_D1.prepare(query).bind(...params).all();
-
-  const unreadResult = await c.env.YNAV_D1.prepare(
-    'SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0'
-  ).bind(userId).first();
-
-  return c.json({
-    notifications: results,
-    unreadCount: unreadResult?.count || 0,
-    total: results.length
-  });
 });
 
 // 获取未读数量（轻量接口，用于顶部角标）
 notifications.get('/unread-count', async (c) => {
-  const userId = c.req.query('userId');
-  if (!userId) return c.json({ count: 0 });
+  try {
+    const userId = c.req.query('userId');
+    if (!userId) return c.json({ count: 0 });
 
-  const result = await c.env.YNAV_D1.prepare(
-    'SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0'
-  ).bind(userId).first();
+    const result = await c.env.YNAV_D1.prepare(
+      'SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0'
+    ).bind(userId).first();
 
-  return c.json({ count: result?.count || 0 });
+    return c.json({ count: result?.count || 0 });
+  } catch (err: any) {
+    console.error('[Notifications GET /unread-count Error]', err);
+    return c.json({ count: 0 });
+  }
 });
 
 // ==========================================
@@ -106,68 +122,89 @@ notifications.delete('/clear-read', async (c) => {
 
 // 获取配置
 notifications.get('/settings', async (c) => {
-  const userId = c.req.query('userId');
-  if (!userId) return c.json({ error: 'missing userId' }, 400);
+  try {
+    console.log('[Notifications] /settings called, checking env...');
+    console.log('[Notifications] c.env keys:', Object.keys(c.env || {}));
+    
+    const userId = c.req.query('userId');
+    if (!userId) {
+      console.log('[Notifications] Missing userId');
+      return c.json({ error: 'missing userId' }, 400);
+    }
+    
+    console.log('[Notifications] Querying D1 for userId:', userId);
+    console.log('[Notifications] D1 object:', c.env.YNAV_D1 ? 'exists' : 'MISSING');
 
-  let settings = await c.env.YNAV_D1.prepare(
-    'SELECT * FROM notification_settings WHERE user_id = ?'
-  ).bind(userId).first();
+    let settings = null;
+    try {
+      settings = await c.env.YNAV_D1.prepare(
+        'SELECT * FROM notification_settings WHERE user_id = ?'
+      ).bind(userId).first();
+      console.log('[Notifications] D1 query result:', settings);
+    } catch (d1Err: any) {
+      console.error('[Notifications] D1 query error:', d1Err);
+      return c.json({ error: 'D1 query failed', details: d1Err.message }, 500);
+    }
 
-  // 如果没有配置，返回默认值
-  if (!settings) {
-    settings = {
-      user_id: userId,
-      email_to: '',
-      smtp_host: '',
-      smtp_port: 465,
-      smtp_user: '',
-      smtp_pass: '',
-      vapid_public_key: '',
-      vapid_private_key: '',
-      webhook_url: '',
-      webhook_headers: '{}',
-      feishu_webhook: '',
-      feishu_secret: '',
-      dingtalk_webhook: '',
-      dingtalk_secret: '',
-      wecom_webhook: '',
-      serverchan_sckey: '',
+    // 如果没有配置，返回默认值
+    if (!settings) {
+      settings = {
+        user_id: userId,
+        email_to: '',
+        smtp_host: '',
+        smtp_port: 465,
+        smtp_user: '',
+        smtp_pass: '',
+        vapid_public_key: '',
+        vapid_private_key: '',
+        webhook_url: '',
+        webhook_headers: '{}',
+        feishu_webhook: '',
+        feishu_secret: '',
+        dingtalk_webhook: '',
+        dingtalk_secret: '',
+        wecom_webhook: '',
+        serverchan_sckey: '',
 
-      success_browser: 1,
-      success_email: 0,
-      success_webhook: 0,
-      success_feishu: 0,
-      success_dingtalk: 0,
-      success_wecom: 0,
-      success_wechat: 0,
+        success_browser: 1,
+        success_email: 0,
+        success_webhook: 0,
+        success_feishu: 0,
+        success_dingtalk: 0,
+        success_wecom: 0,
+        success_wechat: 0,
 
-      fail_browser: 1,
-      fail_email: 1,
-      fail_webhook: 1,
-      fail_feishu: 1,
-      fail_dingtalk: 1,
-      fail_wecom: 1,
-      fail_wechat: 1,
+        fail_browser: 1,
+        fail_email: 1,
+        fail_webhook: 1,
+        fail_feishu: 1,
+        fail_dingtalk: 1,
+        fail_wecom: 1,
+        fail_wechat: 1,
 
-      alert_browser: 1,
-      alert_email: 1,
-      alert_webhook: 1,
-      alert_feishu: 1,
-      alert_dingtalk: 1,
-      alert_wecom: 1,
-      alert_wechat: 1,
+        alert_browser: 1,
+        alert_email: 1,
+        alert_webhook: 1,
+        alert_feishu: 1,
+        alert_dingtalk: 1,
+        alert_wecom: 1,
+        alert_wechat: 1,
 
-      notice_browser: 1,
-      notice_email: 0,
-      notice_webhook: 0,
-      notice_feishu: 0,
-      notice_dingtalk: 0,
-      notice_wecom: 0,
-      notice_wechat: 0,
-    };
+        notice_browser: 1,
+        notice_email: 0,
+        notice_webhook: 0,
+        notice_feishu: 0,
+        notice_dingtalk: 0,
+        notice_wecom: 0,
+        notice_wechat: 0,
+      };
+    }
+
+    return c.json(settings);
+  } catch (err: any) {
+    console.error('[Notifications GET /settings Error]', err);
+    return c.json({ error: err.message }, 500);
   }
-
-  return c.json(settings);
 });
 
 // 保存配置

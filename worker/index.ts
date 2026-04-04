@@ -203,16 +203,17 @@ async function handleAPI(request: Request, env: Env, ctx: ExecutionContext): Pro
 
   // 通知中心 API
   if (path.startsWith('/api/v1/notifications')) {
-    // 创建一个新的请求，修改 URL 为 Hono 路由期望的格式
-    const newUrl = new URL(request.url);
-    // Hono 路由内部期望的路径是相对路径
-    const honoPath = path.replace('/api/v1/notifications', '') || '/';
-    const newRequest = new Request(newUrl.origin + honoPath + newUrl.search, {
-      method: request.method,
-      headers: request.headers,
-      body: request.body
-    });
-    return notifications.fetch(newRequest, env, ctx);
+    try {
+      // 直接使用原始请求调用 Hono 路由
+      const response = await notifications.fetch(request, env, ctx);
+      return response;
+    } catch (err: any) {
+      console.error('[Notifications Route Error]', err);
+      return new Response(JSON.stringify({ error: err.message }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
   }
 
   return new Response(JSON.stringify({ error: 'Not found' }), {
