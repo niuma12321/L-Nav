@@ -108,7 +108,7 @@ export const DEFAULT_WIDGETS: WidgetConfig[] = [
     id: 'weather',
     type: 'weather',
     title: '天气插件 Pro',
-    description: '高精度气象数据、空气质量监测及未来7天预报。支持多城市自动轮播显示。',
+    description: '实时天气监测与未来7天预报。结合实时天气和天气预报接口，支持自定义城市查询。',
     icon: 'Cloud',
     enabled: true,
     isFixed: true, // 固定组件
@@ -117,11 +117,10 @@ export const DEFAULT_WIDGETS: WidgetConfig[] = [
       mobile: { order: 2 }
     },
     settings: {
-      cities: ['北京'],
-      currentCity: '北京',
-      cityId: '101010100',
+      city: '北京',
       showAirQuality: true,
-      showForecast: true
+      showForecast: true,
+      refreshInterval: 1800
     }
   },
   {

@@ -82,277 +82,218 @@ interface V9DashboardProps {
   }>;
 }
 
-// 天气小组件 - 接入真实天气API，支持城市选择和定位
+// 天气小组件 - 使用 60s API，结合实时天气和天气预报
 const WeatherWidget: React.FC = () => {
-  // 常用城市列表
   const cities = [
-    { name: '北京', id: '101010100' },
-    { name: '上海', id: '101020100' },
-    { name: '广州', id: '101280101' },
-    { name: '深圳', id: '101280601' },
-    { name: '杭州', id: '101210101' },
-    { name: '南京', id: '101190101' },
-    { name: '成都', id: '101270101' },
-    { name: '武汉', id: '101200101' },
-    { name: '西安', id: '101110101' },
-    { name: '重庆', id: '101040100' },
+    '北京', '上海', '广州', '深圳', '杭州', '南京', '成都', '武汉', '西安', '重庆',
+    '天津', '苏州', '长沙', '郑州', '青岛', '大连', '厦门', '昆明', '合肥', '济南'
   ];
 
-  const [weather, setWeather] = useState({
-    city: '北京',
-    cityId: '101010100',
-    temp: 23,
+  const [city, setCity] = useState('北京');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [showCitySelector, setShowCitySelector] = useState(false);
+  
+  // 实时天气数据
+  const [currentWeather, setCurrentWeather] = useState({
+    temperature: 23,
     condition: '多云',
     humidity: 61,
-    windLevel: 4,
-    icon: 'Cloud',
-    loading: false,
-    error: false
+    windDirection: '东南风',
+    windPower: '3级',
+    updated: '',
+    weatherIcon: ''
   });
-  const [showCitySelector, setShowCitySelector] = useState(false);
-  const [isLocating, setIsLocating] = useState(false);
+  
+  // 空气质量数据
+  const [airQuality, setAirQuality] = useState({
+    aqi: 75,
+    quality: '良',
+    pm25: 35,
+    pm10: 50
+  });
+  
+  // 预报数据
+  const [forecast, setForecast] = useState<Array<{
+    date: string;
+    dayCondition: string;
+    nightCondition: string;
+    maxTemp: number;
+    minTemp: number;
+    dayWeatherIcon: string;
+  }>>([]);
+  
+  // 生活指数
+  const [lifeIndices, setLifeIndices] = useState<Array<{
+    name: string;
+    level: string;
+    description: string;
+  }>>([]);
 
-  // 根据天气条件返回对应图标名称
-  const getWeatherIconByCondition = (condition: string) => {
-    if (condition.includes('晴')) return 'Sun';
-    if (condition.includes('雨')) return 'CloudRain';
-    if (condition.includes('雪')) return 'Snowflake';
-    return 'Cloud';
+  // 获取天气图标
+  const getWeatherIcon = (condition: string) => {
+    if (condition.includes('晴')) return '☀️';
+    if (condition.includes('多云')) return '⛅';
+    if (condition.includes('阴')) return '☁️';
+    if (condition.includes('雨')) return '🌧️';
+    if (condition.includes('雪')) return '❄️';
+    if (condition.includes('雷')) return '⛈️';
+    if (condition.includes('雾')) return '🌫️';
+    return '🌤️';
   };
 
-  // 根据天气图标代码返回对应图标名称
-  const getWeatherIcon = (iconCode: string) => {
-    const code = parseInt(iconCode);
-    if (code <= 3) return 'Sun';
-    if (code <= 9) return 'Cloud';
-    if (code <= 19) return 'CloudRain';
-    if (code <= 25) return 'Snowflake';
-    return 'Cloud';
+  // 格式化日期
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const today = new Date();
+    const isToday = date.toDateString() === today.toDateString();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const isTomorrow = date.toDateString() === tomorrow.toDateString();
+    
+    if (isToday) return '今天';
+    if (isTomorrow) return '明天';
+    return `${date.getMonth() + 1}/${date.getDate()}`;
   };
 
-  // 获取天气数据
-  const fetchWeather = useCallback(async (cityId: string, cityName: string) => {
-    setWeather(prev => ({ ...prev, loading: true, error: false }));
+  // 获取实时天气
+  const fetchCurrentWeather = useCallback(async (cityName: string) => {
     try {
-      // 优先使用环境变量中的API Key
-      const apiKey = import.meta.env.VITE_QWEATHER_KEY || '';
-      
-      // 如果没有API Key，跳过API请求直接使用模拟数据
-      if (!apiKey) {
-        // 使用模拟数据
-        const mockData: Record<string, { temp: number; condition: string; humidity: number; windLevel: number }> = {
-          '101010100': { temp: 22, condition: '晴', humidity: 45, windLevel: 3 },
-          '101020100': { temp: 23, condition: '多云', humidity: 60, windLevel: 4 },
-          '101280101': { temp: 28, condition: '雷阵雨', humidity: 75, windLevel: 5 },
-          '101280601': { temp: 29, condition: '多云', humidity: 70, windLevel: 4 },
-          '101210101': { temp: 24, condition: '小雨', humidity: 80, windLevel: 3 },
-          '101190101': { temp: 21, condition: '阴', humidity: 65, windLevel: 3 },
-          '101270101': { temp: 25, condition: '多云', humidity: 55, windLevel: 2 },
-          '101200101': { temp: 26, condition: '晴', humidity: 50, windLevel: 3 },
-          '101110101': { temp: 20, condition: '晴', humidity: 40, windLevel: 2 },
-          '101040100': { temp: 27, condition: '多云', humidity: 60, windLevel: 3 },
-        };
-        const data = mockData[cityId] || { temp: 23, condition: '多云', humidity: 60, windLevel: 3 };
-        setWeather({
-          city: cityName,
-          cityId: cityId,
-          temp: data.temp,
-          condition: data.condition,
-          humidity: data.humidity,
-          windLevel: data.windLevel,
-          icon: getWeatherIconByCondition(data.condition),
-          loading: false,
-          error: false
-        });
-        localStorage.setItem('ynav_weather_city', JSON.stringify({ name: cityName, id: cityId }));
-        return;
-      }
-      
-      const response = await fetch(`https://devapi.qweather.com/v7/weather/now?location=${cityId}&key=${apiKey}`, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Weather API error: ${response.status}`);
-      }
-      
+      const response = await fetch(`https://60s.viki.moe/v2/weather?query=${encodeURIComponent(cityName)}`);
       const data = await response.json();
       
-      if (data.code === '200' && data.now) {
-        const now = data.now;
-        setWeather({
-          city: cityName,
-          cityId: cityId,
-          temp: parseInt(now.temp),
-          condition: now.text,
-          humidity: parseInt(now.humidity),
-          windLevel: parseInt(now.windScale) || 3,
-          icon: getWeatherIcon(now.icon),
-          loading: false,
-          error: false
+      if (data.code === 200 && data.data) {
+        const { weather, air_quality, life_indices } = data.data;
+        
+        setCurrentWeather({
+          temperature: weather.temperature,
+          condition: weather.condition,
+          humidity: weather.humidity,
+          windDirection: weather.wind_direction,
+          windPower: weather.wind_power,
+          updated: weather.updated,
+          weatherIcon: weather.weather_icon
         });
-        localStorage.setItem('ynav_weather_city', JSON.stringify({ name: cityName, id: cityId }));
-      } else {
-        throw new Error('Weather API error');
+        
+        setAirQuality({
+          aqi: air_quality.aqi,
+          quality: air_quality.quality,
+          pm25: air_quality.pm25,
+          pm10: air_quality.pm10
+        });
+        
+        if (life_indices && life_indices.length > 0) {
+          setLifeIndices(life_indices.slice(0, 4).map((item: any) => ({
+            name: item.name,
+            level: item.level,
+            description: item.description
+          })));
+        }
+        
+        return true;
       }
-    } catch {
-      // 备用：使用模拟数据
-      const mockData: Record<string, { temp: number; condition: string; humidity: number; windLevel: number }> = {
-        '101010100': { temp: 22, condition: '晴', humidity: 45, windLevel: 3 },
-        '101020100': { temp: 23, condition: '多云', humidity: 60, windLevel: 4 },
-        '101280101': { temp: 28, condition: '雷阵雨', humidity: 75, windLevel: 5 },
-        '101280601': { temp: 29, condition: '多云', humidity: 70, windLevel: 4 },
-        '101210101': { temp: 24, condition: '小雨', humidity: 80, windLevel: 3 },
-        '101190101': { temp: 21, condition: '阴', humidity: 65, windLevel: 3 },
-        '101270101': { temp: 25, condition: '多云', humidity: 55, windLevel: 2 },
-        '101200101': { temp: 26, condition: '晴', humidity: 50, windLevel: 3 },
-        '101110101': { temp: 20, condition: '晴', humidity: 40, windLevel: 2 },
-        '101040100': { temp: 27, condition: '多云', humidity: 60, windLevel: 3 },
-      };
-      const data = mockData[cityId] || { temp: 23, condition: '多云', humidity: 60, windLevel: 3 };
-      setWeather({
-        city: cityName,
-        cityId: cityId,
-        temp: data.temp,
-        condition: data.condition,
-        humidity: data.humidity,
-        windLevel: data.windLevel,
-        icon: getWeatherIconByCondition(data.condition),
-        loading: false,
-        error: false
-      });
-      localStorage.setItem('ynav_weather_city', JSON.stringify({ name: cityName, id: cityId }));
+      return false;
+    } catch (err) {
+      console.error('获取实时天气失败:', err);
+      return false;
     }
   }, []);
 
-  // 获取当前定位
-  const getCurrentLocation = useCallback(() => {
-    if (!navigator.geolocation) {
-      alert('您的浏览器不支持地理定位');
-      return;
-    }
-    // 检查是否HTTPS或localhost（地理定位需要安全上下文）
-    const isSecureContext = window.isSecureContext || 
-      window.location.hostname === 'localhost' || 
-      window.location.hostname === '127.0.0.1';
-    if (!isSecureContext) {
-      alert('地理定位需要在HTTPS或localhost环境下使用');
-      return;
-    }
-    setIsLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        try {
-          // 使用逆地理编码获取城市信息
-          const response = await fetch(`https://apis.map.qq.com/ws/geocoder/v1/?location=${latitude},${longitude}&key=OB4BZ-D4W3U-B7VVO-4PJWW-6TKDJ-WPB77&get_poi=0`);
-          const data = await response.json();
-          if (data.status === 0 && data.result?.ad_info?.city) {
-            const cityName = data.result.ad_info.city.replace(/市$/, '');
-            // 查找城市ID
-            const city = cities.find(c => cityName.includes(c.name) || c.name.includes(cityName));
-            if (city) {
-              await fetchWeather(city.id, city.name);
-            } else {
-              await fetchWeather('101010100', '北京(定位)');
-            }
-          } else {
-            await fetchWeather('101010100', '北京(定位)');
-          }
-        } catch {
-          await fetchWeather('101010100', '北京(定位)');
-        }
-        setIsLocating(false);
-      },
-      (error) => {
-        setIsLocating(false);
-        let errorMsg = '获取定位失败';
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            errorMsg = '定位权限被拒绝，请在浏览器设置中允许定位';
-            break;
-          case error.POSITION_UNAVAILABLE:
-            errorMsg = '位置信息不可用';
-            break;
-          case error.TIMEOUT:
-            errorMsg = '获取定位超时';
-            break;
-        }
-        alert(errorMsg);
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-    );
-  }, [fetchWeather]);
-
-  // 加载保存的城市
-  useEffect(() => {
-    const saved = localStorage.getItem('ynav_weather_city');
-    if (saved) {
-      try {
-        const { name, id } = JSON.parse(saved);
-        fetchWeather(id, name);
-      } catch {
-        fetchWeather('101010100', '北京');
+  // 获取天气预报
+  const fetchForecast = useCallback(async (cityName: string) => {
+    try {
+      const response = await fetch(`https://60s.viki.moe/v2/weather/forecast?query=${encodeURIComponent(cityName)}&days=7`);
+      const data = await response.json();
+      
+      if (data.code === 200 && data.data) {
+        const { daily_forecast } = data.data;
+        
+        setForecast(daily_forecast.slice(0, 5).map((item: any) => ({
+          date: item.date,
+          dayCondition: item.day_condition,
+          nightCondition: item.night_condition,
+          maxTemp: item.max_temperature,
+          minTemp: item.min_temperature,
+          dayWeatherIcon: item.day_weather_icon
+        })));
+        
+        return true;
       }
-    } else {
-      fetchWeather('101010100', '北京');
+      return false;
+    } catch (err) {
+      console.error('获取天气预报失败:', err);
+      return false;
     }
-  }, [fetchWeather]);
+  }, []);
 
-  // 每30分钟自动刷新
+  // 获取所有天气数据
+  const fetchWeatherData = useCallback(async (cityName: string) => {
+    setLoading(true);
+    setError('');
+    
+    try {
+      await Promise.all([
+        fetchCurrentWeather(cityName),
+        fetchForecast(cityName)
+      ]);
+      
+      localStorage.setItem('ynav_weather_city', cityName);
+    } catch (err) {
+      setError('获取天气数据失败');
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchCurrentWeather, fetchForecast]);
+
+  // 初始化加载
+  useEffect(() => {
+    const savedCity = localStorage.getItem('ynav_weather_city');
+    if (savedCity && cities.includes(savedCity)) {
+      setCity(savedCity);
+      fetchWeatherData(savedCity);
+    } else {
+      fetchWeatherData(city);
+    }
+  }, []);
+
+  // 自动刷新
   useEffect(() => {
     const timer = setInterval(() => {
-      if (weather.cityId) {
-        fetchWeather(weather.cityId, weather.city);
-      }
-    }, 30 * 60 * 1000);
+      fetchWeatherData(city);
+    }, 30 * 60 * 1000); // 30分钟刷新
+    
     return () => clearInterval(timer);
-  }, [weather.cityId, weather.city, fetchWeather]);
+  }, [city, fetchWeatherData]);
 
-  const handleRefresh = () => {
-    fetchWeather(weather.cityId, weather.city);
-  };
-
-  const handleCitySelect = (city: typeof cities[0]) => {
-    fetchWeather(city.id, city.name);
+  const handleCitySelect = (selectedCity: string) => {
+    setCity(selectedCity);
+    fetchWeatherData(selectedCity);
     setShowCitySelector(false);
   };
 
-  const WeatherIcon = weather.loading ? Cloud : 
-    weather.icon === 'Sun' ? ({className}: {className?: string}) => <span className={className}>☀️</span> :
-    weather.icon === 'CloudRain' ? ({className}: {className?: string}) => <span className={className}>🌧️</span> :
-    weather.icon === 'Snowflake' ? ({className}: {className?: string}) => <span className={className}>❄️</span> :
-    Cloud;
+  const handleRefresh = () => {
+    fetchWeatherData(city);
+  };
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between mb-2">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3">
         <button 
           onClick={() => setShowCitySelector(true)}
           className="flex items-center gap-1 text-sm font-medium text-slate-300 hover:text-emerald-400 transition-colors"
         >
           <MapPin className="w-3.5 h-3.5" />
-          {weather.city}
+          {city}
         </button>
         <div className="flex items-center gap-1">
           <button 
-            onClick={getCurrentLocation}
-            disabled={isLocating}
-            className="p-1 rounded hover:bg-white/5 transition-colors"
-            title="获取当前定位"
-          >
-            <Navigation className={`w-3 h-3 text-slate-400 ${isLocating ? 'animate-spin' : ''}`} />
-          </button>
-          <button 
             onClick={handleRefresh}
-            disabled={weather.loading}
+            disabled={loading}
             className="p-1 rounded hover:bg-white/5 transition-colors"
             title="刷新天气"
           >
-            <RefreshCw className={`w-3 h-3 text-slate-400 ${weather.loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3 h-3 text-slate-400 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>
@@ -369,57 +310,84 @@ const WeatherWidget: React.FC = () => {
               <X className="w-4 h-4" />
             </button>
           </div>
-          <div className="grid grid-cols-2 gap-2 overflow-y-auto max-h-40">
-            {cities.map(city => (
+          <div className="grid grid-cols-3 gap-2 overflow-y-auto max-h-40">
+            {cities.map(cityName => (
               <button
-                key={city.id}
-                onClick={() => handleCitySelect(city)}
-                className={`px-3 py-2 rounded-lg text-sm transition-colors text-left ${
-                  weather.cityId === city.id 
+                key={cityName}
+                onClick={() => handleCitySelect(cityName)}
+                className={`px-2 py-1.5 rounded-lg text-xs transition-colors text-center ${
+                  city === cityName 
                     ? 'bg-emerald-500 text-[#0d0e10]' 
                     : 'bg-white/5 text-slate-300 hover:bg-white/10'
                 }`}
               >
-                {city.name}
+                {cityName}
               </button>
             ))}
           </div>
-          <button
-            onClick={getCurrentLocation}
-            disabled={isLocating}
-            className="w-full mt-2 py-2 rounded-lg bg-white/5 text-slate-300 text-sm flex items-center justify-center gap-2 hover:bg-white/10 transition-colors"
-          >
-            <Navigation className={`w-4 h-4 ${isLocating ? 'animate-spin' : ''}`} />
-            {isLocating ? '定位中...' : '获取当前定位'}
-          </button>
         </div>
       )}
 
-      <div className="flex items-center gap-3 flex-1">
-        {weather.loading ? (
+      {/* 当前天气 */}
+      <div className="flex items-center gap-3 mb-3">
+        {loading ? (
           <Loader2 className="w-8 h-8 text-slate-400 animate-spin" />
         ) : (
           <>
-            <WeatherIcon className="w-8 h-8 text-gray-400" />
+            <span className="text-4xl">{getWeatherIcon(currentWeather.condition)}</span>
             <div>
-              <div className="text-3xl font-bold text-white">{weather.temp}°</div>
-              <div className={`text-xs ${weather.error ? 'text-red-400' : 'text-slate-400'}`}>
-                {weather.condition}
-              </div>
+              <div className="text-3xl font-bold text-white">{currentWeather.temperature}°</div>
+              <div className="text-xs text-slate-400">{currentWeather.condition}</div>
             </div>
           </>
         )}
       </div>
-      <div className="flex items-center gap-4 mt-2 text-xs text-slate-400">
+
+      {/* 天气详情 */}
+      <div className="flex items-center gap-4 mb-3 text-xs text-slate-400">
         <div className="flex items-center gap-1">
           <Droplets className="w-3 h-3" />
-          <span>{weather.humidity}%</span>
+          <span>{currentWeather.humidity}%</span>
         </div>
         <div className="flex items-center gap-1">
           <Wind className="w-3 h-3" />
-          <span>{weather.windLevel}级</span>
+          <span>{currentWeather.windPower}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className={`px-1.5 py-0.5 rounded text-[10px] ${
+            airQuality.aqi <= 50 ? 'bg-green-500/20 text-green-400' :
+            airQuality.aqi <= 100 ? 'bg-yellow-500/20 text-yellow-400' :
+            'bg-orange-500/20 text-orange-400'
+          }`}>
+            AQI {airQuality.aqi} {airQuality.quality}
+          </span>
         </div>
       </div>
+
+      {/* 未来预报 */}
+      {forecast.length > 0 && (
+        <div className="flex-1 overflow-hidden">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-slate-500">未来预报</span>
+          </div>
+          <div className="space-y-1.5 overflow-y-auto max-h-[120px]">
+            {forecast.map((day, index) => (
+              <div key={index} className="flex items-center justify-between py-1">
+                <span className="text-xs text-slate-400 w-10">{formatDate(day.date)}</span>
+                <span className="text-sm">{getWeatherIcon(day.dayCondition)}</span>
+                <span className="text-xs text-slate-400 flex-1 text-center">{day.dayCondition}</span>
+                <span className="text-xs text-slate-300">
+                  {day.minTemp}° / {day.maxTemp}°
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="text-xs text-red-400 mt-2">{error}</div>
+      )}
     </div>
   );
 };
