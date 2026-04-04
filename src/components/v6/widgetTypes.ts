@@ -357,7 +357,7 @@ export const API_60S_TRENDING: API60sPreset[] = [
       refreshInterval: 600,
       dataPath: 'data',
       displayType: 'list',
-      fields: { title: 'title', link: 'link' },
+      fields: { title: 'title', value: 'hot_value', link: 'link' },
       maxItems: 10,
       emptyText: '热搜加载中...'
     }

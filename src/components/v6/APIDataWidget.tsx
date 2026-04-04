@@ -286,6 +286,15 @@ export const APIDataWidget: React.FC<APIDataWidgetProps> = ({ config }) => {
             {data.map((item, index) => {
               const linkUrl = config.fields.link ? getFieldValue(item, config.fields.link) : '';
               const titleText = getItemDisplayText(item, config.fields.title);
+              const valueText = config.fields.value ? getFieldValue(item, config.fields.value) : '';
+              
+              // 根据索引设置序号颜色
+              const getRankColor = (rank: number) => {
+                if (rank === 0) return 'text-red-500 font-bold';
+                if (rank === 1) return 'text-orange-500 font-bold';
+                if (rank === 2) return 'text-yellow-500 font-bold';
+                return 'text-slate-500';
+              };
               
               return linkUrl ? (
                 <a
@@ -293,23 +302,32 @@ export const APIDataWidget: React.FC<APIDataWidgetProps> = ({ config }) => {
                   href={linkUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-start gap-3 p-3 rounded-lg bg-[#0d0e10] hover:bg-[#1a1c1f] transition-colors group cursor-pointer"
+                  className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-[#1a1c1f] transition-colors group cursor-pointer"
                 >
-                  <span className="text-xs text-slate-500 mt-0.5">{index + 1}</span>
-                  <p className="text-sm text-slate-300 flex-1 leading-relaxed group-hover:text-emerald-400 transition-colors">
+                  <span className={`text-sm w-5 text-center ${getRankColor(index)}`}>{index + 1}</span>
+                  <p className="text-sm text-slate-300 flex-1 leading-relaxed truncate group-hover:text-emerald-400 transition-colors">
                     {titleText}
                   </p>
-                  <ExternalLink className="w-3.5 h-3.5 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity mt-0.5" />
+                  {valueText && (
+                    <span className="text-xs text-slate-500 shrink-0">
+                      {valueText}
+                    </span>
+                  )}
                 </a>
               ) : (
                 <div
                   key={index}
-                  className="flex items-start gap-3 p-3 rounded-lg bg-[#0d0e10]"
+                  className="flex items-center gap-3 py-2 px-3 rounded-lg"
                 >
-                  <span className="text-xs text-slate-500 mt-0.5">{index + 1}</span>
-                  <p className="text-sm text-slate-300 flex-1 leading-relaxed">
+                  <span className={`text-sm w-5 text-center ${getRankColor(index)}`}>{index + 1}</span>
+                  <p className="text-sm text-slate-300 flex-1 leading-relaxed truncate">
                     {titleText}
                   </p>
+                  {valueText && (
+                    <span className="text-xs text-slate-500 shrink-0">
+                      {valueText}
+                    </span>
+                  )}
                 </div>
               );
             })}
