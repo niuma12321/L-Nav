@@ -148,15 +148,11 @@ export const BingWallpaperRenderer: React.FC<{ data: any[] }> = ({ data }) => {
 // ==========================================
 // 5. 汇率 - 表格展示
 // API: /v2/exchange-rate
-// 数据结构: { data: { conversion_rates: { USD: 1, CNY: 7.23, ... } } }
+// 数据结构: { data: { rates: [{currency, rate}, ...] } }
 // ==========================================
 export const ExchangeRateRenderer: React.FC<{ data: any[] }> = ({ data }) => {
-  // conversion_rates是对象格式，需要转换为数组
-  const rates = data[0] || {};
-  const entries = Object.entries(rates).map(([currency, rate]) => ({
-    currency,
-    rate: typeof rate === 'number' ? rate.toFixed(4) : rate
-  })).slice(0, 10); // 只显示前10个
+  // data is already the rates array from data.rates
+  const rates = data.slice(0, 10); // Show first 10 currencies
 
   return (
     <div className="overflow-x-auto">
@@ -168,10 +164,12 @@ export const ExchangeRateRenderer: React.FC<{ data: any[] }> = ({ data }) => {
           </tr>
         </thead>
         <tbody>
-          {entries.map((item, index) => (
+          {rates.map((item, index) => (
             <tr key={index} className="border-b border-white/5 hover:bg-[#0d0e10]">
               <td className="py-2 px-2 text-white">{item.currency}</td>
-              <td className="py-2 px-2 text-right text-emerald-400">{item.rate}</td>
+              <td className="py-2 px-2 text-right text-emerald-400">
+                {typeof item.rate === 'number' ? item.rate.toFixed(4) : item.rate}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -327,35 +325,29 @@ export const OilPriceRenderer: React.FC<{ data: any[] }> = ({ data }) => {
 // ==========================================
 // 10. 摸鱼日报 - 富文本卡片
 // API: /v2/moyu
-// 数据结构: { data: { today: "晨报内容..." } }
+// 数据结构: { data: { moyuQuote: "string content" } }
 // ==========================================
 export const MoyuDailyRenderer: React.FC<{ data: any[] }> = ({ data }) => {
-  // data.today 是字符串格式
-  const content = typeof data[0] === 'string' ? data[0] : (data[0]?.today || data[0]?.content || '');
+  // data.moyuQuote is a string
+  const content = typeof data[0] === 'string' ? data[0] : (data[0]?.moyuQuote || '');
 
-  // 解析内容中的不同部分
-  const lines = content.split('\n').filter((line: string) => line.trim());
+  if (!content) {
+    return (
+      <div className="p-4 rounded-xl bg-[#0d0e10] text-center">
+        <p className="text-sm text-slate-400">暂无摸鱼日报</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 rounded-xl bg-[#0d0e10] overflow-y-auto max-h-[300px]">
-      <div className="space-y-2">
-        {lines.map((line: string, index: number) => {
-          // 识别标题行（通常包含【】）
-          if (line.includes('【') && line.includes('】')) {
-            return (
-              <div key={index} className="flex items-center gap-2 py-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                <span className="text-sm font-medium text-emerald-400">{line}</span>
-              </div>
-            );
-          }
-          return (
-            <p key={index} className="text-sm text-slate-300 leading-relaxed pl-4">
-              {line}
-            </p>
-          );
-        })}
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-lg">☕</span>
+        <span className="text-xs text-emerald-400 font-medium">摸鱼日报</span>
       </div>
+      <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-line">
+        {content}
+      </p>
     </div>
   );
 };
