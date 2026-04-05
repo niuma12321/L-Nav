@@ -1111,14 +1111,18 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
 
   if (!isLoaded || !dataLoaded) {
     return (
-      <div className="min-h-screen bg-[#0d0e10] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+      <div className="min-h-screen flex items-center justify-center relative">
+        {/* 加载页面也继承背景设置 */}
+        <Loader2 className="w-8 h-8 text-emerald-500 animate-spin z-10" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen w-full bg-[#0d0e10] text-white">
+    <div className="min-h-screen w-full text-white relative">
+      {/* 背景图层 - 从父组件继承 */}
+      {/* V9Dashboard不再设置自己的背景，完全依赖App.tsx的背景设置 */}
+      
       {/* 顶部导航栏 */}
       <header className="sticky top-0 z-50 border-b border-white/5 bg-[#0d0e10]/80 backdrop-blur-xl">
         <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">

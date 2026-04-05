@@ -1006,6 +1006,21 @@ function App() {
     }
   }, [siteSettings.backgroundImageEnabled, backgroundSource, backgroundImage, updateSiteSettings]);
 
+  // 确保数据同步 - 监听站点设置变化
+  useEffect(() => {
+    const handleSync = () => {
+      console.log('[App] 站点设置已更新，触发同步');
+      // 触发统一同步
+      window.dispatchEvent(new CustomEvent('ynav-force-sync', {
+        detail: { type: 'site_settings', timestamp: Date.now() }
+      }));
+    };
+
+    // 监听站点设置变化
+    window.addEventListener('ynav-site-settings-updated', handleSync);
+    return () => window.removeEventListener('ynav-site-settings-updated', handleSync);
+  }, []);
+
   useEffect(() => {
     if (!privacyGroupEnabled || !privacyAutoUnlockEnabled || isPrivateUnlocked) return;
     if (sessionStorage.getItem(PRIVACY_SESSION_UNLOCKED_KEY) !== '1') return;

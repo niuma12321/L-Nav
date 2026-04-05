@@ -353,6 +353,11 @@ export function useConfig() {
             const settingsWithVersion = { ...mergedSettings, _schemaVersion: CONFIG_SCHEMA_VERSION };
             setSiteSettings(settingsWithVersion);
             safeStorage.set(SITE_SETTINGS_KEY, settingsWithVersion);
+            
+            // 触发站点设置更新事件，确保数据同步
+            window.dispatchEvent(new CustomEvent('ynav-site-settings-updated', {
+                detail: { settings: mergedSettings, timestamp: Date.now() }
+            }));
         }
 
         return true;
