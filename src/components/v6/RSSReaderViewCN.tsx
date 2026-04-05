@@ -108,10 +108,14 @@ const RSSReaderViewCN: React.FC = () => {
     try {
       const response = await fetch(`${RSS_PROXY_API}?url=${encodeURIComponent(source.url)}`);
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       
       const xmlText = await response.text();
+      if (!xmlText.trim()) {
+        throw new Error('RSS 源返回空内容');
+      }
+      
       const newItems = parseRSS(xmlText, source.id, source.title);
       
       // 更新源的元数据
@@ -136,6 +140,8 @@ const RSSReaderViewCN: React.FC = () => {
       return newItems.length;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : '获取失败';
+      console.error(`获取 RSS 源失败 (${source.title}):`, error);
+      
       const updatedSource = {
         ...source,
         lastFetched: Date.now(),
@@ -143,6 +149,7 @@ const RSSReaderViewCN: React.FC = () => {
       };
       const newSources = sources.map(s => s.id === source.id ? updatedSource : s);
       saveSources(newSources);
+      
       throw error;
     } finally {
       setLoadingSourceId(null);
@@ -281,6 +288,14 @@ const RSSReaderViewCN: React.FC = () => {
       return;
     }
 
+    // 验证 URL 格式
+    try {
+      new URL(newSourceUrl);
+    } catch {
+      setAddError('RSS 地址格式无效');
+      return;
+    }
+
     setAddError('');
     setLoading(true);
 
@@ -288,12 +303,22 @@ const RSSReaderViewCN: React.FC = () => {
       // 尝试获取 RSS 验证
       const response = await fetch(`${RSS_PROXY_API}?url=${encodeURIComponent(newSourceUrl)}`);
       if (!response.ok) {
-        throw new Error('无法获取 RSS 源，请检查地址是否正确');
+        throw new Error(`无法获取 RSS 源 (${response.status}): ${response.statusText}`);
       }
 
       const xmlText = await response.text();
+      if (!xmlText.trim()) {
+        throw new Error('RSS 源返回空内容，请检查地址是否正确');
+      }
+
       const parser = new DOMParser();
       const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+      
+      // 检测解析错误
+      const parseError = xmlDoc.querySelector('parsererror');
+      if (parseError) {
+        throw new Error('RSS 源格式无效，无法解析');
+      }
       
       // 提取标题
       const channelTitle = xmlDoc.querySelector('channel > title, feed > title')?.textContent || 
@@ -321,7 +346,9 @@ const RSSReaderViewCN: React.FC = () => {
       setNewSourceTitle('');
       setShowAddModal(false);
     } catch (error) {
-      setAddError(error instanceof Error ? error.message : '添加失败');
+      const errorMsg = error instanceof Error ? error.message : '添加失败';
+      setAddError(errorMsg);
+      console.error('添加 RSS 源失败:', error);
     } finally {
       setLoading(false);
     }

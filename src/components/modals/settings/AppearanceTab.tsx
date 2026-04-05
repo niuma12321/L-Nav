@@ -413,8 +413,20 @@ const AppearanceTab: React.FC<AppearanceTabProps> = React.memo(({ settings, onCh
             </div>
             <div 
               className="w-full h-20 rounded-lg bg-cover bg-center" 
-              style={{ backgroundImage: `url(${settings.backgroundImage})` }}
+              style={{ 
+                backgroundImage: settings.backgroundImage && settings.backgroundImage.startsWith('http') 
+                  ? `url(${settings.backgroundImage})` 
+                  : settings.backgroundImage && settings.backgroundImage.startsWith('data:')
+                  ? `url(${settings.backgroundImage})`
+                  : undefined,
+                backgroundColor: !settings.backgroundImage || (!settings.backgroundImage.startsWith('http') && !settings.backgroundImage.startsWith('data:')) ? '#f3f4f6' : undefined
+              }}
             />
+            {settings.backgroundImage && !settings.backgroundImage.startsWith('http') && !settings.backgroundImage.startsWith('data:') && (
+              <div className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                ⚠️ 背景图片格式无效，请使用有效的 URL 或 Base64 数据
+              </div>
+            )}
           </div>
         )}
       </section>

@@ -985,7 +985,9 @@ function App() {
   const backgroundImage = siteSettings.backgroundImage && typeof siteSettings.backgroundImage === 'string' 
     ? String(siteSettings.backgroundImage ?? '').trim() 
     : '';
-  const useCustomBackground = !!siteSettings.backgroundImageEnabled && !!backgroundImage;
+  const useCustomBackground = !!siteSettings.backgroundImageEnabled && !!backgroundImage && (
+    backgroundImage.startsWith('http') || backgroundImage.startsWith('data:')
+  );
   const backgroundMotion = siteSettings.backgroundMotion ?? false;
 
   useEffect(() => {
@@ -1016,7 +1018,7 @@ function App() {
       } : undefined}
     >
       {/* 背景遮罩层 - 提高文字可读性 */}
-      {useCustomBackground && (
+      {useCustomBackground && backgroundImage && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-0 pointer-events-none" />
       )}
       {/* Main Dashboard - V9Dashboard 自带完整的导航和侧边栏 */}
