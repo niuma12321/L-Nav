@@ -9,7 +9,8 @@ export type WidgetType =
   | 'exchange' 
   | 'lifeprogress' 
   | 'zen'
-  | 'api';
+  | 'api'
+  | 'iframe';
 
 export interface WidgetPosition {
   x: number;
@@ -113,6 +114,16 @@ export interface ApiWidgetSettings {
   headers?: Record<string, string>;
   method?: 'GET' | 'POST';
   body?: string;
+}
+
+// Iframe内嵌组件配置
+export interface IframeWidgetSettings {
+  url: string;
+  width?: string;
+  height?: string;
+  allowScroll?: boolean;
+  showBorder?: boolean;
+  showHeader?: boolean;
 }
 
 // 默认小组件配置
@@ -229,6 +240,15 @@ export const WIDGET_DISPLAY_CONFIG: Record<WidgetType, {
     name: 'API数据',
     icon: 'ExternalLink',
     description: '根据API返回内容自动渲染显示',
+    minW: 2,
+    minH: 2,
+    defaultW: 3,
+    defaultH: 3
+  },
+  iframe: {
+    name: '内嵌组件',
+    icon: 'Link',
+    description: '输入任意URL，直接内嵌显示',
     minW: 2,
     minH: 2,
     defaultW: 3,

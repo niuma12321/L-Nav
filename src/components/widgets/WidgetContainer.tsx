@@ -11,7 +11,8 @@ import {
   LifeProgressWidgetSettings,
   ZenWidgetSettings,
   RSSWidgetSettings,
-  ApiWidgetSettings
+  ApiWidgetSettings,
+  IframeWidgetSettings
 } from '../../types/widgets';
 import WeatherWidget from './WeatherWidget';
 import TodoWidget from './TodoWidget';
@@ -22,6 +23,7 @@ import LifeProgressWidget from './LifeProgressWidget';
 import ZenWidget from './ZenWidget';
 import RSSWidget from './RSSWidget';
 import ApiWidget from './ApiWidget';
+import IframeWidget from './IframeWidget';
 import { Settings, X, GripVertical } from 'lucide-react';
 
 interface WidgetContainerProps {
@@ -102,6 +104,12 @@ const WidgetContainer: React.FC<WidgetContainerProps> = ({
         return (
           <ApiWidget
             config={widget.settings as ApiWidgetSettings}
+          />
+        );
+      case 'iframe':
+        return (
+          <IframeWidget
+            widget={widget as WidgetConfig & { settings: IframeWidgetSettings }}
           />
         );
       default:

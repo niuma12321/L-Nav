@@ -51,6 +51,7 @@ import {
 } from 'lucide-react';
 import { useWidgetSystem } from '../../hooks/useWidgetSystem';
 import { WidgetPosition } from '../../types/widgets';
+import { IframeWidgetSettingsModal } from '../widgets/IframeWidgetSettings';
 import { 
   WidgetConfig, 
   DEFAULT_WIDGETS, 
@@ -313,6 +314,10 @@ const WidgetConfigCenter: React.FC = () => {
   // API preset config modal state
   const [showAPIConfigModal, setShowAPIConfigModal] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState<API60sPreset | null>(null);
+
+  // Iframe配置弹窗状态
+  const [showIframeModal, setShowIframeModal] = useState(false);
+  const [editingIframeWidget, setEditingIframeWidget] = useState<WidgetConfig | null>(null);
 
   // 分离固定组件和自定义组件
   const fixedWidgets = widgets.filter(w => w.isFixed);
@@ -674,6 +679,21 @@ const WidgetConfigCenter: React.FC = () => {
             <span className="text-sm font-medium">添加API组件</span>
             <span className="text-xs text-slate-600">({ALL_API_60S_PRESETS.length} 个预设接口)</span>
           </button>
+
+          {/* Iframe内嵌组件添加 */}
+          <button 
+            onClick={() => {
+              setEditingIframeWidget(null);
+              setShowIframeModal(true);
+            }}
+            className="p-6 rounded-3xl border-2 border-dashed border-emerald-500/20 flex flex-col items-center justify-center gap-4 text-slate-500 hover:border-emerald-500/50 hover:text-emerald-400 transition-all min-h-[200px]"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
+              <Link2 className="w-6 h-6 text-emerald-400" />
+            </div>
+            <span className="text-sm font-medium">添加内嵌组件</span>
+            <span className="text-xs text-slate-600">自定义URL内嵌</span>
+          </button>
         </div>
       </div>
 
@@ -816,6 +836,49 @@ const WidgetConfigCenter: React.FC = () => {
         }}
         onSave={updateWidgetPosition}
       />
+
+      {/* Iframe配置弹窗 */}
+      {showIframeModal && (
+        <IframeWidgetSettingsModal
+          widget={editingIframeWidget || {
+            id: `iframe-${Date.now()}`,
+            type: 'iframe',
+            title: '内嵌组件',
+            enabled: true,
+            position: { x: 0, y: 0, w: 3, h: 3 },
+            settings: {}
+          }}
+          onClose={() => {
+            setShowIframeModal(false);
+            setEditingIframeWidget(null);
+          }}
+          onSave={(settings) => {
+            if (editingIframeWidget) {
+              // 更新现有组件
+              const updatedWidget = {
+                ...editingIframeWidget,
+                settings: { ...editingIframeWidget.settings, ...settings }
+              };
+              updateWidget(updatedWidget);
+            } else {
+              // 创建新组件
+              const newWidget: WidgetConfig = {
+                id: `iframe-${Date.now()}`,
+                type: 'iframe',
+                title: settings.url ? new URL(settings.url).hostname : '内嵌组件',
+                description: `内嵌: ${settings.url || '未配置'}`,
+                icon: 'Link',
+                enabled: true,
+                position: { x: 0, y: 0, w: 3, h: 3 },
+                settings: settings
+              };
+              addWidget(newWidget);
+            }
+            setShowIframeModal(false);
+            setEditingIframeWidget(null);
+          }}
+        />
+      )}
 
       {/* 60s API选择弹窗 */}
       {show60sAPIModal && (
