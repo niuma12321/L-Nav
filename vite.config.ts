@@ -36,8 +36,8 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         output: {
           manualChunks: (id) => {
-            // React 核心库
-            if (id.includes('react') || id.includes('react-dom')) {
+            // React 核心库 - 单独分组避免循环
+            if (id.includes('react') || id.includes('react-dom') || id.includes('scheduler')) {
               return 'vendor-react';
             }
             
@@ -61,39 +61,20 @@ export default defineConfig(({ mode }) => {
               return 'vendor-fonts';
             }
             
-            // 大型组件分割
-            if (id.includes('V9Dashboard')) {
-              return 'component-dashboard';
+            // 大型组件分组到主包，避免循环依赖
+            if (id.includes('V9Dashboard') || 
+                id.includes('LinkModal') ||
+                id.includes('CategoryManagerModal') ||
+                id.includes('ImportModal') ||
+                id.includes('SettingsModal') ||
+                id.includes('DataBackupModal')) {
+              return 'index';
             }
             
-            if (id.includes('LinkModal')) {
-              return 'component-modal-link';
-            }
-            
-            if (id.includes('CategoryManagerModal')) {
-              return 'component-modal-category';
-            }
-            
-            if (id.includes('ImportModal')) {
-              return 'component-modal-import';
-            }
-            
-            if (id.includes('SettingsModal')) {
-              return 'component-modal-settings';
-            }
-            
-            if (id.includes('WidgetConfigCenter')) {
-              return 'component-widgets';
-            }
-            
-            // 工具类分割
-            if (id.includes('utils/') || id.includes('/utils')) {
-              return 'utils';
-            }
-            
-            // Hooks 分割
-            if (id.includes('hooks/') || id.includes('/hooks')) {
-              return 'hooks';
+            // 工具函数和 hooks 分组到主包
+            if (id.includes('utils/') || id.includes('/utils') || 
+                id.includes('hooks/') || id.includes('/hooks')) {
+              return 'index';
             }
             
             // 默认分组
