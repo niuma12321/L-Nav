@@ -59,6 +59,8 @@ export function useSimpleDataStore() {
   const loadData = useCallback(() => {
     try {
       const userId = getCurrentUserId();
+      console.log('[SimpleDataStore] Loading data for user:', userId);
+      
       if (!userId) {
         console.warn('[SimpleDataStore] No user found, initializing...');
         migrateLegacyData();
@@ -66,21 +68,33 @@ export function useSimpleDataStore() {
       }
 
       const storageKey = getStorageKey();
+      console.log('[SimpleDataStore] Storage key:', storageKey);
+      
       const stored = localStorage.getItem(storageKey);
+      console.log('[SimpleDataStore] Raw stored data:', stored ? 'exists' : 'null');
       
       if (stored) {
         const data = JSON.parse(stored);
         const loadedLinks = data.links || [];
         const loadedCategories = data.categories || DEFAULT_CATEGORIES;
         
-        setLinks(loadedLinks);
-        setCategories(loadedCategories);
         console.log('[SimpleDataStore] Data loaded:', loadedLinks.length, 'links,', loadedCategories.length, 'categories');
+        console.log('[SimpleDataStore] Data version:', data.version, 'updatedAt:', data.updatedAt);
+        
+        // 检查数据完整性
+        if (loadedLinks.length === 0 && loadedCategories.length === 0) {
+          console.warn('[SimpleDataStore] Empty data detected, using defaults');
+          setLinks(INITIAL_LINKS);
+          setCategories(DEFAULT_CATEGORIES);
+        } else {
+          setLinks(loadedLinks);
+          setCategories(loadedCategories);
+        }
       } else {
         // 使用默认数据
+        console.log('[SimpleDataStore] No stored data, using defaults');
         setLinks(INITIAL_LINKS);
         setCategories(DEFAULT_CATEGORIES);
-        console.log('[SimpleDataStore] Using default data');
       }
       
       setIsLoaded(true);
@@ -96,16 +110,47 @@ export function useSimpleDataStore() {
   // === 数据保存 ===
   const saveData = useCallback((newLinks: LinkItem[], newCategories: Category[]) => {
     try {
+      const userId = getCurrentUserId();
       const storageKey = getStorageKey();
+      
+      console.log('[SimpleDataStore] Saving data for user:', userId);
+      console.log('[SimpleDataStore] Storage key:', storageKey);
+      console.log('[SimpleDataStore] Data to save:', newLinks.length, 'links,', newCategories.length, 'categories');
+      
+      // 检查现有数据
+      const existingData = localStorage.getItem(storageKey);
+      if (existingData) {
+        try {
+          const parsed = JSON.parse(existingData);
+          console.log('[SimpleDataStore] Existing data version:', parsed.version, 'updatedAt:', parsed.updatedAt);
+          
+          // 检测潜在冲突
+          if (parsed.updatedAt && Date.now() - parsed.updatedAt < 1000) {
+            console.warn('[SimpleDataStore] Potential conflict detected - data updated very recently');
+          }
+        } catch (e) {
+          console.warn('[SimpleDataStore] Failed to parse existing data:', e);
+        }
+      }
+      
       const data = {
         links: newLinks,
         categories: newCategories,
         updatedAt: Date.now(),
-        version: '1.0.0'
+        version: '1.0.0',
+        userId: userId
       };
       
       localStorage.setItem(storageKey, JSON.stringify(data));
-      console.log('[SimpleDataStore] Data saved:', newLinks.length, 'links,', newCategories.length, 'categories');
+      console.log('[SimpleDataStore] Data saved successfully');
+      
+      // 触发 storage event 通知其他标签页
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: storageKey,
+        newValue: JSON.stringify(data),
+        oldValue: existingData
+      }));
+      
     } catch (e) {
       console.error('[SimpleDataStore] Failed to save data:', e);
       notify('数据保存失败', 'error');
@@ -231,8 +276,40 @@ export function useSimpleDataStore() {
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === getStorageKey() && e.newValue) {
-        console.log('[SimpleDataStore] Storage changed, reloading data...');
-        loadData();
+        console.log('[SimpleDataStore] Storage changed, analyzing...');
+        console.log('[SimpleDataStore] Old value exists:', !!e.oldValue);
+        console.log('[SimpleDataStore] New value exists:', !!e.newValue);
+        
+        try {
+          const newData = JSON.parse(e.newValue);
+          const currentUserId = getCurrentUserId();
+          
+          // 检查是否是当前用户的数据
+          if (newData.userId !== currentUserId) {
+            console.warn('[SimpleDataStore] Data change from different user, ignoring');
+            return;
+          }
+          
+          // 检查时间戳冲突
+          if (e.oldValue) {
+            try {
+              const oldData = JSON.parse(e.oldValue);
+              const timeDiff = newData.updatedAt - oldData.updatedAt;
+              
+              if (Math.abs(timeDiff) < 100) {
+                console.warn('[SimpleDataStore] Potential conflict detected - time difference:', timeDiff, 'ms');
+              }
+              
+              console.log('[SimpleDataStore] Data updated by another tab, reloading...');
+            } catch (parseError) {
+              console.warn('[SimpleDataStore] Failed to parse old data:', parseError);
+            }
+          }
+          
+          loadData();
+        } catch (parseError) {
+          console.error('[SimpleDataStore] Failed to parse new storage data:', parseError);
+        }
       }
     };
 
