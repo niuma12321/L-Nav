@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, ArrowLeft, Clock, TrendingUp, Sparkles } from 'lucide-react';
+import { Search, X, ArrowLeft, Clock, TrendingUp, Sparkles } from '@/utils/icons';
 import { LinkItem } from '../../types';
 
 interface MobileFullscreenSearchProps {

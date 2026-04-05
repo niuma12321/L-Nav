@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bot, Settings, Save, Plus, Trash2, ExternalLink, Key, MessageSquare } from 'lucide-react';
+import { Bot, Settings, Save, Plus, Trash2, ExternalLink, Key, MessageSquare } from '@/utils/icons';
 
 interface BotConfig {
   id: string;

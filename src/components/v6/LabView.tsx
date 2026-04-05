@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, X, Pin, StickyNote } from 'lucide-react';
+import { Plus, X, Pin, StickyNote } from '@/utils/icons';
 
 interface Note {
   id: string;

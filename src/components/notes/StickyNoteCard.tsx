@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { StickyNote } from '../../types';
-import { Edit3, Trash2, FileText } from 'lucide-react';
+import { Edit3, Trash2, FileText } from '@/utils/icons';
 
 interface StickyNoteCardProps {
   note: StickyNote;

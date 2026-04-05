@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, RefreshCw, ChevronRight, Lightbulb, Wind, Power } from 'lucide-react';
+import { Home, RefreshCw, ChevronRight, Lightbulb, Wind, Power } from '@/utils/icons';
 import { useSmartHome } from '../../hooks/useSmartHome';
 
 interface SmartHomeStatusWidgetProps {

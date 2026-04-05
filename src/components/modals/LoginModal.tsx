@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, User, Eye, EyeOff } from 'lucide-react';
+import { Lock, User, Eye, EyeOff } from '@/utils/icons';
 
 interface LoginModalProps {
   isOpen: boolean;

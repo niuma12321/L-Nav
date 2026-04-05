@@ -23,7 +23,7 @@ import {
   Server,
   Container,
   Code
-} from 'lucide-react';
+} from '@/utils/icons';
 import type { AutomationTask, TaskExecutionLog, TaskType, TaskAction, TaskStatus } from './types';
 
 interface AutomationCenterViewProps {

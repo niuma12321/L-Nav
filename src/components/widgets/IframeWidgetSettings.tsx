@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Save, ExternalLink } from 'lucide-react';
+import { X, Save, ExternalLink } from '@/utils/icons';
 import { WidgetConfig, IframeWidgetSettings } from '../../types/widgets';
 
 interface IframeWidgetSettingsProps {

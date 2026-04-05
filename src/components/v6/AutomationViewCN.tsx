@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAutomation } from '../../hooks/useAutomation';
-import { Clock, Play, Pencil, Trash2, Plus, CheckCircle2, XCircle, Loader2, Calendar, FileText } from 'lucide-react';
+import { Clock, Play, Pencil, Trash2, Plus, CheckCircle2, XCircle, Loader2, Calendar, FileText } from '@/utils/icons';
 
 interface AutomationViewCNProps {
   onBack?: () => void;

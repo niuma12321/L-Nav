@@ -1,5 +1,5 @@
 import React from 'react';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink } from '@/utils/icons';
 import { WidgetConfig } from '../../types/widgets';
 
 interface IframeWidgetProps {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Zap, Home, LogOut, Moon, Film } from 'lucide-react';
+import { Zap, Home, LogOut, Moon, Film } from '@/utils/icons';
 import { useSmartHome } from '../../hooks/useSmartHome';
 
 interface SmartHomeQuickWidgetProps {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Search, Bookmark, MoreHorizontal, Plus } from 'lucide-react';
+import { Home, Search, Bookmark, MoreHorizontal, Plus } from '@/utils/icons';
 
 interface MobileBottomNavProps {
   activeTab: 'home' | 'search' | 'favorites' | 'more';

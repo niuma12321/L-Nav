@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Save, Mail, Globe, Link2, BookOpen, MessageSquare, Briefcase, AlertCircle } from 'lucide-react';
+import { X, Save, Mail, Globe, Link2, BookOpen, MessageSquare, Briefcase, AlertCircle } from '@/utils/icons';
 import { useNotifications } from '../../hooks/useNotifications';
 
 // 渠道列表

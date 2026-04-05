@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Calculator, ArrowRightLeft, TrendingUp } from 'lucide-react';
+import { Calculator, ArrowRightLeft, TrendingUp } from '@/utils/icons';
 import { ExchangeWidgetSettings } from '../../types/widgets';
 
 interface ExchangeWidgetProps {

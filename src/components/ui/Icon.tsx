@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import * as LucideIcons from 'lucide-react';
-import type { LucideProps } from 'lucide-react';
+import * as LucideIcons from '@/utils/icons';
+import type { LucideProps } from '@/utils/icons';
 
 // ==============================================
 // 🎯 类型定义（自动推导所有 Lucide 图标名称，完美TS支持）

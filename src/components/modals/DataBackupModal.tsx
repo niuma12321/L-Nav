@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { X, Download, Upload, Database, AlertCircle, Check, FileJson } from 'lucide-react';
+import { X, Download, Upload, Database, AlertCircle, Check, FileJson } from '@/utils/icons';
 import { LinkItem, Category, SiteSettings, SearchConfig, AIConfig, StickyNote } from '../../types';
 
 interface DataBackupModalProps {

@@ -48,7 +48,7 @@ import {
   FileText,
   List,
   AlignLeft
-} from 'lucide-react';
+} from '@/utils/icons';
 import { useWidgetSystem } from '../../hooks/useWidgetSystem';
 import { WidgetPosition } from '../../types/widgets';
 import { IframeWidgetSettingsModal } from '../widgets/IframeWidgetSettings';

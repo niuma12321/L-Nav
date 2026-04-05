@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Search, Bell, Command, ArrowRight, X } from 'lucide-react';
+import { Search, Bell, Command, ArrowRight, X } from '@/utils/icons';
 import { LinkItem } from '../../types';
 
 interface TopBarProps {

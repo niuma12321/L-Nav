@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Globe, Search, GripVertical, Check, RotateCcw, AlertCircle } from 'lucide-react';
+import { X, Plus, Trash2, Globe, Search, GripVertical, Check, RotateCcw, AlertCircle } from '@/utils/icons';
 import { ExternalSearchSource } from '../../types';
 import { useDialog } from '../ui/DialogProvider';
 import {

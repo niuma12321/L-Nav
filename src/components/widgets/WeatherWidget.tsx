@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Cloud, Sun, CloudRain, CloudSnow, Wind, Droplets, Loader } from 'lucide-react';
+import { Cloud, Sun, CloudRain, CloudSnow, Wind, Droplets, Loader } from '@/utils/icons';
 import { WeatherWidgetSettings } from '../../types/widgets';
 
 interface WeatherWidgetProps {

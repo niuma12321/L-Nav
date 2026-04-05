@@ -58,7 +58,7 @@ import {
   setUserData
 } from './utils/constants';
 import { decryptPrivateVault, encryptPrivateVault } from './utils/privateVault';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle } from '@/utils/icons';
 
 function App() {
   // === Unified Sync Engine ===

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { CalendarClock, Heart } from 'lucide-react';
+import { CalendarClock, Heart } from '@/utils/icons';
 import { LifeProgressWidgetSettings } from '../../types/widgets';
 
 interface LifeProgressWidgetProps {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { CircleDot, Volume2, VolumeX } from 'lucide-react';
+import { CircleDot, Volume2, VolumeX } from '@/utils/icons';
 import { ZenWidgetSettings } from '../../types/widgets';
 
 interface ZenWidgetProps {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, LayoutGrid, Search, User } from 'lucide-react';
+import { Home, LayoutGrid, Search, User } from '@/utils/icons';
 
 interface BottomNavBarProps {
   activeTab: 'home' | 'widgets' | 'search' | 'profile';

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Check, X, Trash2, Loader } from 'lucide-react';
+import { Plus, Check, X, Trash2, Loader } from '@/utils/icons';
 import { TodoWidgetSettings, TodoItem, TODO_STORAGE_KEY } from '../../types/widgets';
 
 interface TodoWidgetProps {

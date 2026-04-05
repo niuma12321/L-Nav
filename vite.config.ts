@@ -44,15 +44,23 @@ export default defineConfig(({ mode }) => {
               '@dnd-kit/sortable',
               '@dnd-kit/utilities'
             ],
-            // 图标库
+            // 图标库 - 按需加载优化
             'vendor-icons': ['lucide-react'],
             // AI 库
             'vendor-ai': ['@google/genai'],
+            // 字体库 - 优化字体加载
+            'vendor-fonts': [
+              '@fontsource/manrope',
+              '@fontsource/outfit'
+            ]
           }
         }
       },
       // 增加 chunk 大小警告阈值
-      chunkSizeWarningLimit: 1000
+      chunkSizeWarningLimit: 1000,
+      // 字体优化配置
+      assetsInlineLimit: 4096, // 小于 4KB 的字体内联
+      cssCodeSplit: true
     }
   };
 });

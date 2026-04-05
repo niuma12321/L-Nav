@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ExternalLink, RefreshCw, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { ExternalLink, RefreshCw, AlertCircle, CheckCircle, Loader2 } from '@/utils/icons';
 
 interface ApiWidgetProps {
   config: {

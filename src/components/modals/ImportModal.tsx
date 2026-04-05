@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { X, Upload, FileText, ArrowRight, Check, AlertCircle, FolderInput, ListTree, Database } from 'lucide-react';
+import { X, Upload, FileText, ArrowRight, Check, AlertCircle, FolderInput, ListTree, Database } from '@/utils/icons';
 import { Category, LinkItem, SearchConfig, AIConfig } from '../../types';
 import { parseBookmarks } from '../../services/bookmarkParser';
 import { useDialog } from '../ui/DialogProvider';

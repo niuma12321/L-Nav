@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, BarChart3, StickyNote, Bookmark, Settings, Plus, Gem } from 'lucide-react';
+import { LayoutDashboard, BarChart3, StickyNote, Bookmark, Settings, Plus, Gem } from '@/utils/icons';
 
 interface SideNavBarProps {
   activeView: 'dashboard' | 'analytics' | 'notes' | 'bookmarks' | 'settings';

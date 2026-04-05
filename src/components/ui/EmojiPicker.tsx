@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { X, Search, Clock, Smile, Heart, Star, Zap, Music, Camera, Gamepad2, Plane, Coffee, Sun, Moon, Cloud, Umbrella, Snowflake, Flame, Droplets, Anchor, Rocket, Gem, Crown, Trophy, Medal, Gift, PartyPopper, Sparkles } from 'lucide-react';
+import { X, Search, Clock, Smile, Heart, Star, Zap, Music, Camera, Gamepad2, Plane, Coffee, Sun, Moon, Cloud, Umbrella, Snowflake, Flame, Droplets, Anchor, Rocket, Gem, Crown, Trophy, Medal, Gift, PartyPopper, Sparkles } from '@/utils/icons';
 
 interface EmojiPickerProps {
   onSelect: (emoji: string) => void;

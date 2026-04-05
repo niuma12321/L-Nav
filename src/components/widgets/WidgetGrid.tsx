@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, LayoutGrid, X, Check } from 'lucide-react';
+import { Plus, LayoutGrid, X, Check } from '@/utils/icons';
 import { WidgetConfig, WIDGET_DISPLAY_CONFIG, WidgetType } from '../../types/widgets';
 import WidgetContainer from './WidgetContainer';
 

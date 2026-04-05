@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Sparkles, Loader2, CheckCircle, AlertCircle, Zap, Layers, List, Key, PauseCircle } from 'lucide-react';
+import { Sparkles, Loader2, CheckCircle, AlertCircle, Zap, Layers, List, Key, PauseCircle } from '@/utils/icons';
 import { AIConfig, LinkItem } from '../../../types';
 import { generateLinkDescription, testAIConnection, fetchAvailableModels } from '../../../services/geminiService';
 import { useDialog } from '../../ui/DialogProvider';

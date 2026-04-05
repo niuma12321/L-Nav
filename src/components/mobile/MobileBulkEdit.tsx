@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Pin, FolderOpen, Share2, Trash2, Check, ChevronRight } from 'lucide-react';
+import { X, Pin, FolderOpen, Share2, Trash2, Check, ChevronRight } from '@/utils/icons';
 import { LinkItem, Category } from '../../types';
 
 interface MobileBulkEditProps {

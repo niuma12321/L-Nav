@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GripVertical, Pencil, Trash2, Eye, EyeOff, Plus, X, Check } from 'lucide-react';
+import { GripVertical, Pencil, Trash2, Eye, EyeOff, Plus, X, Check } from '@/utils/icons';
 import { Category } from '../../types';
 
 interface MobileCategoryManagerProps {

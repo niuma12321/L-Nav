@@ -14,7 +14,7 @@ import {
   Settings,
   Filter,
   RefreshCw
-} from 'lucide-react';
+} from '@/utils/icons';
 
 interface NotificationsViewCNProps {
   onBack?: () => void;

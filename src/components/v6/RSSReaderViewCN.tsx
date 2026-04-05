@@ -16,7 +16,7 @@ import {
   Upload,
   FileText,
   Cloud
-} from 'lucide-react';
+} from '@/utils/icons';
 import { useRSSSync, RSSSource, RSSItem, DEFAULT_RSS_SOURCES } from '../../hooks/useRSSSync';
 
 // RSS 代理 API 端点

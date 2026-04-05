@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Globe, Upload, RefreshCw } from 'lucide-react';
+import { Globe, Upload, RefreshCw } from '@/utils/icons';
 import { SiteSettings } from '../../../types';
 import { useDialog } from '../../ui/DialogProvider';
 

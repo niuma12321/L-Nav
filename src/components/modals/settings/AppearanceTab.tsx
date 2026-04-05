@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { SiteSettings } from '../../../types';
-import { Image, RefreshCw, Clock } from 'lucide-react';
+import { Image, RefreshCw, Clock } from '@/utils/icons';
 
 interface AppearanceTabProps {
   settings: SiteSettings;

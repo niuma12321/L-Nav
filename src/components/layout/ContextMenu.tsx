@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Copy, Edit2, Trash2, Pin, CopyPlus, FolderInput, ChevronRight, Eye, EyeOff } from 'lucide-react';
+import { Copy, Edit2, Trash2, Pin, CopyPlus, FolderInput, ChevronRight, Eye, EyeOff } from '@/utils/icons';
 import { Category } from '../../types';
 
 interface ContextMenuProps {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, RefreshCw, ChevronRight } from 'lucide-react';
+import { Clock, RefreshCw, ChevronRight } from '@/utils/icons';
 import { useAutomation } from '../../hooks/useAutomation';
 
 interface AutomationTasksWidgetProps {

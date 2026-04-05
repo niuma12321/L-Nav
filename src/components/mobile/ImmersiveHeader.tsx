@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Menu, Bell, User, ChevronLeft } from 'lucide-react';
+import { Menu, Bell, User, ChevronLeft } from '@/utils/icons';
 
 interface ImmersiveHeaderProps {
   title: string;

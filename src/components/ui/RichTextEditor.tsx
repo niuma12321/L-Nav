@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { 
   Bold, Italic, Underline, List, ListOrdered, 
   Image as ImageIcon, CheckSquare, Type, X, Link as LinkIcon
-} from 'lucide-react';
+} from '@/utils/icons';
 
 interface RichTextEditorProps {
   initialContent?: string;

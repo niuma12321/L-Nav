@@ -1,5 +1,5 @@
 import React from 'react';
-import { Cloud, Zap, Newspaper, CheckCircle2, ExternalLink } from 'lucide-react';
+import { Cloud, Zap, Newspaper, CheckCircle2, ExternalLink } from '@/utils/icons';
 
 interface DashboardProps {
   widgets: React.ReactNode;

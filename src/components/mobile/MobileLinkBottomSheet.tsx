@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Link2, Type, AlignLeft, Grid3X3, Check, Loader2, Globe } from 'lucide-react';
+import { X, Link2, Type, AlignLeft, Grid3X3, Check, Loader2, Globe } from '@/utils/icons';
 import { LinkItem, Category } from '../../types';
 
 interface MobileLinkBottomSheetProps {

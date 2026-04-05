@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Sparkles, Loader2, Pin, Wand2, Trash2, Upload, EyeOff, Smile } from 'lucide-react';
+import { X, Sparkles, Loader2, Pin, Wand2, Trash2, Upload, EyeOff, Smile } from '@/utils/icons';
 import { LinkItem, Category, AIConfig } from '../../types';
 import { generateLinkDescription, suggestCategory } from '../../services/geminiService';
 import { useDialog } from '../ui/DialogProvider';

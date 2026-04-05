@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Bot, Globe, Palette, Database } from 'lucide-react';
+import { X, Save, Bot, Globe, Palette, Database } from '@/utils/icons';
 import { AIConfig, LinkItem, SiteSettings } from '../../types';
 import SiteTab from './settings/SiteTab';
 import AITab from './settings/AITab';

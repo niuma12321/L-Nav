@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback } from 'react';
 import { LinkItem } from '../../types';
-import { EyeOff, Settings, Globe, Activity } from 'lucide-react';
+import { EyeOff, Settings, Globe, Activity } from '@/utils/icons';
 import Favicon from './Favicon';
 import { getIconToneClass, getIconToneStyle } from '../../utils/iconTone';
 import { LinkStatus } from '../../hooks/useLinkCheck';

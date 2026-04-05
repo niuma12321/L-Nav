@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Cloud, CloudOff, RefreshCw, Check, AlertCircle, CloudUpload } from 'lucide-react';
+import { Cloud, CloudOff, RefreshCw, Check, AlertCircle, CloudUpload } from '@/utils/icons';
 import { SyncStatus } from '../../types';
 
 interface SyncStatusIndicatorProps {

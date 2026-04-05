@@ -18,7 +18,7 @@ import {
   RotateCcw,
   ChevronLeft,
   Zap
-} from 'lucide-react';
+} from '@/utils/icons';
 import type { SmartDevice, SmartScene, DeviceType } from '../automation/types';
 
 interface SmartHomeViewProps {

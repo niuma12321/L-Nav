@@ -24,7 +24,7 @@ import ZenWidget from './ZenWidget';
 import RSSWidget from './RSSWidget';
 import ApiWidget from './ApiWidget';
 import IframeWidget from './IframeWidget';
-import { Settings, X, GripVertical } from 'lucide-react';
+import { Settings, X, GripVertical } from '@/utils/icons';
 
 interface WidgetContainerProps {
   widget: WidgetConfig;

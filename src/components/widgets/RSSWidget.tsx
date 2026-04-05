@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Rss, ExternalLink, Loader, Plus, Trash2, RefreshCw } from 'lucide-react';
+import { Rss, ExternalLink, Loader, Plus, Trash2, RefreshCw } from '@/utils/icons';
 import { RSSWidgetSettings, RSSItem, RSS_CACHE_KEY } from '../../types/widgets';
 
 interface RSSWidgetProps {

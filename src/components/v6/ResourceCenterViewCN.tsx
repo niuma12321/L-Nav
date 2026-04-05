@@ -19,7 +19,7 @@ import {
   Settings,
   Menu,
   ChevronRight
-} from 'lucide-react';
+} from '@/utils/icons';
 
 interface Category {
   id: string;

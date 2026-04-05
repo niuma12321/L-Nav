@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { 
   X, ArrowUp, ArrowDown, Trash2, Edit2, Plus, Check, 
   Palette, Square, CheckSquare, Eye, EyeOff, Folder, Settings, Smile
-} from 'lucide-react';
+} from '@/utils/icons';
 import { Category } from '../../types';
 import { useDialog } from '../ui/DialogProvider';
 import Icon from '../ui/Icon';

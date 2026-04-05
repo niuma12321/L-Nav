@@ -11,7 +11,7 @@ import {
   Check,
   Trash2,
   ChevronRight
-} from 'lucide-react';
+} from '@/utils/icons';
 
 interface NotificationDropdownProps {
   notifications: Notification[];

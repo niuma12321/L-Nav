@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import type { LucideIcon } from 'lucide-react';
+import type { LucideIcon } from '@/utils/icons';
 import {
   Search,
   Zap,
@@ -39,7 +39,7 @@ import {
   ChevronDown,
   Database,
   Globe,
-} from 'lucide-react';
+} from '@/utils/icons';
 import { useWidgetSystem } from '../../hooks/useWidgetSystem';
 import { getUserData, setUserData } from '../../utils/constants';
 

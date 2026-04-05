@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { X, RotateCw, Maximize, Minimize, ZoomIn, ZoomOut, RefreshCw, Move } from 'lucide-react';
+import { X, RotateCw, Maximize, Minimize, ZoomIn, ZoomOut, RefreshCw, Move } from '@/utils/icons';
 
 interface MobileContentViewerProps {
   url: string;

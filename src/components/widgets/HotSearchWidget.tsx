@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { TrendingUp, ExternalLink, Loader, Flame } from 'lucide-react';
+import { TrendingUp, ExternalLink, Loader, Flame } from '@/utils/icons';
 import { HotSearchWidgetSettings, HotSearchItem, HOTSEARCH_CACHE_KEY } from '../../types/widgets';
 
 interface HotSearchWidgetProps {

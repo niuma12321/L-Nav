@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, ChevronRight, Globe, Bot, Palette, Database, Trash2, AlertTriangle } from 'lucide-react';
+import { X, ChevronRight, Globe, Bot, Palette, Database, Trash2, AlertTriangle } from '@/utils/icons';
 
 interface MobileSettingsProps {
   isOpen: boolean;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, RefreshCw, ChevronRight, CheckCircle, XCircle } from 'lucide-react';
+import { FileText, RefreshCw, ChevronRight, CheckCircle, XCircle } from '@/utils/icons';
 import { useAutomation } from '../../hooks/useAutomation';
 
 interface AutomationLogsWidgetProps {

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import * as LucideIcons from 'lucide-react';
-import { X, Search, ExternalLink, Clock, Star, Layout, Grid, Code, Settings, Users, Server, Chrome, Check } from 'lucide-react';
+import * as LucideIcons from '@/utils/icons';
+import { X, Search, ExternalLink, Clock, Star, Layout, Grid, Code, Settings, Users, Server, Chrome, Check } from '@/utils/icons';
 import Icon from './Icon';
 
 interface IconSelectorProps {

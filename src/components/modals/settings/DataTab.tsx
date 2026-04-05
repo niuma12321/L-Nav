@@ -7,7 +7,7 @@ import {
   EyeOff,
   X,
   AlertCircle,
-} from 'lucide-react';
+} from '@/utils/icons';
 import { SiteSettings } from '../../../types';
 import { getUserData, setUserData } from '../../../utils/constants';
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Loader2, RefreshCw, Globe, AlertCircle, FileText, ExternalLink } from 'lucide-react';
+import { Loader2, RefreshCw, Globe, AlertCircle, FileText, ExternalLink } from '@/utils/icons';
 import type { APIDataConfig } from './widgetTypes';
 import { getRenderer } from './APIRenderers';
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Timer, Plus, Trash2, Calendar } from 'lucide-react';
+import { Timer, Plus, Trash2, Calendar } from '@/utils/icons';
 import { CountdownWidgetSettings, CountdownEvent } from '../../types/widgets';
 
 interface CountdownWidgetProps {
