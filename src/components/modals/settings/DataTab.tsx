@@ -9,7 +9,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { SiteSettings } from '../../../types';
-import { VIEW_PASSWORD_KEY } from '../../../utils/constants';
+import { getUserData, setUserData } from '../../../utils/constants';
 
 // ==============================================
 // 类型定义
@@ -64,19 +64,19 @@ const DataTab: React.FC<DataTabProps> = ({
 
   // === 初始化加载 ===
   useEffect(() => {
-    const saved = localStorage.getItem(VIEW_PASSWORD_KEY);
+    const saved = getUserData('view_password', '');
     if (saved) setViewPassword(saved);
   }, []);
 
   // === 查看密码管理 ===
   const handleSaveViewPassword = () => {
     if (!viewPassword.trim()) {
-      localStorage.removeItem(VIEW_PASSWORD_KEY);
+      setUserData('view_password', '');
       onViewPasswordChange('');
       alert('查看密码已清除');
       return;
     }
-    localStorage.setItem(VIEW_PASSWORD_KEY, viewPassword);
+    setUserData('view_password', viewPassword);
     onViewPasswordChange(viewPassword);
     alert('查看密码已保存');
   };

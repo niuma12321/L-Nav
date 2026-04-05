@@ -5,6 +5,7 @@ import SiteTab from './settings/SiteTab';
 import AITab from './settings/AITab';
 import AppearanceTab from './settings/AppearanceTab';
 import DataTab from './settings/DataTab';
+import { getUserData, setUserData } from '../../utils/constants';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -50,12 +51,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   closeOnBackdrop = true
 }) => {
   const [activeTab, setActiveTab] = useState<'site' | 'ai' | 'appearance' | 'data'>(() => {
-    return (localStorage.getItem('ynav-settings-active-tab') as any) || 'site';
+    return getUserData('settings_active_tab', 'site');
   });
 
-  // 持久化 activeTab 到 localStorage
+  // 持久化 activeTab 到用户维度存储
   useEffect(() => {
-    localStorage.setItem('ynav-settings-active-tab', activeTab);
+    setUserData('settings_active_tab', activeTab);
   }, [activeTab]);
 
   const [localConfig, setLocalConfig] = useState<AIConfig>(config);
