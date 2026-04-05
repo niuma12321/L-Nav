@@ -1026,29 +1026,39 @@ function App() {
   return (
     <div 
       className={`flex min-h-screen ${toneClasses.text} relative`}
-      style={useCustomBackground ? {
-        backgroundImage: `url(${backgroundImage})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundAttachment: 'fixed'
-      } : undefined}
     >
+      {/* 背景图层 - 确保在最底层 */}
+      {useCustomBackground && backgroundImage && (
+        <div 
+          className="fixed inset-0 z-0"
+          style={{
+            backgroundImage: `url(${backgroundImage})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundAttachment: 'fixed'
+          }}
+        />
+      )}
+      
       {/* 背景遮罩层 - 提高文字可读性 */}
       {useCustomBackground && backgroundImage && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-0 pointer-events-none" />
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-10 pointer-events-none" />
       )}
-      {/* Main Dashboard - V9Dashboard 自带完整的导航和侧边栏 */}
-      <V9Dashboard
-        links={links}
-        categories={categories}
-        pinnedLinks={pinnedLinks}
-        onAddResource={handleAddLinkRequest}
-        onOpenSettings={() => setIsSettingsModalOpen(true)}
-        onOpenImport={() => setIsImportModalOpen(true)}
-        onOpenSearchConfig={() => setIsSearchConfigModalOpen(true)}
-        onEditLink={handleLinkEdit}
-        onDeleteLink={handleDeleteLink}
-      />
+      
+      {/* 主内容区域 */}
+      <div className="relative z-20 w-full">
+        <V9Dashboard
+          links={links}
+          categories={categories}
+          pinnedLinks={pinnedLinks}
+          onAddResource={handleAddLinkRequest}
+          onOpenSettings={() => setIsSettingsModalOpen(true)}
+          onOpenImport={() => setIsImportModalOpen(true)}
+          onOpenSearchConfig={() => setIsSearchConfigModalOpen(true)}
+          onEditLink={handleLinkEdit}
+          onDeleteLink={handleDeleteLink}
+        />
+      </div>
 
       {/* Modals - 同步导入，无需Suspense */}
       <CategoryManagerModal

@@ -129,10 +129,12 @@ export function useUnifiedSync() {
     }
   }, [getSyncMetadata, saveSyncMetadata]);
 
-  // 推送所有数据到云端
+  // 推送所有数据到云端 - 增强用户操作保存
   const pushToCloud = useCallback(async (debounce = true) => {
     const userId = getCurrentUserId() || initDefaultUser();
     if (!userId) return;
+
+    console.log('[UnifiedSync] 开始推送用户数据到云端:', { userId, debounce });
 
     // 防抖：延迟2秒推送，避免频繁修改
     if (syncTimeoutRef.current) {
@@ -147,27 +149,41 @@ export function useUnifiedSync() {
         const meta = getSyncMetadata();
         
         // 推送所有数据类型
+        const allLocalData = getAllLocalData();
+        const pushPromises: Promise<void>[] = [];
+        
         for (const type of SYNC_DATA_TYPES) {
-          try {
-            const localData = readSyncableUserData(type.remoteType, null);
-
-            if (localData !== null && localData !== undefined) {
-              await fetch('/api/sync', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  userId,
-                  dataType: type.remoteType,
-                  data: localData,
-                  deviceId: deviceId.current,
-                  version: meta.version
-                })
-              });
-            }
-          } catch (e) {
-            console.error(`推送 ${type.name} 失败`, e);
+          const data = allLocalData[type.remoteType];
+          if (data !== null && data !== undefined) {
+            const pushPromise = fetch('/api/sync', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Cache-Control': 'no-cache, no-store, must-revalidate'
+              },
+              body: JSON.stringify({
+                userId,
+                dataType: type.remoteType,
+                data,
+                timestamp: Date.now(),
+                deviceId: deviceId.current
+              })
+            }).then(res => {
+              if (res.ok) {
+                console.log(`[UnifiedSync] 成功推送 ${type.name} 数据`);
+              } else {
+                console.error(`[UnifiedSync] 推送 ${type.name} 失败:`, res.status);
+              }
+            }).catch(e => {
+              console.error(`[UnifiedSync] 推送 ${type.name} 异常:`, e);
+            });
+            
+            pushPromises.push(pushPromise);
           }
         }
+        
+        // 等待所有推送完成
+        await Promise.allSettled(pushPromises);
 
         // 更新同步元数据
         const newMeta = {
@@ -178,6 +194,12 @@ export function useUnifiedSync() {
         saveSyncMetadata(newMeta);
         setLastSyncAt(newMeta.lastSyncAt);
         setSyncStatus('synced');
+        
+        console.log('[UnifiedSync] 用户数据推送完成:', {
+          timestamp: newMeta.lastSyncAt,
+          version: newMeta.version,
+          dataTypes: SYNC_DATA_TYPES.map(t => t.name)
+        });
       } catch (e) {
         console.error('推送失败', e);
         setSyncStatus('error');
