@@ -75,6 +75,11 @@ export function useWidgetSystem() {
     setWidgets(normalizedWidgets);
     setUserData(WIDGETS_STORAGE_KEY, normalizedWidgets);
 
+    // 触发同步事件
+    window.dispatchEvent(new CustomEvent('ynav-data-changed', {
+      detail: { type: 'widgets', timestamp: Date.now() }
+    }));
+
     if (bcRef.current) {
       bcRef.current.postMessage({ type: 'WIDGETS_UPDATED', widgets: normalizedWidgets });
     }
