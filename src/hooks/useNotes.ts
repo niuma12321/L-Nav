@@ -1,7 +1,13 @@
 import { useState, useCallback, useEffect } from 'react';
 import { StickyNote } from '../types';
-
-const NOTES_STORAGE_KEY = 'ynav_notes';
+import {
+  NOTES_STORAGE_KEY,
+  getCanonicalUserStorageKey,
+  getUserData,
+  setUserData,
+  YNAV_DATA_SYNCED_EVENT,
+  YNAV_USER_STORAGE_UPDATED_EVENT
+} from '../utils/constants';
 
 export interface UseNotesReturn {
   notes: StickyNote[];
@@ -12,43 +18,57 @@ export interface UseNotesReturn {
   importNotes: (newNotes: StickyNote[]) => void;
 }
 
+const loadNotesFromStorage = () => {
+  const storedNotes = getUserData<StickyNote[]>(NOTES_STORAGE_KEY, []);
+  return Array.isArray(storedNotes) ? storedNotes : [];
+};
+
 /**
  * 便签数据管理 Hook
- * 提供便签的增删改查功能，数据持久化到 localStorage
+ * 提供便签的增删改查功能，数据持久化到用户维度存储。
  */
 export function useNotes(): UseNotesReturn {
-  // 从 localStorage 加载初始数据
-  const [notes, setNotes] = useState<StickyNote[]>(() => {
-    try {
-      const stored = localStorage.getItem(NOTES_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          return parsed;
-        }
-      }
-    } catch (error) {
-      if (import.meta.env.DEV) {
-        console.error('[Notes] Failed to load notes:', error);
-      }
-    }
-    return [];
-  });
+  const [notes, setNotes] = useState<StickyNote[]>(() => loadNotesFromStorage());
 
-  // 数据变化时保存到 localStorage
   useEffect(() => {
-    try {
-      localStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(notes));
-    } catch (error) {
-      if (import.meta.env.DEV) {
-        console.error('[Notes] Failed to save notes:', error);
-      }
-    }
+    setUserData(NOTES_STORAGE_KEY, notes);
   }, [notes]);
 
-  /**
-   * 创建新便签
-   */
+  useEffect(() => {
+    const syncableKeys = new Set([
+      NOTES_STORAGE_KEY,
+      'ynav-notes',
+      getCanonicalUserStorageKey('ynav-notes')
+    ]);
+
+    const reloadNotes = (changedKeys: string[] = []) => {
+      if (changedKeys.some((changedKey) => syncableKeys.has(changedKey))) {
+        setNotes(loadNotesFromStorage());
+      }
+    };
+
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key && syncableKeys.has(event.key)) {
+        setNotes(loadNotesFromStorage());
+      }
+    };
+
+    const handleCustomEvent = (event: Event) => {
+      const changedKeys = (event as CustomEvent<{ changedKeys?: string[] }>).detail?.changedKeys || [];
+      reloadNotes(changedKeys);
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener(YNAV_DATA_SYNCED_EVENT, handleCustomEvent as EventListener);
+    window.addEventListener(YNAV_USER_STORAGE_UPDATED_EVENT, handleCustomEvent as EventListener);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener(YNAV_DATA_SYNCED_EVENT, handleCustomEvent as EventListener);
+      window.removeEventListener(YNAV_USER_STORAGE_UPDATED_EVENT, handleCustomEvent as EventListener);
+    };
+  }, []);
+
   const addNote = useCallback((content?: string): StickyNote => {
     const now = Date.now();
     const safeContent = content && typeof content === 'string' ? content.trim() : '';
@@ -58,55 +78,40 @@ export function useNotes(): UseNotesReturn {
       createdAt: now,
       updatedAt: now,
     };
-    
-    setNotes(prev => [newNote, ...prev]);
+
+    setNotes((prev) => [newNote, ...prev]);
     return newNote;
   }, []);
 
-  /**
-   * 更新便签内容（支持富文本）
-   */
   const updateNote = useCallback((id: string, content: string, htmlContent?: string, isRichText?: boolean) => {
     const trimmedContent = (content && typeof content === 'string') ? content.trim() : '';
-    
-    setNotes(prev =>
-      prev.map(note =>
+
+    setNotes((prev) =>
+      prev.map((note) =>
         note.id === id
-          ? { 
-              ...note, 
-              content: trimmedContent, 
-              htmlContent: htmlContent || note.htmlContent,
+          ? {
+              ...note,
+              content: trimmedContent,
+              htmlContent: htmlContent ?? note.htmlContent,
               isRichText: isRichText ?? note.isRichText,
-              updatedAt: Date.now() 
+              updatedAt: Date.now()
             }
           : note
       )
     );
   }, []);
 
-  /**
-   * 删除便签
-   */
   const deleteNote = useCallback((id: string) => {
-    setNotes(prev => prev.filter(note => note.id !== id));
+    setNotes((prev) => prev.filter((note) => note.id !== id));
   }, []);
 
-  /**
-   * 批量导入便签
-   */
   const importNotes = useCallback((newNotes: StickyNote[]) => {
-    setNotes(newNotes);
+    setNotes(Array.isArray(newNotes) ? newNotes : []);
   }, []);
 
-  /**
-   * 根据 ID 获取便签
-   */
-  const getNoteById = useCallback(
-    (id: string): StickyNote | undefined => {
-      return notes.find(note => note.id === id);
-    },
-    [notes]
-  );
+  const getNoteById = useCallback((id: string): StickyNote | undefined => {
+    return notes.find((note) => note.id === id);
+  }, [notes]);
 
   return {
     notes,

@@ -60,6 +60,11 @@ export const SEARCH_CONFIG_KEY = STORAGE_KEYS.SEARCH_CONFIG;
 export const FAVICON_CACHE_KEY = STORAGE_KEYS.FAVICON_CACHE;
 export const SITE_SETTINGS_KEY = STORAGE_KEYS.SITE_SETTINGS;
 export const THEME_KEY = STORAGE_KEYS.THEME;
+export const NOTES_STORAGE_KEY = 'ynav_notes';
+export const RSS_ITEMS_KEY = 'rss_items_cache';
+export const LAB_NOTES_KEY = 'lab_notes_v1';
+export const SMART_HOME_PREFERENCES_KEY = 'smart_home_preferences';
+export const AUTOMATION_PREFERENCES_KEY = 'automation_preferences';
 
 export const CURRENT_USER_KEY = STORAGE_KEYS.CURRENT_USER;
 export const USER_PROFILES_KEY = STORAGE_KEYS.USER_PROFILES;
@@ -91,7 +96,31 @@ export const SYNC_API_VERSION = 'v1';
 /** 数据结构版本 */
 export const SYNC_DATA_SCHEMA_VERSION = 1;
 /** GitHub 地址 */
-export const GITHUB_REPO_URL = 'https://github.com/yml2213/Y-Nav.git';
+export const GITHUB_REPO_URL = 'https://github.com/niuma12321/L-Nav.git';
+
+export const YNAV_DATA_SYNCED_EVENT = 'ynav-data-synced';
+export const YNAV_USER_STORAGE_UPDATED_EVENT = 'ynav-user-storage-updated';
+
+interface SyncStorageEntry {
+  remoteType: string;
+  name: string;
+  primaryKey: string;
+  aliases?: string[];
+}
+
+export const SYNC_STORAGE_REGISTRY: readonly SyncStorageEntry[] = [
+  { remoteType: 'links_data', name: '链接数据', primaryKey: 'links_data', aliases: [LOCAL_STORAGE_KEY] },
+  { remoteType: 'ynav-widgets-v9', name: '小组件配置', primaryKey: 'ynav-widgets-v9' },
+  { remoteType: 'site_settings', name: '站点设置', primaryKey: SITE_SETTINGS_KEY, aliases: ['site_settings'] },
+  { remoteType: 'ai_config', name: 'AI 配置', primaryKey: AI_CONFIG_KEY, aliases: ['ai_config'] },
+  { remoteType: 'ynav-notes', name: '便签数据', primaryKey: NOTES_STORAGE_KEY, aliases: ['ynav-notes'] },
+  { remoteType: 'theme', name: '主题设置', primaryKey: THEME_KEY },
+  { remoteType: 'search_config', name: '搜索配置', primaryKey: SEARCH_CONFIG_KEY, aliases: ['search_config'] },
+  { remoteType: 'rss_sources', name: 'RSS 源', primaryKey: 'rss_sources' },
+  { remoteType: 'rss_items_cache', name: 'RSS 缓存', primaryKey: RSS_ITEMS_KEY },
+  { remoteType: 'weather_city', name: '天气城市', primaryKey: 'weather_city' },
+  { remoteType: 'view_password', name: '查看密码', primaryKey: VIEW_PASSWORD_KEY, aliases: ['view_password'] },
+];
 
 /** 存储版本管理 */
 export const STORAGE_VERSION: StorageVersion = {
@@ -321,11 +350,59 @@ export const getUserProfiles = (): UserProfile[] => {
   }
 };
 
+const uniqueStorageKeys = (keys: string[]): string[] => Array.from(new Set(keys.filter(Boolean)));
+
+const parseStoredUserValue = <T>(stored: string, defaultValue: T): T => {
+  try {
+    return JSON.parse(stored) as T;
+  } catch {
+    return (typeof defaultValue === 'string' ? stored : defaultValue) as T;
+  }
+};
+
+const getSyncStorageEntry = (typeOrKey: string): SyncStorageEntry | undefined => {
+  return SYNC_STORAGE_REGISTRY.find((entry) =>
+    entry.remoteType === typeOrKey ||
+    entry.primaryKey === typeOrKey ||
+    entry.aliases?.includes(typeOrKey)
+  );
+};
+
+const getStorageCandidates = (typeOrKey: string): string[] => {
+  const entry = getSyncStorageEntry(typeOrKey);
+  if (!entry) return [typeOrKey];
+  return uniqueStorageKeys([entry.primaryKey, ...(entry.aliases || []), typeOrKey]);
+};
+
+const getPrimaryStorageBaseKey = (typeOrKey: string): string => {
+  return getSyncStorageEntry(typeOrKey)?.primaryKey || typeOrKey;
+};
+
+const dispatchUserStorageEvent = (changedKeys: string[]): void => {
+  if (!isBrowser) return;
+
+  const uniqueChangedKeys = uniqueStorageKeys(changedKeys);
+  window.dispatchEvent(new CustomEvent(YNAV_USER_STORAGE_UPDATED_EVENT, {
+    detail: { changedKeys: uniqueChangedKeys }
+  }));
+};
+
+const ensureCurrentUserId = (): string | null => {
+  if (!isBrowser) return null;
+
+  const currentUserId = getCurrentUserId();
+  if (currentUserId) return currentUserId;
+
+  const defaultUserId = `default_${Date.now()}`;
+  setCurrentUser(defaultUserId, '默认用户');
+  return defaultUserId;
+};
+
 /**
  * 获取当前用户的存储键前缀
  */
 export const getUserStoragePrefix = (): string => {
-  const userId = getCurrentUserId();
+  const userId = ensureCurrentUserId();
   if (!userId) return '';
   return `user_${userId}_`;
 };
@@ -339,22 +416,43 @@ export const getUserStorageKey = (baseKey: string): string => {
   return `${prefix}${baseKey}`;
 };
 
+export const getCanonicalUserStorageKey = (typeOrKey: string): string => {
+  return getUserStorageKey(getPrimaryStorageBaseKey(typeOrKey));
+};
+
 /**
  * 安全获取用户数据
  */
 export const getUserData = <T>(key: string, defaultValue: T): T => {
   if (!isBrowser) return defaultValue;
-  
-  const userKey = getUserStorageKey(key);
-  const stored = localStorage.getItem(userKey);
-  
-  if (!stored) return defaultValue;
-  
-  try {
-    return JSON.parse(stored);
-  } catch {
-    return defaultValue;
+
+  const primaryBaseKey = getPrimaryStorageBaseKey(key);
+  const primaryStorageKey = getUserStorageKey(primaryBaseKey);
+
+  for (const candidateBaseKey of getStorageCandidates(key)) {
+    const userScopedKey = getUserStorageKey(candidateBaseKey);
+    const scopedValue = localStorage.getItem(userScopedKey);
+    const unscopedValue = localStorage.getItem(candidateBaseKey);
+    const stored = scopedValue ?? unscopedValue;
+
+    if (stored == null) continue;
+
+    const parsedValue = parseStoredUserValue(stored, defaultValue);
+
+    if (candidateBaseKey !== primaryBaseKey || userScopedKey !== primaryStorageKey || unscopedValue != null) {
+      localStorage.setItem(primaryStorageKey, JSON.stringify(parsedValue));
+      if (userScopedKey !== primaryStorageKey) {
+        localStorage.removeItem(userScopedKey);
+      }
+      if (candidateBaseKey !== primaryBaseKey) {
+        localStorage.removeItem(candidateBaseKey);
+      }
+    }
+
+    return parsedValue;
   }
+
+  return defaultValue;
 };
 
 /**
@@ -362,9 +460,18 @@ export const getUserData = <T>(key: string, defaultValue: T): T => {
  */
 export const setUserData = <T>(key: string, value: T): void => {
   if (!isBrowser) return;
-  
-  const userKey = getUserStorageKey(key);
+
+  const primaryBaseKey = getPrimaryStorageBaseKey(key);
+  const userKey = getUserStorageKey(primaryBaseKey);
   localStorage.setItem(userKey, JSON.stringify(value));
+
+  for (const candidateBaseKey of getStorageCandidates(key)) {
+    if (candidateBaseKey === primaryBaseKey) continue;
+    localStorage.removeItem(getUserStorageKey(candidateBaseKey));
+    localStorage.removeItem(candidateBaseKey);
+  }
+
+  dispatchUserStorageEvent([key, primaryBaseKey, userKey]);
 };
 
 /**
@@ -372,23 +479,22 @@ export const setUserData = <T>(key: string, value: T): void => {
  */
 export const clearUserData = (key: string): void => {
   if (!isBrowser) return;
-  
-  const userKey = getUserStorageKey(key);
-  localStorage.removeItem(userKey);
+
+  const primaryBaseKey = getPrimaryStorageBaseKey(key);
+  const userKey = getUserStorageKey(primaryBaseKey);
+  for (const candidateBaseKey of getStorageCandidates(key)) {
+    localStorage.removeItem(getUserStorageKey(candidateBaseKey));
+    localStorage.removeItem(candidateBaseKey);
+  }
+
+  dispatchUserStorageEvent([key, primaryBaseKey, userKey]);
 };
 
 /**
  * 初始化默认用户 (首次访问)
  */
 export const initDefaultUser = (): string => {
-  const existingUser = getCurrentUserId();
-  if (existingUser) return existingUser;
-  
-  // 生成默认用户ID
-  const defaultUserId = `default_${Date.now()}`;
-  setCurrentUser(defaultUserId, '默认用户');
-  
-  return defaultUserId;
+  return ensureCurrentUserId() || `default_${Date.now()}`;
 };
 
 /**
@@ -399,5 +505,34 @@ export const switchUser = (userId: string): void => {
   // 强制刷新页面以加载新用户的数据
   if (isBrowser) {
     window.location.reload();
+  }
+};
+
+export const readSyncableUserData = <T>(typeOrKey: string, defaultValue: T): T => {
+  return getUserData(typeOrKey, defaultValue);
+};
+
+export const writeSyncableUserData = <T>(
+  typeOrKey: string,
+  value: T,
+  options?: { emitSyncEvent?: boolean }
+): void => {
+  setUserData(typeOrKey, value);
+
+  if (options?.emitSyncEvent && isBrowser) {
+    const detail = { changedKeys: [typeOrKey, getPrimaryStorageBaseKey(typeOrKey)] };
+    window.dispatchEvent(new CustomEvent(YNAV_DATA_SYNCED_EVENT, { detail }));
+  }
+};
+
+export const clearSyncableUserData = (
+  typeOrKey: string,
+  options?: { emitSyncEvent?: boolean }
+): void => {
+  clearUserData(typeOrKey);
+
+  if (options?.emitSyncEvent && isBrowser) {
+    const detail = { changedKeys: [typeOrKey, getPrimaryStorageBaseKey(typeOrKey)] };
+    window.dispatchEvent(new CustomEvent(YNAV_DATA_SYNCED_EVENT, { detail }));
   }
 };

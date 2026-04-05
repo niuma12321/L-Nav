@@ -1,24 +1,18 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   getCurrentUserId, 
-  getUserStorageKey, 
   getDeviceId,
-  STORAGE_KEYS 
+  initDefaultUser,
+  getCanonicalUserStorageKey,
+  readSyncableUserData,
+  writeSyncableUserData,
+  STORAGE_KEYS,
+  SYNC_STORAGE_REGISTRY,
+  YNAV_DATA_SYNCED_EVENT,
+  YNAV_USER_STORAGE_UPDATED_EVENT
 } from '@/utils/constants';
 
-// 所有需要同步的数据类型
-const SYNC_DATA_TYPES = [
-  { key: 'links_data', name: '链接数据' },
-  { key: 'ynav-widgets-v9', name: '小组件配置' },
-  { key: 'site_settings', name: '站点设置' },
-  { key: 'ai_config', name: 'AI配置' },
-  { key: 'ynav-notes', name: '笔记数据' },
-  { key: 'theme', name: '主题设置' },
-  { key: 'search_config', name: '搜索配置' },
-  { key: 'rss_sources', name: 'RSS源' },
-  { key: 'weather_city', name: '天气城市' },
-  { key: 'view_password', name: '查看密码' }
-];
+const SYNC_DATA_TYPES = [...SYNC_STORAGE_REGISTRY];
 
 // 同步元数据接口
 interface SyncMetadata {
@@ -31,9 +25,11 @@ interface SyncMetadata {
 export function useUnifiedSync() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncAt, setLastSyncAt] = useState<number>(0);
-  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'pending' | 'syncing' | 'synced' | 'error' | 'conflict'>('idle');
   const [conflict, setConflict] = useState<{ localData: Record<string, any>; remoteData: Record<string, any> } | null>(null);
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const suppressAutoPushRef = useRef(false);
+  const hasInitialPullRef = useRef(false);
   const deviceId = useRef<string>(getDeviceId());
 
   // 获取同步元数据
@@ -43,7 +39,7 @@ export function useUnifiedSync() {
       version: 1,
       lastSyncAt: 0,
       deviceId: deviceId.current,
-      dataTypes: SYNC_DATA_TYPES.map(t => t.key)
+      dataTypes: SYNC_DATA_TYPES.map(type => type.remoteType)
     };
   }, []);
 
@@ -54,7 +50,7 @@ export function useUnifiedSync() {
 
   // 从云端拉取所有数据
   const pullFromCloud = useCallback(async (force = false) => {
-    const userId = getCurrentUserId();
+    const userId = getCurrentUserId() || initDefaultUser();
     if (!userId) return;
 
     setIsSyncing(true);
@@ -67,7 +63,7 @@ export function useUnifiedSync() {
       const allData: Record<string, any> = {};
       for (const type of SYNC_DATA_TYPES) {
         try {
-          const res = await fetch(`/api/sync?userId=${userId}&dataType=${type.key}`, {
+          const res = await fetch(`/api/sync?userId=${userId}&dataType=${type.remoteType}`, {
             cache: 'no-store',
             headers: {
               'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -77,7 +73,7 @@ export function useUnifiedSync() {
           if (res.ok) {
             const data = await res.json();
             if (data && data.data) {
-              allData[type.key] = data.data;
+              allData[type.remoteType] = data.data;
             }
           }
         } catch (e) {
@@ -92,17 +88,20 @@ export function useUnifiedSync() {
           localData: getAllLocalData(),
           remoteData: allData
         });
-        setSyncStatus('error');
+        setSyncStatus('conflict');
         return;
       }
 
       // 覆盖本地数据
+      const changedKeys = new Set<string>();
+      suppressAutoPushRef.current = true;
       for (const [key, data] of Object.entries(allData)) {
-        if (data) {
-          const storageKey = getUserStorageKey(key);
-          localStorage.setItem(storageKey, JSON.stringify(data));
+        if (data !== null && data !== undefined) {
+          writeSyncableUserData(key, data);
+          changedKeys.add(key);
         }
       }
+      suppressAutoPushRef.current = false;
 
       // 更新同步元数据
       const newMeta = {
@@ -112,21 +111,27 @@ export function useUnifiedSync() {
       };
       saveSyncMetadata(newMeta);
       setLastSyncAt(newMeta.lastSyncAt);
-      setSyncStatus('success');
+      setSyncStatus('synced');
 
       // 触发页面刷新
-      window.dispatchEvent(new CustomEvent('ynav-data-synced'));
+      if (changedKeys.size > 0) {
+        window.dispatchEvent(new CustomEvent(YNAV_DATA_SYNCED_EVENT, {
+          detail: { changedKeys: Array.from(changedKeys) }
+        }));
+      }
     } catch (e) {
       console.error('同步失败', e);
       setSyncStatus('error');
     } finally {
+      hasInitialPullRef.current = true;
+      suppressAutoPushRef.current = false;
       setIsSyncing(false);
     }
   }, [getSyncMetadata, saveSyncMetadata]);
 
   // 推送所有数据到云端
   const pushToCloud = useCallback(async (debounce = true) => {
-    const userId = getCurrentUserId();
+    const userId = getCurrentUserId() || initDefaultUser();
     if (!userId) return;
 
     // 防抖：延迟2秒推送，避免频繁修改
@@ -144,17 +149,16 @@ export function useUnifiedSync() {
         // 推送所有数据类型
         for (const type of SYNC_DATA_TYPES) {
           try {
-            const storageKey = getUserStorageKey(type.key);
-            const localData = localStorage.getItem(storageKey);
-            
-            if (localData) {
+            const localData = readSyncableUserData(type.remoteType, null);
+
+            if (localData !== null && localData !== undefined) {
               await fetch('/api/sync', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   userId,
-                  dataType: type.key,
-                  data: JSON.parse(localData),
+                  dataType: type.remoteType,
+                  data: localData,
                   deviceId: deviceId.current,
                   version: meta.version
                 })
@@ -173,7 +177,7 @@ export function useUnifiedSync() {
         };
         saveSyncMetadata(newMeta);
         setLastSyncAt(newMeta.lastSyncAt);
-        setSyncStatus('success');
+        setSyncStatus('synced');
       } catch (e) {
         console.error('推送失败', e);
         setSyncStatus('error');
@@ -183,6 +187,7 @@ export function useUnifiedSync() {
     };
 
     if (debounce) {
+      setSyncStatus('pending');
       syncTimeoutRef.current = setTimeout(doPush, 2000);
     } else {
       await doPush();
@@ -194,10 +199,10 @@ export function useUnifiedSync() {
     const localData = getAllLocalData();
     
     for (const type of SYNC_DATA_TYPES) {
-      const local = localData[type.key];
-      const remote = remoteData[type.key];
+      const local = localData[type.remoteType];
+      const remote = remoteData[type.remoteType];
       
-      if (local && remote && JSON.stringify(local) !== JSON.stringify(remote)) {
+      if (local !== null && local !== undefined && remote !== null && remote !== undefined && JSON.stringify(local) !== JSON.stringify(remote)) {
         return true;
       }
     }
@@ -209,10 +214,9 @@ export function useUnifiedSync() {
   const getAllLocalData = (): Record<string, any> => {
     const data: Record<string, any> = {};
     for (const type of SYNC_DATA_TYPES) {
-      const storageKey = getUserStorageKey(type.key);
-      const local = localStorage.getItem(storageKey);
-      if (local) {
-        data[type.key] = JSON.parse(local);
+      const local = readSyncableUserData(type.remoteType, null);
+      if (local !== null && local !== undefined) {
+        data[type.remoteType] = local;
       }
     }
     return data;
@@ -237,9 +241,12 @@ export function useUnifiedSync() {
   // 监听数据变化，自动推送
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
+      if (!hasInitialPullRef.current) return;
+      if (suppressAutoPushRef.current) return;
+
       // 只监听我们的数据类型
       const isSyncableType = SYNC_DATA_TYPES.some(type => 
-        e.key?.includes(type.key)
+        e.key === getCanonicalUserStorageKey(type.remoteType)
       );
       
       if (isSyncableType && e.newValue) {
@@ -247,8 +254,31 @@ export function useUnifiedSync() {
       }
     };
 
+    const handleUserStorageUpdated = (event: Event) => {
+      if (!hasInitialPullRef.current) return;
+      if (suppressAutoPushRef.current) return;
+
+      const changedKeys = (event as CustomEvent<{ changedKeys?: string[] }>).detail?.changedKeys || [];
+      const isSyncableType = changedKeys.some((changedKey) =>
+        SYNC_DATA_TYPES.some(type =>
+          changedKey === type.remoteType ||
+          changedKey === type.primaryKey ||
+          changedKey === getCanonicalUserStorageKey(type.remoteType)
+        )
+      );
+
+      if (isSyncableType) {
+        pushToCloud();
+      }
+    };
+
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    window.addEventListener(YNAV_USER_STORAGE_UPDATED_EVENT, handleUserStorageUpdated as EventListener);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener(YNAV_USER_STORAGE_UPDATED_EVENT, handleUserStorageUpdated as EventListener);
+    };
   }, [pushToCloud]);
 
   // 初始化时拉取云端数据

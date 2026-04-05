@@ -1,166 +1,234 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { WidgetConfig, DEFAULT_WIDGETS } from '../components/v6/widgetTypes';
-import { 
+import {
   initDefaultUser,
-  getUserStorageKey,
-  getCurrentUserId
+  getCurrentUserId,
+  getCanonicalUserStorageKey,
+  getUserData,
+  setUserData,
+  YNAV_DATA_SYNCED_EVENT,
+  YNAV_USER_STORAGE_UPDATED_EVENT
 } from '../utils/constants';
 
 const WIDGETS_STORAGE_KEY = 'ynav-widgets-v9';
 const WIDGETS_SYNC_CHANNEL = 'ynav-widgets-sync';
 
+const normalizeWidgets = (storedWidgets: WidgetConfig[]) => {
+  const safeWidgets = Array.isArray(storedWidgets) ? storedWidgets : [];
+  const mergedWidgets = safeWidgets.map((widget, index) => ({
+    ...widget,
+    order: widget.order ?? index,
+    position: {
+      desktop: widget.position?.desktop || widget.position || { x: 0, y: 0, w: 4, h: 2 },
+      mobile: widget.position?.mobile || { order: index }
+    }
+  }));
+
+  DEFAULT_WIDGETS.forEach((defaultWidget) => {
+    const exists = mergedWidgets.find((widget) => widget.id === defaultWidget.id);
+    if (!exists) {
+      mergedWidgets.push({
+        ...defaultWidget,
+        order: mergedWidgets.length
+      });
+    }
+  });
+
+  return mergedWidgets
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    .map((widget, index) => ({
+      ...widget,
+      order: index,
+      position: {
+        desktop: widget.position.desktop,
+        mobile: {
+          ...(widget.position.mobile || { order: index }),
+          order: widget.position.mobile?.order ?? index
+        }
+      }
+    }));
+};
+
 export function useWidgetSystem() {
-  // 确保有默认用户
   const [currentUserId, setCurrentUserId] = useState<string>(() => {
     if (typeof window === 'undefined') return '';
     return initDefaultUser();
   });
-  
+
   const [widgets, setWidgets] = useState<WidgetConfig[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const bcRef = useRef<BroadcastChannel | null>(null);
 
-  // 监听用户变化
+  const loadWidgets = useCallback(() => {
+    const userId = getCurrentUserId() || initDefaultUser();
+    setCurrentUserId(userId);
+
+    const storedWidgets = getUserData<WidgetConfig[]>(WIDGETS_STORAGE_KEY, []);
+    const nextWidgets = normalizeWidgets(storedWidgets.length > 0 ? storedWidgets : DEFAULT_WIDGETS);
+    setWidgets(nextWidgets);
+    setIsLoaded(true);
+  }, []);
+
+  const persistWidgets = useCallback((nextWidgets: WidgetConfig[]) => {
+    const normalizedWidgets = normalizeWidgets(nextWidgets);
+    setWidgets(normalizedWidgets);
+    setUserData(WIDGETS_STORAGE_KEY, normalizedWidgets);
+
+    if (bcRef.current) {
+      bcRef.current.postMessage({ type: 'WIDGETS_UPDATED', widgets: normalizedWidgets });
+    }
+  }, []);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    
+
     const checkUserChange = () => {
-      const newUserId = getCurrentUserId();
-      if (newUserId && newUserId !== currentUserId) {
-        console.log('[WidgetSystem] User changed from', currentUserId, 'to', newUserId);
-        setCurrentUserId(newUserId);
+      const nextUserId = getCurrentUserId();
+      if (nextUserId && nextUserId !== currentUserId) {
+        setCurrentUserId(nextUserId);
         setIsLoaded(false);
+        loadWidgets();
       }
     };
-    
+
     const interval = setInterval(checkUserChange, 1000);
     return () => clearInterval(interval);
-  }, [currentUserId]);
+  }, [currentUserId, loadWidgets]);
 
-  // 获取当前用户的存储键
-  const getStorageKey = useCallback(() => {
-    return getUserStorageKey(WIDGETS_STORAGE_KEY);
-  }, [currentUserId]);
-
-  // Initialize BroadcastChannel for cross-tab sync
   useEffect(() => {
     if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
       bcRef.current = new BroadcastChannel(WIDGETS_SYNC_CHANNEL);
       bcRef.current.onmessage = (event) => {
         if (event.data.type === 'WIDGETS_UPDATED') {
-          setWidgets(event.data.widgets);
+          setWidgets(normalizeWidgets(event.data.widgets || []));
         }
       };
     }
+
     return () => {
       bcRef.current?.close();
     };
   }, []);
 
-  // Sync widgets to other tabs
-  const syncWidgets = useCallback((newWidgets: WidgetConfig[]) => {
-    if (bcRef.current) {
-      bcRef.current.postMessage({ type: 'WIDGETS_UPDATED', widgets: newWidgets });
-    }
-  }, []);
-
-  // Load widgets from localStorage and merge with new default widgets
   useEffect(() => {
-    if (!currentUserId) return;
-    
-    const storageKey = getStorageKey();
-    const stored = localStorage.getItem(storageKey);
-    
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          // Merge stored widgets with new default widgets
-          const mergedWidgets = [...parsed];
-          // Add any new default widgets that don't exist in stored data
-          DEFAULT_WIDGETS.forEach(defaultWidget => {
-            const exists = mergedWidgets.find(w => w.id === defaultWidget.id);
-            if (!exists) {
-              mergedWidgets.push(defaultWidget);
-            }
-          });
-          setWidgets(mergedWidgets);
-        } else {
-          setWidgets(DEFAULT_WIDGETS);
-        }
-      } catch {
-        setWidgets(DEFAULT_WIDGETS);
+    loadWidgets();
+  }, [loadWidgets]);
+
+  useEffect(() => {
+    const syncableKeys = new Set([
+      WIDGETS_STORAGE_KEY,
+      getCanonicalUserStorageKey(WIDGETS_STORAGE_KEY)
+    ]);
+
+    const reloadWidgets = (changedKeys: string[] = []) => {
+      if (changedKeys.some((changedKey) => syncableKeys.has(changedKey))) {
+        loadWidgets();
       }
-    } else {
-      setWidgets(DEFAULT_WIDGETS);
-    }
-    setIsLoaded(true);
-  }, [currentUserId, getStorageKey]);
+    };
 
-  // Save widgets to localStorage and sync
-  useEffect(() => {
-    if (isLoaded && currentUserId) {
-      const storageKey = getStorageKey();
-      localStorage.setItem(storageKey, JSON.stringify(widgets));
-      syncWidgets(widgets);
-    }
-  }, [widgets, isLoaded, currentUserId, getStorageKey, syncWidgets]);
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key && syncableKeys.has(event.key)) {
+        loadWidgets();
+      }
+    };
+
+    const handleCustomEvent = (event: Event) => {
+      const changedKeys = (event as CustomEvent<{ changedKeys?: string[] }>).detail?.changedKeys || [];
+      reloadWidgets(changedKeys);
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener(YNAV_DATA_SYNCED_EVENT, handleCustomEvent as EventListener);
+    window.addEventListener(YNAV_USER_STORAGE_UPDATED_EVENT, handleCustomEvent as EventListener);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener(YNAV_DATA_SYNCED_EVENT, handleCustomEvent as EventListener);
+      window.removeEventListener(YNAV_USER_STORAGE_UPDATED_EVENT, handleCustomEvent as EventListener);
+    };
+  }, [loadWidgets]);
 
   const toggleWidget = useCallback((id: string) => {
-    setWidgets(prev => prev.map(w => 
-      w.id === id ? { ...w, enabled: !w.enabled } : w
+    persistWidgets(widgets.map((widget) =>
+      widget.id === id ? { ...widget, enabled: !widget.enabled } : widget
     ));
-  }, []);
+  }, [persistWidgets, widgets]);
 
   const updateWidgetPosition = useCallback((id: string, position: WidgetConfig['position']) => {
-    setWidgets(prev => prev.map(w => 
-      w.id === id ? { ...w, position } : w
+    persistWidgets(widgets.map((widget) =>
+      widget.id === id
+        ? {
+            ...widget,
+            position: {
+              desktop: position.desktop || widget.position.desktop,
+              mobile: position.mobile || widget.position.mobile
+            }
+          }
+        : widget
     ));
-  }, []);
+  }, [persistWidgets, widgets]);
 
   const updateWidgetSettings = useCallback((id: string, settings: Record<string, any>) => {
-    setWidgets(prev => prev.map(w => 
-      w.id === id ? { ...w, settings: { ...w.settings, ...settings } } : w
+    persistWidgets(widgets.map((widget) =>
+      widget.id === id ? { ...widget, settings: { ...widget.settings, ...settings } } : widget
     ));
-  }, []);
+  }, [persistWidgets, widgets]);
 
   const reorderWidgets = useCallback((newOrder: string[]) => {
-    setWidgets(prev => {
-      const ordered: WidgetConfig[] = [];
-      newOrder.forEach(id => {
-        const widget = prev.find(w => w.id === id);
-        if (widget) ordered.push(widget);
-      });
-      // Add any widgets not in newOrder
-      prev.forEach(w => {
-        if (!newOrder.includes(w.id)) ordered.push(w);
-      });
-      return ordered;
+    const currentWidgets = normalizeWidgets(widgets);
+    const orderedWidgets: WidgetConfig[] = [];
+
+    newOrder.forEach((id) => {
+      const widget = currentWidgets.find((item) => item.id === id);
+      if (widget) orderedWidgets.push(widget);
     });
-  }, []);
+
+    currentWidgets.forEach((widget) => {
+      if (!newOrder.includes(widget.id)) {
+        orderedWidgets.push(widget);
+      }
+    });
+
+    persistWidgets(orderedWidgets.map((widget, index) => ({
+      ...widget,
+      order: index,
+      position: {
+        desktop: widget.position.desktop,
+        mobile: {
+          ...(widget.position.mobile || { order: index }),
+          order: index
+        }
+      }
+    })));
+  }, [persistWidgets, widgets]);
 
   const addWidget = useCallback((widget: WidgetConfig) => {
-    setWidgets(prev => [...prev, widget]);
-  }, []);
+    persistWidgets([
+      ...widgets,
+      {
+        ...widget,
+        order: widgets.length,
+        position: {
+          desktop: widget.position?.desktop || { x: 0, y: 0, w: 4, h: 3 },
+          mobile: widget.position?.mobile || { order: widgets.length }
+        }
+      }
+    ]);
+  }, [persistWidgets, widgets]);
 
   const removeWidget = useCallback((id: string) => {
-    setWidgets(prev => {
-      const widget = prev.find(w => w.id === id);
-      if (widget?.isFixed) {
-        return prev; // 固定组件不可删除
-      }
-      return prev.filter(w => w.id !== id);
-    });
-  }, []);
+    const nextWidgets = widgets.filter((widget) => !(widget.id === id && !widget.isFixed));
+    persistWidgets(nextWidgets);
+  }, [persistWidgets, widgets]);
 
   const updateWidget = useCallback((updatedWidget: WidgetConfig) => {
-    setWidgets(prev => prev.map(w => 
-      w.id === updatedWidget.id ? updatedWidget : w
+    persistWidgets(widgets.map((widget) =>
+      widget.id === updatedWidget.id ? updatedWidget : widget
     ));
-  }, []);
+  }, [persistWidgets, widgets]);
 
-  const enabledWidgets = widgets.filter(w => w.enabled);
+  const enabledWidgets = widgets.filter((widget) => widget.enabled);
 
   return {
     widgets,

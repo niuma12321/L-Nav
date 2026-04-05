@@ -38,11 +38,12 @@ import { AIConfig, SiteSettings } from '../types';
 import { 
   AI_CONFIG_KEY, 
   SITE_SETTINGS_KEY,
-  initDefaultUser,
-  getUserStorageKey,
-  getCurrentUserId,
+  clearUserData,
+  getCanonicalUserStorageKey,
   getUserData,
-  setUserData
+  setUserData,
+  YNAV_DATA_SYNCED_EVENT,
+  YNAV_USER_STORAGE_UPDATED_EVENT
 } from '../utils/constants';
 
 // ============ 类型定义 ============
@@ -113,8 +114,7 @@ const safeStorage = {
     },
     remove: (key: string): void => {
         try {
-            const userKey = getUserStorageKey(key);
-            localStorage.removeItem(userKey);
+            clearUserData(key);
         } catch (error) {
             if (import.meta.env.DEV) {
                 console.warn(`[Config] Failed to remove ${key}:`, error);
@@ -541,6 +541,53 @@ export function useConfig() {
             }
         }
     }, [siteSettings.title, siteSettings.favicon]);
+
+    useEffect(() => {
+        const syncableKeys = new Set([
+            AI_CONFIG_KEY,
+            SITE_SETTINGS_KEY,
+            'ai_config',
+            'site_settings',
+            getCanonicalUserStorageKey('ai_config'),
+            getCanonicalUserStorageKey('site_settings')
+        ]);
+
+        const reloadConfig = (changedKeys: string[] = []) => {
+            if (!changedKeys.some((changedKey) => syncableKeys.has(changedKey))) return;
+
+            const savedAIConfig = safeStorage.get(AI_CONFIG_KEY, null);
+            const savedSiteSettings = safeStorage.get(SITE_SETTINGS_KEY, null);
+
+            if (savedAIConfig) {
+                setAiConfig(migrateAIConfig(savedAIConfig));
+            }
+
+            if (savedSiteSettings) {
+                setSiteSettings(migrateSiteSettings(savedSiteSettings));
+            }
+        };
+
+        const handleStorageChange = (event: StorageEvent) => {
+            if (event.key && syncableKeys.has(event.key)) {
+                reloadConfig([event.key]);
+            }
+        };
+
+        const handleCustomEvent = (event: Event) => {
+            const changedKeys = (event as CustomEvent<{ changedKeys?: string[] }>).detail?.changedKeys || [];
+            reloadConfig(changedKeys);
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+        window.addEventListener(YNAV_DATA_SYNCED_EVENT, handleCustomEvent as EventListener);
+        window.addEventListener(YNAV_USER_STORAGE_UPDATED_EVENT, handleCustomEvent as EventListener);
+
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            window.removeEventListener(YNAV_DATA_SYNCED_EVENT, handleCustomEvent as EventListener);
+            window.removeEventListener(YNAV_USER_STORAGE_UPDATED_EVENT, handleCustomEvent as EventListener);
+        };
+    }, []);
 
     /**
      * 清理函数

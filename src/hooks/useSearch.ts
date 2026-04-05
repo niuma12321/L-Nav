@@ -1,6 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { SearchMode, ExternalSearchSource, SearchConfig } from '../types';
-import { getUserData, setUserData } from '../utils/constants';
+import {
+    SEARCH_CONFIG_KEY,
+    getCanonicalUserStorageKey,
+    getUserData,
+    setUserData,
+    YNAV_DATA_SYNCED_EVENT,
+    YNAV_USER_STORAGE_UPDATED_EVENT
+} from '../utils/constants';
 
 // 默认搜索源
 const buildDefaultSearchSources = (): ExternalSearchSource[] => {
@@ -65,7 +72,7 @@ export function useSearch() {
         setExternalSearchSources(safeSources);
         setSearchMode(mode);
         setSelectedSearchSource(resolvedSelected);
-        setUserData('search_config', searchConfig);
+        setUserData(SEARCH_CONFIG_KEY, searchConfig);
     }, [selectedSearchSource]);
 
     // 切换搜索模式
@@ -132,7 +139,7 @@ export function useSearch() {
 
     // 初始化加载（全类型安全）
     useEffect(() => {
-        const savedSearchConfig = getUserData<SearchConfig>('search_config', null);
+        const savedSearchConfig = getUserData<SearchConfig>(SEARCH_CONFIG_KEY, null);
         if (savedSearchConfig) {
             const parsed = savedSearchConfig;
             if (parsed?.mode) {
@@ -148,6 +155,59 @@ export function useSearch() {
             setExternalSearchSources(defaultSources);
             setSelectedSearchSource(defaultSources[0] || null);
         }
+    }, []);
+
+    useEffect(() => {
+        const syncableKeys = new Set([
+            SEARCH_CONFIG_KEY,
+            'search_config',
+            getCanonicalUserStorageKey('search_config')
+        ]);
+
+        const reloadSearchConfig = (changedKeys: string[] = []) => {
+            if (!changedKeys.some((changedKey) => syncableKeys.has(changedKey))) return;
+
+            const savedSearchConfig = getUserData<SearchConfig>(SEARCH_CONFIG_KEY, null);
+            if (!savedSearchConfig) {
+                const defaultSources = buildDefaultSearchSources();
+                setSearchMode('external');
+                setExternalSearchSources(defaultSources);
+                setSelectedSearchSource(defaultSources[0] || null);
+                return;
+            }
+
+            const sources = Array.isArray(savedSearchConfig.externalSources) ? savedSearchConfig.externalSources : [];
+            const resolvedSelected = resolveSelectedSource(
+                sources,
+                savedSearchConfig.selectedSourceId,
+                savedSearchConfig.selectedSource ?? null
+            );
+
+            setSearchMode(savedSearchConfig.mode || 'external');
+            setExternalSearchSources(sources);
+            setSelectedSearchSource(resolvedSelected);
+        };
+
+        const handleStorageChange = (event: StorageEvent) => {
+            if (event.key && syncableKeys.has(event.key)) {
+                reloadSearchConfig([event.key]);
+            }
+        };
+
+        const handleCustomEvent = (event: Event) => {
+            const changedKeys = (event as CustomEvent<{ changedKeys?: string[] }>).detail?.changedKeys || [];
+            reloadSearchConfig(changedKeys);
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+        window.addEventListener(YNAV_DATA_SYNCED_EVENT, handleCustomEvent as EventListener);
+        window.addEventListener(YNAV_USER_STORAGE_UPDATED_EVENT, handleCustomEvent as EventListener);
+
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            window.removeEventListener(YNAV_DATA_SYNCED_EVENT, handleCustomEvent as EventListener);
+            window.removeEventListener(YNAV_USER_STORAGE_UPDATED_EVENT, handleCustomEvent as EventListener);
+        };
     }, []);
 
     // 弹窗延迟隐藏

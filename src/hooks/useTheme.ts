@@ -1,5 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getUserData, setUserData } from '../utils/constants';
+import {
+    getCanonicalUserStorageKey,
+    getUserData,
+    setUserData,
+    YNAV_DATA_SYNCED_EVENT,
+    YNAV_USER_STORAGE_UPDATED_EVENT
+} from '../utils/constants';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 
@@ -68,6 +74,43 @@ export function useTheme() {
             }
         };
     }, [themeMode, applyThemeMode]);
+
+    useEffect(() => {
+        const syncableKeys = new Set(['theme', getCanonicalUserStorageKey('theme')]);
+
+        const reloadTheme = (changedKeys: string[] = []) => {
+            if (!changedKeys.some((changedKey) => syncableKeys.has(changedKey))) return;
+
+            const storedTheme = getUserData<ThemeMode>('theme', 'system');
+            const nextMode: ThemeMode = storedTheme === 'dark' || storedTheme === 'light' || storedTheme === 'system'
+                ? storedTheme
+                : 'system';
+
+            setThemeMode(nextMode);
+            applyThemeMode(nextMode);
+        };
+
+        const handleStorageChange = (event: StorageEvent) => {
+            if (event.key && syncableKeys.has(event.key)) {
+                reloadTheme([event.key]);
+            }
+        };
+
+        const handleCustomEvent = (event: Event) => {
+            const changedKeys = (event as CustomEvent<{ changedKeys?: string[] }>).detail?.changedKeys || [];
+            reloadTheme(changedKeys);
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+        window.addEventListener(YNAV_DATA_SYNCED_EVENT, handleCustomEvent as EventListener);
+        window.addEventListener(YNAV_USER_STORAGE_UPDATED_EVENT, handleCustomEvent as EventListener);
+
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            window.removeEventListener(YNAV_DATA_SYNCED_EVENT, handleCustomEvent as EventListener);
+            window.removeEventListener(YNAV_USER_STORAGE_UPDATED_EVENT, handleCustomEvent as EventListener);
+        };
+    }, [applyThemeMode]);
 
     return {
         themeMode,
