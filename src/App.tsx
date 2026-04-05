@@ -1006,7 +1006,19 @@ function App() {
 
   // === Render ===
   return (
-    <div className={`flex min-h-screen ${toneClasses.text}`}>
+    <div 
+      className={`flex min-h-screen ${toneClasses.text} relative`}
+      style={useCustomBackground ? {
+        backgroundImage: `url(${backgroundImage})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed'
+      } : undefined}
+    >
+      {/* 背景遮罩层 - 提高文字可读性 */}
+      {useCustomBackground && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-0 pointer-events-none" />
+      )}
       {/* Main Dashboard - V9Dashboard 自带完整的导航和侧边栏 */}
       <V9Dashboard
         links={links}

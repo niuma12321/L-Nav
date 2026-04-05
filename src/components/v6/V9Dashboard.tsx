@@ -34,7 +34,8 @@ import {
   Navigation,
   Newspaper,
   Rss,
-  MoreVertical
+  MoreVertical,
+  GripVertical
 } from 'lucide-react';
 import { useWidgetSystem } from '../../hooks/useWidgetSystem';
 import { getUserData, setUserData } from '../../utils/constants';
@@ -1200,6 +1201,9 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
   const [navEditModalOpen, setNavEditModalOpen] = useState(false);
   const [editingNavItem, setEditingNavItem] = useState<{id: string, label: string, originalId: string} | null>(null);
 
+  // 设置下拉菜单状态
+  const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
+
   // 通知中心
   const {
     unreadCount,
@@ -1265,13 +1269,51 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
                 <Monitor className="w-5 h-5" />
               </button>
 
-              {/* 设置 */}
-              <button 
-                onClick={onOpenSettings}
-                className="p-2 rounded-xl text-slate-400 hover:text-emerald-400 hover:bg-white/5 transition-all"
-              >
-                <Settings className="w-5 h-5" />
-              </button>
+              {/* 设置下拉菜单 */}
+              <div className="relative">
+                <button 
+                  onClick={() => setShowSettingsDropdown(!showSettingsDropdown)}
+                  className="flex items-center gap-1 p-2 rounded-xl text-slate-400 hover:text-emerald-400 hover:bg-white/5 transition-all"
+                >
+                  <Settings className="w-5 h-5" />
+                  <ChevronDown className={`w-3 h-3 transition-transform ${showSettingsDropdown ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {showSettingsDropdown && (
+                  <div className="absolute top-full right-0 mt-2 w-48 rounded-xl bg-[#181a1c] border border-white/10 shadow-xl z-50 py-1">
+                    <button
+                      onClick={() => {
+                        onOpenSettings?.();
+                        setShowSettingsDropdown(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-slate-300 hover:text-white hover:bg-white/10 flex items-center gap-2"
+                    >
+                      <Settings className="w-4 h-4" />
+                      网站设置
+                    </button>
+                    <button
+                      onClick={() => {
+                        setNavEditModalOpen(true);
+                        setShowSettingsDropdown(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-slate-300 hover:text-white hover:bg-white/10 flex items-center gap-2"
+                    >
+                      <Menu className="w-4 h-4" />
+                      菜单配置
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActiveView('widgets');
+                        setShowSettingsDropdown(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-slate-300 hover:text-white hover:bg-white/10 flex items-center gap-2"
+                    >
+                      <Grid3X3 className="w-4 h-4" />
+                      组件配置
+                    </button>
+                  </div>
+                )}
+              </div>
 
               {/* 通知 */}
               <div className="relative">
@@ -1426,13 +1468,31 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
                         onDragStart={(e) => {
                           e.dataTransfer.setData('widgetId', widget.id);
                           e.dataTransfer.effectAllowed = 'move';
+                          // 添加拖拽中的样式
+                          e.currentTarget.classList.add('opacity-50', 'scale-95');
+                        }}
+                        onDragEnd={(e) => {
+                          // 移除拖拽样式
+                          e.currentTarget.classList.remove('opacity-50', 'scale-95');
+                          // 清除所有放置区域的高亮
+                          document.querySelectorAll('.widget-drop-target').forEach(el => {
+                            el.classList.remove('ring-2', 'ring-emerald-500', 'ring-offset-2', 'ring-offset-[#0d0e10]');
+                          });
                         }}
                         onDragOver={(e) => {
                           e.preventDefault();
                           e.dataTransfer.dropEffect = 'move';
+                          // 高亮当前放置区域
+                          e.currentTarget.classList.add('ring-2', 'ring-emerald-500', 'ring-offset-2', 'ring-offset-[#0d0e10]');
+                        }}
+                        onDragLeave={(e) => {
+                          // 移除高亮
+                          e.currentTarget.classList.remove('ring-2', 'ring-emerald-500', 'ring-offset-2', 'ring-offset-[#0d0e10]');
                         }}
                         onDrop={(e) => {
                           e.preventDefault();
+                          // 移除高亮
+                          e.currentTarget.classList.remove('ring-2', 'ring-emerald-500', 'ring-offset-2', 'ring-offset-[#0d0e10]');
                           const draggedId = e.dataTransfer.getData('widgetId');
                           if (draggedId && draggedId !== widget.id) {
                             const currentWidgets = enabledWidgets.filter(w => w.enabled).sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -1447,18 +1507,21 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
                             }
                           }
                         }}
-                        className={`bg-[#181a1c] rounded-xl border border-white/5 hover:border-emerald-500/30 transition-all duration-200 overflow-hidden group cursor-move ${
+                        className={`widget-drop-target bg-[#181a1c] rounded-xl border border-white/5 hover:border-emerald-500/30 transition-all duration-200 overflow-hidden group cursor-move ${
                           colSpan === 1 ? '' : colSpan === 2 ? 'md:col-span-2' : colSpan === 3 ? 'md:col-span-3' : 'md:col-span-4'
                         }`}
                       >
-                        {/* 组件头部 */}
-                        <div className="flex items-center justify-between px-3 py-2 border-b border-white/5">
+                        {/* 组件头部 - 添加拖拽手柄 */}
+                        <div className="flex items-center justify-between px-3 py-2 border-b border-white/5 bg-[#181a1c]">
                           <div className="flex items-center gap-2">
+                            {/* 拖拽手柄 */}
+                            <div className="flex items-center gap-0.5 text-slate-600 cursor-grab active:cursor-grabbing hover:text-slate-400 transition-colors">
+                              <GripVertical className="w-3 h-3" />
+                            </div>
                             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/60" />
                             <span className="text-xs font-medium text-slate-400 group-hover:text-slate-300 transition-colors">
                               {widget.title}
                             </span>
-                            <span className="text-[10px] text-slate-600">⋮⋮</span>
                           </div>
                           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button className="p-1 rounded hover:bg-white/10 text-slate-500 hover:text-slate-300">

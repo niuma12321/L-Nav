@@ -171,17 +171,29 @@ const WidgetSettingsModal: React.FC<{
   widget: WidgetConfig | null;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (id: string, position: WidgetPosition) => void;
+  onSave: (id: string, position: WidgetConfig['position']) => void;
 }> = ({ widget, isOpen, onClose, onSave }) => {
-  const [position, setPosition] = useState<WidgetPosition>({ x: 0, y: 0, w: 4, h: 2 });
+  const [width, setWidth] = useState(4);
+  const [height, setHeight] = useState(2);
 
   React.useEffect(() => {
     if (widget) {
-      setPosition(widget.position);
+      setWidth(widget.position.desktop?.w || widget.position.w || 4);
+      setHeight(widget.position.desktop?.h || widget.position.h || 2);
     }
   }, [widget]);
 
   if (!isOpen || !widget) return null;
+
+  const handleSave = () => {
+    // 构建完整的 position 对象，保留原有的 mobile order
+    const newPosition: WidgetConfig['position'] = {
+      desktop: { x: 0, y: 0, w: width, h: height },
+      mobile: widget.position.mobile || { order: 0 }
+    };
+    onSave(widget.id, newPosition);
+    onClose();
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto"
@@ -203,8 +215,8 @@ const WidgetSettingsModal: React.FC<{
               <label className="text-xs text-slate-500 mb-1 block">宽度 (列数)</label>
               <input
                 type="number"
-                value={position.w}
-                onChange={(e) => setPosition({ ...position, w: parseInt(e.target.value) || 1 })}
+                value={width}
+                onChange={(e) => setWidth(parseInt(e.target.value) || 1)}
                 min={1}
                 max={12}
                 className="w-full px-3 py-2 bg-[#0d0e10] rounded-lg border border-white/5 text-white text-sm"
@@ -214,8 +226,8 @@ const WidgetSettingsModal: React.FC<{
               <label className="text-xs text-slate-500 mb-1 block">高度 (行数)</label>
               <input
                 type="number"
-                value={position.h}
-                onChange={(e) => setPosition({ ...position, h: parseInt(e.target.value) || 1 })}
+                value={height}
+                onChange={(e) => setHeight(parseInt(e.target.value) || 1)}
                 min={1}
                 max={12}
                 className="w-full px-3 py-2 bg-[#0d0e10] rounded-lg border border-white/5 text-white text-sm"
@@ -237,10 +249,7 @@ const WidgetSettingsModal: React.FC<{
               取消
             </button>
             <button
-              onClick={() => {
-                onSave(widget.id, position);
-                onClose();
-              }}
+              onClick={handleSave}
               className="flex-1 px-4 py-2.5 rounded-xl bg-emerald-500 text-[#0d0e10] font-medium hover:bg-emerald-400 transition-colors text-sm"
             >
               保存设置
