@@ -193,6 +193,11 @@ export const useRSSSync = () => {
         setUserData(RSS_ITEMS_KEY, validItems);
         console.log('[RSS] 已保存到用户存储，源:', validSources.length, '条目:', validItems.length);
         
+        // 触发同步事件
+        window.dispatchEvent(new CustomEvent('ynav-data-changed', {
+          detail: { type: 'rss', timestamp: Date.now() }
+        }));
+        
         // 同步到云端
         debouncedSync(validSources, validItems);
       } catch (error) {
