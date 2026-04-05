@@ -182,12 +182,13 @@ function App() {
     setUserData('recent_searches', recentSearches);
   }, [recentSearches]);
 
-  // 检测移动端
+  // 检测移动端：matchMedia 仅在跨越断点时触发，比 resize 更省
   useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    const mq = window.matchMedia('(max-width: 767px)');
+    const sync = () => setIsMobile(mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
   }, []);
 
   // === Theme ===

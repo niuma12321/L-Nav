@@ -842,10 +842,12 @@ const WidgetConfigCenter: React.FC = () => {
         <IframeWidgetSettingsModal
           widget={editingIframeWidget || {
             id: `iframe-${Date.now()}`,
-            type: 'iframe',
+            type: 'custom-url',
             title: '内嵌组件',
+            description: '',
+            icon: 'Link',
             enabled: true,
-            position: { x: 0, y: 0, w: 3, h: 3 },
+            position: { desktop: { x: 0, y: 0, w: 3, h: 3 }, mobile: { order: 0 } },
             settings: {}
           }}
           onClose={() => {
@@ -864,12 +866,12 @@ const WidgetConfigCenter: React.FC = () => {
               // 创建新组件
               const newWidget: WidgetConfig = {
                 id: `iframe-${Date.now()}`,
-                type: 'iframe',
+                type: 'custom-url',
                 title: settings.url ? new URL(settings.url).hostname : '内嵌组件',
                 description: `内嵌: ${settings.url || '未配置'}`,
                 icon: 'Link',
                 enabled: true,
-                position: { x: 0, y: 0, w: 3, h: 3 },
+                position: { desktop: { x: 0, y: 0, w: 3, h: 3 }, mobile: { order: 0 } },
                 settings: settings
               };
               addWidget(newWidget);

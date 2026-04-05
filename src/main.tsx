@@ -1,4 +1,4 @@
-import React, { StrictMode, Suspense, useEffect, useState, useRef } from 'react';
+import React, { StrictMode, useEffect, useState, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 import { DialogProvider } from './components/ui/DialogProvider';
 import './index.css';
@@ -58,31 +58,32 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 
   resetError = (): void => {
-    (this as any).setState({ hasError: false, error: null });
+    this.setState({ hasError: false, error: null });
   };
 
   render() {
-    const self = this as any;
-    if (self.state.hasError) {
-      if (self.props.fallback) {
-        return self.props.fallback(self.state.error, this.resetError);
+    if (this.state.hasError) {
+      if (this.props.fallback) {
+        return this.props.fallback(this.state.error, this.resetError);
       }
-      
+
       return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-orange-50 p-4">
           <div className="text-center p-8 max-w-md bg-white rounded-2xl shadow-xl">
             <div className="text-6xl mb-4">⚠️</div>
             <h1 className="text-2xl font-bold text-gray-800 mb-2">应用出错了</h1>
             <p className="text-gray-600 mb-2">抱歉，应用遇到了问题，请尝试刷新页面。</p>
-            <p className="text-sm text-gray-500 mb-4">错误信息: {self.state.error?.message}</p>
+            <p className="text-sm text-gray-500 mb-4">错误信息: {this.state.error?.message}</p>
             <div className="flex gap-3 justify-center">
               <button
+                type="button"
                 onClick={this.resetError}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
               >
                 重试
               </button>
               <button
+                type="button"
                 onClick={() => window.location.reload()}
                 className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
               >
@@ -94,7 +95,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
       );
     }
 
-    return self.props.children;
+    return this.props.children;
   }
 }
 
@@ -171,71 +172,7 @@ const LoadingFallback: React.FC<{
   );
 };
 
-// ==============================================
-// 🎨 主题提供者
-// ==============================================
-const ThemeProvider: React.FC<{
-  children: React.ReactNode;
-  defaultTheme?: 'light' | 'dark' | 'system';
-  storageKey?: string;
-}> = ({ 
-  children, 
-  defaultTheme = 'system',
-  storageKey = 'app-theme'
-}) => {
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    const stored = localStorage.getItem(storageKey) as 'light' | 'dark' | null;
-    
-    if (stored === 'light' || stored === 'dark') {
-      return stored;
-    }
-    
-    if (defaultTheme === 'system') {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    }
-    
-    return defaultTheme;
-  });
-  
-  useEffect(() => {
-    const root = window.document.documentElement;
-    root.classList.remove('light', 'dark');
-    root.classList.add(theme);
-    localStorage.setItem(storageKey, theme);
-  }, [theme, storageKey]);
-  
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = () => {
-      if (defaultTheme === 'system') {
-        setTheme(mediaQuery.matches ? 'dark' : 'light');
-      }
-    };
-    
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, [defaultTheme]);
-  
-  const value = {
-    theme,
-    setTheme,
-    toggleTheme: () => setTheme(prev => prev === 'dark' ? 'light' : 'dark'),
-  };
-  
-  return (
-    <ThemeContext.Provider value={value}>
-      {children}
-    </ThemeContext.Provider>
-  );
-};
-
-const ThemeContext = React.createContext({
-  theme: 'light' as 'light' | 'dark',
-  setTheme: (theme: 'light' | 'dark') => {},
-  toggleTheme: () => {},
-});
-
-export const useTheme = () => React.useContext(ThemeContext);
+// 主题由 hooks/useTheme 统一管理（与设置中的「主题」一致），此处不再套一层 Provider，避免重复写 documentElement 与 localStorage。
 
 // ==============================================
 // 🔧 工具函数
@@ -432,14 +369,12 @@ const AppWrapper: React.FC = () => {
         </div>
       )}
     >
-      <ThemeProvider defaultTheme="system" storageKey="app-theme">
-        <DialogProvider
-          toastPosition="top-right"
-          maxToasts={5}
-        >
-          <App />
-        </DialogProvider>
-      </ThemeProvider>
+      <DialogProvider
+        toastPosition="top-right"
+        maxToasts={5}
+      >
+        <App />
+      </DialogProvider>
     </ErrorBoundary>
   );
 };

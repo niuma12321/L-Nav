@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { 
-  Search, 
+import {
+  Search,
   Zap,
   Loader2,
   Grid3X3,
@@ -36,17 +36,13 @@ import {
   Rss,
   MoreVertical,
   GripVertical,
-  ChevronDown
+  ChevronDown,
+  Database,
+  Globe,
 } from 'lucide-react';
 import { useWidgetSystem } from '../../hooks/useWidgetSystem';
 import { getUserData, setUserData } from '../../utils/constants';
 
-interface NavItem {
-  id: string;
-  label: string;
-  icon: LucideIcon;
-}
-import { Database, Globe } from 'lucide-react';
 import { APIDataWidget } from './APIDataWidget';
 import NavEditModal from '../modals/NavEditModal';
 
@@ -62,6 +58,12 @@ import EmojiPicker from '../ui/EmojiPicker';
 import { useNotifications } from '../../hooks/useNotifications';
 import { NotificationDropdown } from './NotificationDropdown';
 import AutomationCenterView from './AutomationViewCN';
+
+interface NavItem {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+}
 
 interface V9DashboardProps {
   onAddResource?: () => void;

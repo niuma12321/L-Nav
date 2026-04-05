@@ -30,6 +30,8 @@ export default defineConfig(({ mode }) => {
     build: {
       // 输出到 dist 目录，由 Workers Assets 自动部署
       outDir: 'dist',
+      // 与 tsconfig ES2022 对齐，减少旧环境 polyfill
+      target: 'es2022',
       // 代码分割配置
       rollupOptions: {
         output: {
