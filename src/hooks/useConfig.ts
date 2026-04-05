@@ -414,31 +414,19 @@ export function useConfig() {
     }, []);
 
     /**
-     * 更新站点设置
+     * 更新站点设置 - 简化版：直接保存并触发同步
      */
     const updateSiteSettings = useCallback((updates: Partial<SiteSettings>) => {
         setSiteSettings(prev => {
             const newSettings = { ...prev, ...updates };
-            const validation = validateSiteSettings(newSettings);
-            
-        if (validation.warnings.length > 0 && import.meta.env.DEV) {
-            console.warn('[Config] Site Settings validation warnings:', validation.warnings);
-        }
-
             const settingsWithVersion = { ...newSettings, _schemaVersion: CONFIG_SCHEMA_VERSION };
             safeStorage.set(SITE_SETTINGS_KEY, settingsWithVersion);
             lastUpdateRef.current = Date.now();
             
-            // 调试日志：确保必应相关字段被正确保存
-            if (import.meta.env.DEV && (updates.backgroundSource || updates.bingAutoUpdate || updates.bingLastUpdate)) {
-                console.log('[Config] 必应壁纸设置已更新:', {
-                    backgroundSource: newSettings.backgroundSource,
-                    bingAutoUpdate: newSettings.bingAutoUpdate,
-                    bingLastUpdate: newSettings.bingLastUpdate,
-                    backgroundImage: newSettings.backgroundImage,
-                    backgroundImageEnabled: newSettings.backgroundImageEnabled
-                });
-            }
+            // 触发同步事件
+            window.dispatchEvent(new CustomEvent('ynav-data-changed', {
+                detail: { type: 'site_settings', timestamp: Date.now() }
+            }));
             
             return settingsWithVersion;
         });
