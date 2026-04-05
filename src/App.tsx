@@ -993,13 +993,15 @@ function App() {
   );
   const backgroundMotion = siteSettings.backgroundMotion ?? false;
 
-  // 必应壁纸模式下的自动加载逻辑
+  // 必应壁纸模式下的自动加载逻辑 - 增强数据一致性
   useEffect(() => {
     if (siteSettings.backgroundImageEnabled && backgroundSource === 'bing' && !backgroundImage) {
       // 如果启用了必应壁纸但没有背景图，使用默认背景
       console.log('[App] 必应壁纸模式但无背景图，使用默认背景');
       updateSiteSettings({
-        backgroundImage: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&h=1080&fit=crop'
+        backgroundImage: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&h=1080&fit=crop',
+        backgroundSource: 'bing',
+        bingLastUpdate: new Date().toISOString().split('T')[0]
       });
     }
   }, [siteSettings.backgroundImageEnabled, backgroundSource, backgroundImage, updateSiteSettings]);

@@ -453,7 +453,7 @@ const AppearanceTab: React.FC<AppearanceTabProps> = React.memo(({ settings, onCh
             </div>
             
             {/* 背景图显示 */}
-            {settings.backgroundImage && settings.backgroundImage.startsWith('http') && (
+            {settings.backgroundImage && (settings.backgroundImage.startsWith('http') || settings.backgroundImage.startsWith('data:')) && (
               <div 
                 className="w-full h-20 rounded-lg bg-cover bg-center relative" 
                 style={{ backgroundImage: `url(${settings.backgroundImage})` }}
@@ -464,13 +464,6 @@ const AppearanceTab: React.FC<AppearanceTabProps> = React.memo(({ settings, onCh
                   </div>
                 )}
               </div>
-            )}
-            
-            {settings.backgroundImage && settings.backgroundImage.startsWith('data:') && (
-              <div 
-                className="w-full h-20 rounded-lg bg-cover bg-center" 
-                style={{ backgroundImage: `url(${settings.backgroundImage})` }}
-              />
             )}
             
             {/* 错误提示 */}

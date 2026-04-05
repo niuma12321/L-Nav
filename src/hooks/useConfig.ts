@@ -336,7 +336,14 @@ export function useConfig() {
 
         // 同时更新站点设置 - 确保合并而非替换，避免丢失必应相关字段
         if (newSiteSettings) {
-            const mergedSettings = { ...siteSettings, ...newSiteSettings };
+            const mergedSettings = {
+                ...siteSettings,
+                ...newSiteSettings,
+                // 确保必应壁纸相关字段不会丢失
+                backgroundSource: newSiteSettings.backgroundSource ?? siteSettings.backgroundSource ?? 'custom',
+                bingAutoUpdate: newSiteSettings.bingAutoUpdate ?? siteSettings.bingAutoUpdate ?? false,
+                bingLastUpdate: newSiteSettings.bingLastUpdate ?? siteSettings.bingLastUpdate ?? ''
+            };
             const settingsValidation = validateSiteSettings(mergedSettings);
             if (!settingsValidation.valid) {
                 console.error('[Config] Site Settings validation failed:', settingsValidation.errors);
