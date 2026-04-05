@@ -174,18 +174,41 @@ export const useRSSSync = () => {
     init();
   }, [pullFromCloud, pushToCloud]);
 
-  // 保存到 localStorage 并同步到云端 - 使用用户维度存储
+  // 保存到 localStorage 并同步到云端 - 使用用户维度存储，增加数据完整性保护
   useEffect(() => {
     if (!isLoading && isInitializedRef.current) {
       try {
-        setUserData(RSS_SOURCES_KEY, sources);
-        setUserData(RSS_ITEMS_KEY, items);
-        console.log('[RSS] Saved to user storage');
+        // 数据验证：确保数据完整性
+        const validSources = sources.filter(s => s && s.id && s.url);
+        const validItems = items.filter(i => i && i.id && i.sourceId);
+        
+        if (validSources.length !== sources.length) {
+          console.warn('[RSS] 过滤了无效的源数据:', sources.length, '->', validSources.length);
+        }
+        if (validItems.length !== items.length) {
+          console.warn('[RSS] 过滤了无效的条目数据:', items.length, '->', validItems.length);
+        }
+        
+        setUserData(RSS_SOURCES_KEY, validSources);
+        setUserData(RSS_ITEMS_KEY, validItems);
+        console.log('[RSS] 已保存到用户存储，源:', validSources.length, '条目:', validItems.length);
         
         // 同步到云端
-        debouncedSync(sources, items);
+        debouncedSync(validSources, validItems);
       } catch (error) {
-        console.error('[RSS] Failed to save:', error);
+        console.error('[RSS] 保存失败:', error);
+        // 保存失败时，尝试恢复本地备份
+        try {
+          const backupSources = getUserData<RSSSource[]>(RSS_SOURCES_KEY, []);
+          const backupItems = getUserData<RSSItem[]>(RSS_ITEMS_KEY, []);
+          if (backupSources.length > 0 || backupItems.length > 0) {
+            console.log('[RSS] 从备份恢复数据');
+            setSources(backupSources);
+            setItems(backupItems);
+          }
+        } catch (backupError) {
+          console.error('[RSS] 备份恢复也失败:', backupError);
+        }
       }
     }
   }, [sources, items, isLoading, debouncedSync]);

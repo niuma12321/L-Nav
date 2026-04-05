@@ -638,7 +638,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resource, viewMode, onEdit,
       if (!url.startsWith('http://') && !url.startsWith('https://')) {
         url = 'https://' + url;
       }
-      window.open(url, '_blank');
+      window.open(url, '_blank', 'noopener,noreferrer');
     }
   };
 
