@@ -10,7 +10,6 @@ import { SyncStatus } from '../../types';
 
 interface SyncStatusIndicatorProps {
     status: SyncStatus;
-    lastSyncTime: number | null;
     onManualSync?: () => void;
     onManualPull?: () => void;
     className?: string;
@@ -21,7 +20,6 @@ const AUTO_HIDE_DELAY = 2500;
 
 const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
     status,
-    lastSyncTime,
     onManualSync,
     onManualPull,
     className = ''

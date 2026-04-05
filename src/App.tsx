@@ -1073,7 +1073,6 @@ function App() {
           privacyAutoUnlockEnabled={privacyAutoUnlockEnabled}
           onTogglePrivacyAutoUnlock={handleTogglePrivacyAutoUnlock}
           syncStatus={syncStatus}
-          lastSyncTime={lastSyncTime}
           webmasterUnlocked={webmasterUnlocked}
           onWebmasterUnlockedChange={setWebmasterUnlockedPersist}
           readOnly={isReadOnly}
@@ -1092,7 +1091,6 @@ function App() {
       <div className="fixed bottom-4 right-4 z-30">
         <SyncStatusIndicator
           status={syncStatus}
-          lastSyncTime={lastSyncAt}
           onManualSync={forceSync}
           onManualPull={forceSync}
         />
