@@ -3,7 +3,21 @@
  * 替换硬编码凭据，提供统一的权限管理
  */
 
-import { createHash, randomBytes } from 'crypto';
+// 浏览器兼容的哈希函数
+const simpleHash = (str: string): string => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // 转换为32位整数
+  }
+  return Math.abs(hash).toString(16);
+};
+
+// 生成随机字符串
+const generateSalt = (): string => {
+  return Math.random().toString(36).slice(2, 18) + Date.now().toString(36);
+};
 
 // 认证配置接口
 export interface AuthConfig {
@@ -66,10 +80,8 @@ const loginAttempts = new Map<string, LoginAttempt>();
  * 生成密码哈希
  */
 export function hashPassword(password: string, salt?: string): string {
-  const actualSalt = salt || randomBytes(16).toString('hex');
-  const hash = createHash('sha256')
-    .update(password + actualSalt)
-    .digest('hex');
+  const actualSalt = salt || generateSalt();
+  const hash = simpleHash(password + actualSalt);
   return `${actualSalt}:${hash}`;
 }
 
@@ -80,10 +92,7 @@ export function verifyPassword(password: string, hashedPassword: string): boolea
   const [salt, hash] = hashedPassword.split(':');
   if (!salt || !hash) return false;
   
-  const computedHash = createHash('sha256')
-    .update(password + salt)
-    .digest('hex');
-  
+  const computedHash = simpleHash(password + salt);
   return computedHash === hash;
 }
 

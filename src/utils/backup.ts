@@ -6,7 +6,8 @@
 import { 
   getCurrentUserId, 
   getUserStorageKey, 
-  STORAGE_KEYS 
+  STORAGE_KEYS,
+  getDeviceId
 } from '@/utils/constants';
 
 // 备份元数据
@@ -438,9 +439,4 @@ export function cleanupOldBackups(maxBackups = 10): void {
   } catch (error) {
     console.error('清理备份失败:', error);
   }
-}
-
-// 获取设备ID (需要导入或重新定义)
-function getDeviceId(): string {
-  return localStorage.getItem(STORAGE_KEYS.DEVICE_ID) || 'unknown_device';
 }
