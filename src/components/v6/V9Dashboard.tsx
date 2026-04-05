@@ -48,7 +48,6 @@ interface NavItem {
 }
 import { Database, Globe } from 'lucide-react';
 import { APIDataWidget } from './APIDataWidget';
-import ContentPreview from './ContentPreview';
 import NavEditModal from '../modals/NavEditModal';
 
 // Static imports - fixed dynamic import issues
