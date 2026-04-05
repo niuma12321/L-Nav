@@ -984,13 +984,25 @@ function App() {
   const setCloseOnBackdrop = useCallback((value: boolean) => {
     updateSiteSettings({ closeOnBackdrop: value });
   }, [updateSiteSettings]);
-  const backgroundImage = siteSettings.backgroundImage && typeof siteSettings.backgroundImage === 'string' 
-    ? String(siteSettings.backgroundImage ?? '').trim() 
+  const backgroundImage = siteSettings.backgroundImage && typeof siteSettings.backgroundImage === 'string'
+    ? String(siteSettings.backgroundImage ?? '').trim()
     : '';
+  const backgroundSource = siteSettings.backgroundSource || 'custom';
   const useCustomBackground = !!siteSettings.backgroundImageEnabled && !!backgroundImage && (
     backgroundImage.startsWith('http') || backgroundImage.startsWith('data:')
   );
   const backgroundMotion = siteSettings.backgroundMotion ?? false;
+
+  // 必应壁纸模式下的自动加载逻辑
+  useEffect(() => {
+    if (siteSettings.backgroundImageEnabled && backgroundSource === 'bing' && !backgroundImage) {
+      // 如果启用了必应壁纸但没有背景图，使用默认背景
+      console.log('[App] 必应壁纸模式但无背景图，使用默认背景');
+      updateSiteSettings({
+        backgroundImage: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&h=1080&fit=crop'
+      });
+    }
+  }, [siteSettings.backgroundImageEnabled, backgroundSource, backgroundImage, updateSiteSettings]);
 
   useEffect(() => {
     if (!privacyGroupEnabled || !privacyAutoUnlockEnabled || isPrivateUnlocked) return;

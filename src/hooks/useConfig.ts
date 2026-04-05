@@ -91,7 +91,10 @@ const DEFAULT_SITE_SETTINGS: SiteSettings = {
     closeOnBackdrop: false,
     backgroundImage: '',
     backgroundImageEnabled: false,
-    backgroundMotion: true
+    backgroundMotion: true,
+    backgroundSource: 'custom',
+    bingAutoUpdate: false,
+    bingLastUpdate: ''
 } as const;
 
 // ============ 工具函数 ============
@@ -331,15 +334,16 @@ export function useConfig() {
         safeStorage.set(AI_CONFIG_KEY, configWithVersion);
         lastUpdateRef.current = Date.now();
 
-        // 同时更新站点设置
+        // 同时更新站点设置 - 确保合并而非替换，避免丢失必应相关字段
         if (newSiteSettings) {
-            const settingsValidation = validateSiteSettings(newSiteSettings);
+            const mergedSettings = { ...siteSettings, ...newSiteSettings };
+            const settingsValidation = validateSiteSettings(mergedSettings);
             if (!settingsValidation.valid) {
                 console.error('[Config] Site Settings validation failed:', settingsValidation.errors);
                 return false;
             }
 
-            const settingsWithVersion = { ...newSiteSettings, _schemaVersion: CONFIG_SCHEMA_VERSION };
+            const settingsWithVersion = { ...mergedSettings, _schemaVersion: CONFIG_SCHEMA_VERSION };
             setSiteSettings(settingsWithVersion);
             safeStorage.set(SITE_SETTINGS_KEY, settingsWithVersion);
         }
@@ -413,9 +417,37 @@ export function useConfig() {
             safeStorage.set(SITE_SETTINGS_KEY, settingsWithVersion);
             lastUpdateRef.current = Date.now();
             
+            // 调试日志：确保必应相关字段被正确保存
+            if (import.meta.env.DEV && (updates.backgroundSource || updates.bingAutoUpdate || updates.bingLastUpdate)) {
+                console.log('[Config] 必应壁纸设置已更新:', {
+                    backgroundSource: newSettings.backgroundSource,
+                    bingAutoUpdate: newSettings.bingAutoUpdate,
+                    bingLastUpdate: newSettings.bingLastUpdate,
+                    backgroundImage: newSettings.backgroundImage,
+                    backgroundImageEnabled: newSettings.backgroundImageEnabled
+                });
+            }
+            
             return settingsWithVersion;
         });
     }, []);
+
+    // 数据一致性检查：确保必应相关字段始终存在
+    useEffect(() => {
+        const missingFields = [];
+        if (siteSettings.backgroundSource === undefined) missingFields.push('backgroundSource');
+        if (siteSettings.bingAutoUpdate === undefined) missingFields.push('bingAutoUpdate');
+        if (siteSettings.bingLastUpdate === undefined) missingFields.push('bingLastUpdate');
+        
+        if (missingFields.length > 0) {
+            console.warn('[Config] 检测到缺失的必应壁纸字段，正在修复:', missingFields);
+            const fixes: Partial<SiteSettings> = {};
+            if (siteSettings.backgroundSource === undefined) fixes.backgroundSource = 'custom';
+            if (siteSettings.bingAutoUpdate === undefined) fixes.bingAutoUpdate = false;
+            if (siteSettings.bingLastUpdate === undefined) fixes.bingLastUpdate = '';
+            updateSiteSettings(fixes);
+        }
+    }, [siteSettings.backgroundSource, siteSettings.bingAutoUpdate, siteSettings.bingLastUpdate, updateSiteSettings]);
 
     /**
      * 重置站点设置
