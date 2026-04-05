@@ -1,9 +1,8 @@
 import React, { useMemo, useEffect, useState, useCallback, useRef } from 'react';
 import { LinkItem, Category } from './types';
 
-// === Constants for removed sync feature ===
-const syncStatus = 'idle' as const;
-const lastSyncTime = null;
+// 统一同步引擎
+import { useUnifiedSync } from './hooks/useUnifiedSync';
 
 // 同步导入所有组件，避免懒加载Promise问题
 import LinkModal from './components/modals/LinkModal';
@@ -59,8 +58,19 @@ import {
   setUserData
 } from './utils/constants';
 import { decryptPrivateVault, encryptPrivateVault } from './utils/privateVault';
+import { AlertTriangle } from 'lucide-react';
 
 function App() {
+  // === Unified Sync Engine ===
+  const { 
+    isSyncing, 
+    syncStatus, 
+    lastSyncAt, 
+    conflict, 
+    forceSync, 
+    resolveConflict 
+  } = useUnifiedSync();
+
   // === Core Data ===
   // 数据仅在本地存储，确保始终最新
   useEffect(() => {
@@ -1080,12 +1090,43 @@ function App() {
       {/* Sync Status Indicator - Fixed bottom right */}
       <div className="fixed bottom-4 right-4 z-30">
         <SyncStatusIndicator
-          status={'idle'}
-          lastSyncTime={null}
-          onManualSync={undefined}
-          onManualPull={undefined}
+          status={syncStatus}
+          lastSyncTime={lastSyncAt}
+          onManualSync={forceSync}
+          onManualPull={forceSync}
         />
       </div>
+
+      {/* 冲突解决弹窗 */}
+      {conflict && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl bg-[#181a1c] text-white shadow-2xl p-6 border border-white/10">
+            <div className="flex items-center gap-2 mb-4">
+              <AlertTriangle className="w-6 h-6 text-yellow-400" />
+              <h2 className="text-xl font-bold">数据冲突</h2>
+            </div>
+            
+            <p className="text-slate-400 mb-6">
+              检测到多端数据冲突，请选择保留哪一端的数据：
+            </p>
+            
+            <div className="flex gap-3">
+              <button 
+                onClick={() => resolveConflict('local')}
+                className="flex-1 bg-emerald-500 text-white px-4 py-2.5 rounded-xl hover:bg-emerald-400 transition-colors font-medium"
+              >
+                保留本地数据
+              </button>
+              <button 
+                onClick={() => resolveConflict('remote')}
+                className="flex-1 bg-blue-500 text-white px-4 py-2.5 rounded-xl hover:bg-blue-400 transition-colors font-medium"
+              >
+                保留云端数据
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Link Modal and Data Backup */}
       <LinkModal
