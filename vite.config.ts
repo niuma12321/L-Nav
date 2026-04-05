@@ -35,24 +35,69 @@ export default defineConfig(({ mode }) => {
       // 代码分割配置
       rollupOptions: {
         output: {
-          manualChunks: {
+          manualChunks: (id) => {
             // React 核心库
-            'vendor-react': ['react', 'react-dom'],
+            if (id.includes('react') || id.includes('react-dom')) {
+              return 'vendor-react';
+            }
+            
             // 拖拽库
-            'vendor-dnd': [
-              '@dnd-kit/core',
-              '@dnd-kit/sortable',
-              '@dnd-kit/utilities'
-            ],
-            // 图标库 - 按需加载优化
-            'vendor-icons': ['lucide-react'],
+            if (id.includes('@dnd-kit')) {
+              return 'vendor-dnd';
+            }
+            
+            // 图标库
+            if (id.includes('lucide-react')) {
+              return 'vendor-icons';
+            }
+            
             // AI 库
-            'vendor-ai': ['@google/genai'],
-            // 字体库 - 优化字体加载
-            'vendor-fonts': [
-              '@fontsource/manrope',
-              '@fontsource/outfit'
-            ]
+            if (id.includes('@google/genai')) {
+              return 'vendor-ai';
+            }
+            
+            // 字体库
+            if (id.includes('@fontsource')) {
+              return 'vendor-fonts';
+            }
+            
+            // 大型组件分割
+            if (id.includes('V9Dashboard')) {
+              return 'component-dashboard';
+            }
+            
+            if (id.includes('LinkModal')) {
+              return 'component-modal-link';
+            }
+            
+            if (id.includes('CategoryManagerModal')) {
+              return 'component-modal-category';
+            }
+            
+            if (id.includes('ImportModal')) {
+              return 'component-modal-import';
+            }
+            
+            if (id.includes('SettingsModal')) {
+              return 'component-modal-settings';
+            }
+            
+            if (id.includes('WidgetConfigCenter')) {
+              return 'component-widgets';
+            }
+            
+            // 工具类分割
+            if (id.includes('utils/') || id.includes('/utils')) {
+              return 'utils';
+            }
+            
+            // Hooks 分割
+            if (id.includes('hooks/') || id.includes('/hooks')) {
+              return 'hooks';
+            }
+            
+            // 默认分组
+            return 'chunk-common';
           }
         }
       },
