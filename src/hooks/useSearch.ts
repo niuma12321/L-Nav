@@ -99,26 +99,27 @@ export function useSearch() {
     }, [externalSearchSources, searchMode, searchQuery, saveSearchConfig]);
 
     // 执行搜索
-    const handleExternalSearch = useCallback(() => {
-        if (searchQuery && typeof searchQuery === 'string' && searchQuery.trim() && searchMode === 'external') {
+    const handleExternalSearch = useCallback((queryOverride?: string) => {
+        const effectiveQuery = typeof queryOverride === 'string' ? queryOverride : searchQuery;
+        if (effectiveQuery && typeof effectiveQuery === 'string' && effectiveQuery.trim() && searchMode === 'external') {
             if (externalSearchSources.length === 0) {
                 const defaultSources = buildDefaultSearchSources();
                 saveSearchConfig(defaultSources, 'external', defaultSources[0]);
-                const searchUrl = defaultSources[0].url.replace('{query}', encodeURIComponent(searchQuery));
+                const searchUrl = defaultSources[0].url.replace('{query}', encodeURIComponent(effectiveQuery));
                 window.open(searchUrl, '_blank');
                 return;
             }
 
-            let source = selectedSearchSource;
+            let source = selectedSearchSource?.enabled ? selectedSearchSource : null;
             if (!source) {
-                const enabledSources = Array.isArray(externalSearchSources) 
-                    ? externalSearchSources.filter(s => s.enabled) 
+                const enabledSources = Array.isArray(externalSearchSources)
+                    ? externalSearchSources.filter(s => s.enabled)
                     : [];
                 if (enabledSources.length > 0) source = enabledSources[0];
             }
 
             if (source) {
-                const searchUrl = source.url.replace('{query}', encodeURIComponent(searchQuery));
+                const searchUrl = source.url.replace('{query}', encodeURIComponent(effectiveQuery));
                 window.open(searchUrl, '_blank');
             }
         }

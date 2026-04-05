@@ -35,6 +35,7 @@ interface Resource {
   url: string;
   description: string;
   categoryId: string;
+  categoryName?: string;
   favicon?: string;
   icon?: string;
   createdAt: number;
@@ -124,7 +125,25 @@ const getCategoryColor = (categoryId: string) => {
   return colors[categoryId] || 'bg-emerald-500/20 text-emerald-400';
 };
 
+const scoreResourceMatch = (resource: Resource, normalizedQuery: string) => {
+  if (!normalizedQuery) return 0;
+
+  const title = resource.title.toLowerCase();
+  const description = resource.description.toLowerCase();
+  const url = resource.url.toLowerCase();
+  let score = 0;
+
+  if (title === normalizedQuery) score += 120;
+  if (title.startsWith(normalizedQuery)) score += 80;
+  if (title.includes(normalizedQuery)) score += 50;
+  if (description.includes(normalizedQuery)) score += 20;
+  if (url.includes(normalizedQuery)) score += 15;
+
+  return score;
+};
+
 interface ResourceCenterViewCNProps {
+  onAddResource?: () => void;
   onImport?: () => void;
   onPreviewLink?: (url: string) => void;
   onOpenSettings?: () => void;
@@ -140,7 +159,11 @@ interface ResourceCenterViewCNProps {
     icon?: string;
     categoryId?: string;
     favicon?: string;
+    pinned?: boolean;
+    hidden?: boolean;
+    pinnedOrder?: number;
     createdAt?: number;
+    updatedAt?: number;
   }>;
   categories?: Array<{
     id: string;
@@ -161,86 +184,94 @@ const ResourceCenterViewCN: React.FC<ResourceCenterViewCNProps> = ({
   links = [],
   categories = []
 }) => {
-  console.log('[ResourceCenter] Received links:', links?.length, 'categories:', categories?.length);
-  
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showCategoryMenu, setShowCategoryMenu] = useState(false);
   const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
 
+  const visibleLinks = useMemo(() => links.filter((link) => !link.hidden), [links]);
+
+  const categoryNameMap = useMemo(() => {
+    return new Map(categories.map((category) => [category.id, category.name]));
+  }, [categories]);
+
   // 将真实的 links 数据转换为 Resource 格式
   const resources = useMemo(() => {
-    if (links.length > 0) {
-      return links.map(link => {
-        // 改进 favicon 获取逻辑
-        let favicon = link.favicon;
-        if (!favicon || favicon.includes('faviconextractor')) {
-          // 提取域名
-          let domain = link.url;
-          try {
-            if (link.url.startsWith('http://') || link.url.startsWith('https://')) {
-              domain = new URL(link.url).hostname;
-            } else {
-              domain = link.url.split('/')[0];
-            }
-          } catch {
-            domain = link.url.replace(/^https?:\/\//, '').split('/')[0];
+    return visibleLinks.map(link => {
+      let favicon = link.favicon;
+      if (!favicon || favicon.includes('faviconextractor')) {
+        let domain = link.url;
+        try {
+          if (link.url.startsWith('http://') || link.url.startsWith('https://')) {
+            domain = new URL(link.url).hostname;
+          } else {
+            domain = link.url.split('/')[0];
           }
-          domain = domain.split(':')[0];
-          if (domain && !domain.includes('localhost') && !domain.startsWith('127.') && !domain.startsWith('192.168.')) {
-            favicon = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
-          }
+        } catch {
+          domain = link.url.replace(/^https?:\/\//, '').split('/')[0];
         }
-        return {
-          id: link.id,
-          title: link.title,
-          url: link.url,
-          description: link.description || '',
-          categoryId: link.categoryId || 'uncategorized',
-          favicon: favicon || '',
-          icon: link.icon,
-          createdAt: link.createdAt || Date.now()
-        };
-      });
-    }
-    // 如果没有真实数据，使用 mock 数据
-    return mockResources;
-  }, [links]);
+        domain = domain.split(':')[0];
+        if (domain && !domain.includes('localhost') && !domain.startsWith('127.') && !domain.startsWith('192.168.')) {
+          favicon = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+        }
+      }
+
+      const categoryId = link.categoryId || 'uncategorized';
+
+      return {
+        id: link.id,
+        title: link.title,
+        url: link.url,
+        description: link.description || '',
+        categoryId,
+        categoryName: categoryNameMap.get(categoryId) || '未分类',
+        favicon: favicon || '',
+        icon: link.icon,
+        createdAt: link.updatedAt || link.createdAt || Date.now()
+      };
+    });
+  }, [categoryNameMap, visibleLinks]);
 
   // 构建分类数据
   const categoryList = useMemo(() => {
-    if (categories.length > 0) {
-      const allCategory = { id: 'all', name: '全部资源', icon: '⊞', count: links.length, color: 'bg-emerald-500' };
-      const mappedCategories = categories.map(cat => ({
-        id: cat.id,
-        name: cat.name,
-        icon: cat.icon || '📁',
-        count: links.filter(l => l.categoryId === cat.id).length,
-        color: 'bg-blue-500'
-      }));
-      return [allCategory, ...mappedCategories];
+    const allCategory = { id: 'all', name: '全部资源', icon: '⊞', count: visibleLinks.length, color: 'bg-emerald-500' };
+    if (categories.length === 0) {
+      return [allCategory];
     }
-    return mockCategories;
-  }, [categories, links]);
+
+    const mappedCategories = categories.map(cat => ({
+      id: cat.id,
+      name: cat.name,
+      icon: cat.icon || '📁',
+      count: visibleLinks.filter(link => link.categoryId === cat.id).length,
+      color: 'bg-blue-500'
+    }));
+
+    return [allCategory, ...mappedCategories];
+  }, [categories, visibleLinks]);
 
   // 过滤资源
   const filteredResources = useMemo(() => {
     let filtered = resources;
-    
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+
     if (activeCategory !== 'all') {
       filtered = filtered.filter(r => r.categoryId === activeCategory);
     }
-    
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(r => 
-        r.title.toLowerCase().includes(query) ||
-        r.description.toLowerCase().includes(query) ||
-        r.url.toLowerCase().includes(query)
-      );
+
+    if (normalizedQuery) {
+      filtered = filtered
+        .filter(r => scoreResourceMatch(r, normalizedQuery) > 0)
+        .sort((a, b) => {
+          const scoreDiff = scoreResourceMatch(b, normalizedQuery) - scoreResourceMatch(a, normalizedQuery);
+          if (scoreDiff !== 0) return scoreDiff;
+          return b.createdAt - a.createdAt;
+        });
+    } else {
+      filtered = [...filtered].sort((a, b) => b.createdAt - a.createdAt);
     }
-    
+
     return filtered;
   }, [activeCategory, searchQuery, resources]);
 
@@ -248,12 +279,23 @@ const ResourceCenterViewCN: React.FC<ResourceCenterViewCNProps> = ({
 
   // 置顶和常用链接计算
   const pinnedLinks = useMemo(() => {
-    return links.filter(link => link.pinned && !link.hidden).slice(0, 8);
-  }, [links]);
+    return [...visibleLinks]
+      .filter(link => link.pinned)
+      .sort((a, b) => {
+        const pinnedOrderA = a.pinnedOrder ?? Number.MAX_SAFE_INTEGER;
+        const pinnedOrderB = b.pinnedOrder ?? Number.MAX_SAFE_INTEGER;
+        if (pinnedOrderA !== pinnedOrderB) return pinnedOrderA - pinnedOrderB;
+        return (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0);
+      })
+      .slice(0, 8);
+  }, [visibleLinks]);
 
   const frequentLinks = useMemo(() => {
-    return links.filter(link => !link.pinned && !link.hidden).slice(0, 8);
-  }, [links]);
+    return [...visibleLinks]
+      .filter(link => !link.pinned)
+      .sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0))
+      .slice(0, 8);
+  }, [visibleLinks]);
 
   return (
     <div className="space-y-6">

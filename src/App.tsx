@@ -1031,6 +1031,7 @@ function App() {
         onAddResource={handleAddLinkRequest}
         onOpenSettings={() => setIsSettingsModalOpen(true)}
         onOpenImport={() => setIsImportModalOpen(true)}
+        onOpenSearchConfig={() => setIsSearchConfigModalOpen(true)}
         onEditLink={handleLinkEdit}
         onDeleteLink={handleDeleteLink}
       />

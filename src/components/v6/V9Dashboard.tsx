@@ -41,6 +41,7 @@ import {
   Globe,
 } from '@/utils/icons';
 import { useWidgetSystem } from '../../hooks/useWidgetSystem';
+import { useSearch } from '../../hooks/useSearch';
 import { getUserData, setUserData } from '../../utils/constants';
 
 import { APIDataWidget } from './APIDataWidget';
@@ -54,7 +55,7 @@ import { EmbeddedNewsWidget } from './EmbeddedNewsWidget';
 import { SmartHomeView } from '../smartHome/SmartHomeView';
 import { NotificationsViewCN } from './NotificationsViewCN';
 import LabView from './LabView';
-import EmojiPicker from '../ui/EmojiPicker';
+import ContentPreview from './ContentPreview';
 import { useNotifications } from '../../hooks/useNotifications';
 import { NotificationDropdown } from './NotificationDropdown';
 import AutomationCenterView from './AutomationViewCN';
@@ -69,6 +70,7 @@ interface V9DashboardProps {
   onAddResource?: () => void;
   onOpenSettings?: () => void;
   onOpenImport?: () => void;
+  onOpenSearchConfig?: () => void;
   onEditLink?: (link: any) => void;
   onDeleteLink?: (id: string) => void;
   links?: Array<{
@@ -760,149 +762,132 @@ const NewsFeedWidget: React.FC = () => {
   );
 };
 
+interface SearchWidgetProps {
+  onOpenConfig?: () => void;
+}
+
 // 搜索组件
-const SearchWidget: React.FC = () => {
-  const defaultEngines = [
-    { name: 'Google', url: 'https://www.google.com/search?q=', icon: '🔍' },
-    { name: '百度', url: 'https://www.baidu.com/s?wd=', icon: '🇨🇳' },
-    { name: 'GitHub', url: 'https://github.com/search?q=', icon: '⚡' },
-    { name: '知乎', url: 'https://www.zhihu.com/search?q=', icon: '💡' }
-  ];
-  
-  const [engines, setEngines] = useState(() => {
-    const saved = getUserData<string | null>('search_engines', null);
-    return saved ? JSON.parse(saved) : defaultEngines;
-  });
-  const [activeEngine, setActiveEngine] = useState(engines[0].name);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showEngineModal, setShowEngineModal] = useState(false);
-  const [newEngine, setNewEngine] = useState({ name: '', url: '', icon: '' });
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [searchHistory, setSearchHistory] = useState<string[]>(() => {
-    return getUserData<string[]>('search_history', []);
-  });
+const SearchWidget: React.FC<SearchWidgetProps> = ({ onOpenConfig }) => {
+  const {
+    searchQuery,
+    setSearchQuery,
+    externalSearchSources,
+    selectedSearchSource,
+    handleSearchSourceSelect,
+    handleExternalSearch
+  } = useSearch();
+  const [searchHistory, setSearchHistory] = useState<string[]>(() => getUserData<string[]>('search_history', []));
 
-  // 保存搜索历史
-  const saveSearchHistory = (query: string) => {
-    if (!query.trim()) return;
-    const newHistory = [query, ...searchHistory.filter(h => h !== query)].slice(0, 5);
-    setSearchHistory(newHistory);
-    setUserData('search_history', newHistory);
-  };
+  const enabledSources = useMemo(() => {
+    const safeSources = Array.isArray(externalSearchSources) ? externalSearchSources.filter(source => source.enabled) : [];
+    return safeSources.sort((a, b) => {
+      if (a.id === selectedSearchSource?.id) return -1;
+      if (b.id === selectedSearchSource?.id) return 1;
+      return a.name.localeCompare(b.name, 'zh-CN');
+    });
+  }, [externalSearchSources, selectedSearchSource]);
 
-  // 清除搜索历史
-  const clearSearchHistory = () => {
+  const activeSource = useMemo(() => {
+    return enabledSources.find(source => source.id === selectedSearchSource?.id)
+      || enabledSources[0]
+      || externalSearchSources[0]
+      || null;
+  }, [enabledSources, externalSearchSources, selectedSearchSource]);
+
+  const saveSearchHistory = useCallback((query: string) => {
+    const normalizedQuery = query.trim();
+    if (!normalizedQuery) return;
+    setSearchHistory(prev => {
+      const nextHistory = [normalizedQuery, ...prev.filter(item => item !== normalizedQuery)].slice(0, 6);
+      setUserData('search_history', nextHistory);
+      return nextHistory;
+    });
+  }, []);
+
+  const clearSearchHistory = useCallback(() => {
     setSearchHistory([]);
     setUserData('search_history', []);
-  };
+  }, []);
 
-  // 从历史记录搜索
-  const searchFromHistory = (query: string) => {
-    setSearchQuery(query);
-    const engine = engines.find(e => e.name === activeEngine);
-    if (engine) {
-      window.open(`${engine.url}${encodeURIComponent(query)}`, '_blank');
-      saveSearchHistory(query);
-    }
-  };
+  const runSearch = useCallback((queryOverride?: string) => {
+    const query = (queryOverride ?? searchQuery).trim();
+    if (!query) return;
+    handleExternalSearch(query);
+    saveSearchHistory(query);
+  }, [handleExternalSearch, saveSearchHistory, searchQuery]);
 
-  const handleSearch = () => {
-    if (searchQuery.trim()) {
-      const engine = engines.find(e => e.name === activeEngine);
-      if (engine) {
-        window.open(`${engine.url}${encodeURIComponent(searchQuery)}`, '_blank');
-        saveSearchHistory(searchQuery);
-      }
-    }
-  };
-
-  // 保存引擎到 localStorage
-  const saveEngines = (newEngines: typeof engines) => {
-    setEngines(newEngines);
-    setUserData('search_engines', JSON.stringify(newEngines));
-  };
-
-  // 添加新引擎
-  const addEngine = () => {
-    if (newEngine.name && newEngine.url) {
-      const engine = { ...newEngine, icon: newEngine.icon || '🔍' };
-      const updated = [...engines, engine];
-      saveEngines(updated);
-      setNewEngine({ name: '', url: '', icon: '' });
-    }
-  };
-
-  // 删除引擎
-  const removeEngine = (name: string) => {
-    const updated = engines.filter(e => e.name !== name);
-    saveEngines(updated);
-    if (activeEngine === name && updated.length > 0) {
-      setActiveEngine(updated[0].name);
-    }
-  };
+  const quickTags = ['React 19', 'AI 编程', '美股行情', '前端面试'];
 
   return (
-    <div className="w-full max-w-2xl mx-auto relative">
-      {/* 搜索引擎选择 */}
-      <div className="flex items-center gap-2 mb-3 justify-center flex-wrap">
-        {engines.map(engine => (
+    <div className="w-full max-w-3xl mx-auto space-y-4">
+      <div className="flex items-center justify-center gap-2 flex-wrap">
+        {enabledSources.map((source) => (
           <button
-            key={engine.name}
-            onClick={() => setActiveEngine(engine.name)}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm transition-colors ${
-              activeEngine === engine.name ? 'bg-emerald-500 text-[#0d0e10]' : 'bg-white/5 text-slate-400 hover:text-white'
+            key={source.id}
+            onClick={() => handleSearchSourceSelect(source)}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm border transition-all ${
+              activeSource?.id === source.id
+                ? 'bg-emerald-500 text-[#0d0e10] border-emerald-400'
+                : 'bg-white/5 text-slate-300 border-white/10 hover:text-white hover:border-emerald-500/30'
             }`}
           >
-            <span>{engine.icon}</span>
-            <span>{engine.name}</span>
+            <span className="text-base">{source.name.slice(0, 1)}</span>
+            <span>{source.name}</span>
           </button>
         ))}
         <button
-          onClick={() => setShowEngineModal(true)}
-          className="p-1.5 rounded-lg bg-white/5 text-slate-400 hover:text-emerald-400 transition-colors"
-          title="管理搜索引擎"
+          onClick={onOpenConfig}
+          className="p-2 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-emerald-400 hover:border-emerald-500/30 transition-colors"
+          title="配置搜索引擎"
         >
           <Settings className="w-4 h-4" />
         </button>
       </div>
 
-      {/* 搜索框 */}
       <div className="relative">
-        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[#181a1c] border border-white/10">
+        <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-[#181a1c] border border-white/10 shadow-lg shadow-black/20">
           <Search className="w-5 h-5 text-slate-500" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-            placeholder={`在 ${activeEngine} 中搜索...`}
+            onKeyDown={(e) => e.key === 'Enter' && runSearch()}
+            placeholder={activeSource ? `在 ${activeSource.name} 中搜索...` : '请输入搜索关键词'}
             className="flex-1 bg-transparent text-white placeholder-slate-500 outline-none"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="p-1 rounded-full hover:bg-white/10 text-slate-400"
+              className="p-1 rounded-full hover:bg-white/10 text-slate-400 transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
           )}
+          <button
+            onClick={() => runSearch()}
+            disabled={!searchQuery.trim() || !activeSource}
+            className="px-3 py-1.5 rounded-xl bg-emerald-500 text-[#0d0e10] text-sm font-medium hover:bg-emerald-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            搜索
+          </button>
         </div>
       </div>
 
-      {/* 快捷标签 + 搜索历史 横向显示 */}
-      <div className="mt-3 flex justify-center gap-2 flex-wrap items-center">
-        {/* 搜索历史标签 */}
+      <div className="flex justify-center gap-2 flex-wrap items-center">
         {searchHistory.length > 0 && (
           <>
-            {searchHistory.map((query, index) => (
-              <span
-                key={index}
-                onClick={() => searchFromHistory(query)}
-                className="px-3 py-1 rounded-full bg-white/10 text-sm text-slate-300 hover:text-white hover:bg-white/20 cursor-pointer transition-colors flex items-center gap-1"
+            {searchHistory.map((query) => (
+              <button
+                key={query}
+                onClick={() => {
+                  setSearchQuery(query);
+                  runSearch(query);
+                }}
+                className="px-3 py-1 rounded-full bg-white/10 text-sm text-slate-300 hover:text-white hover:bg-white/20 transition-colors flex items-center gap-1"
               >
                 <Clock className="w-3 h-3" />
                 {query}
-              </span>
+              </button>
             ))}
             <button
               onClick={clearSearchHistory}
@@ -914,113 +899,20 @@ const SearchWidget: React.FC = () => {
             <span className="text-slate-600">|</span>
           </>
         )}
-        {/* 默认快捷标签 */}
-        {['React 19', 'AI 编程', '美股行情', '前端面试'].map(tag => (
-          <span
+
+        {quickTags.map((tag) => (
+          <button
             key={tag}
-            onClick={() => { setSearchQuery(tag); handleSearch(); }}
-            className="px-3 py-1 rounded-full bg-white/5 text-sm text-slate-400 hover:text-white hover:bg-white/10 cursor-pointer transition-colors"
+            onClick={() => {
+              setSearchQuery(tag);
+              runSearch(tag);
+            }}
+            className="px-3 py-1 rounded-full bg-white/5 text-sm text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
           >
             {tag}
-          </span>
+          </button>
         ))}
       </div>
-
-      {/* 搜索引擎管理弹窗 */}
-      {showEngineModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto" onClick={() => setShowEngineModal(false)}>
-          <div className="bg-[#181a1c] rounded-2xl border border-white/10 w-full max-w-md p-6 shadow-2xl my-auto" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-white">管理搜索引擎</h3>
-              <button onClick={() => setShowEngineModal(false)} className="p-2 rounded-lg hover:bg-white/10 text-slate-400">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            {/* 现有引擎列表 */}
-            <div className="space-y-2 mb-4 max-h-32 sm:max-h-48 overflow-y-auto">
-              {engines.map(engine => (
-                <div key={engine.name} className="flex items-center justify-between px-3 py-2 bg-[#0d0e10] rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <span>{engine.icon}</span>
-                    <span className="text-sm text-white">{engine.name}</span>
-                  </div>
-                  <button
-                    onClick={() => removeEngine(engine.name)}
-                    className="p-1 rounded hover:bg-white/10 text-red-400"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            {/* 添加新引擎 */}
-            <div className="space-y-3 pt-4 border-t border-white/5">
-              <p className="text-sm text-slate-400">添加新引擎</p>
-              <input
-                type="text"
-                placeholder="名称 (如: Bing)"
-                value={newEngine.name}
-                onChange={(e) => setNewEngine({...newEngine, name: e.target.value})}
-                className="w-full px-3 py-2 bg-[#0d0e10] rounded-lg border border-white/5 text-white text-sm"
-              />
-              <input
-                type="text"
-                placeholder="搜索URL (如: https://bing.com/search?q=)"
-                value={newEngine.url}
-                onChange={(e) => setNewEngine({...newEngine, url: e.target.value})}
-                className="w-full px-3 py-2 bg-[#0d0e10] rounded-lg border border-white/5 text-white text-sm"
-              />
-              
-              {/* Emoji 选择器 */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                  className="w-full px-3 py-2 bg-[#0d0e10] rounded-lg border border-white/5 text-white text-sm flex items-center gap-2 hover:bg-[#1a1c1f] transition-colors"
-                >
-                  <span className="text-xl">{newEngine.icon || '🔍'}</span>
-                  <span className="text-slate-400">{newEngine.icon ? '已选择图标' : '点击选择图标'}</span>
-                </button>
-                
-                {showEmojiPicker && (
-                  <div className="fixed sm:absolute z-[60] mt-2 left-4 right-4 sm:left-0 sm:right-0 max-h-[60vh] overflow-hidden">
-                    <div className="bg-[#181a1c] rounded-xl border border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[60vh]">
-                      <div className="p-2 border-b border-white/5 flex justify-between items-center shrink-0">
-                        <span className="text-sm text-slate-300">选择图标</span>
-                        <button
-                          onClick={() => setShowEmojiPicker(false)}
-                          className="p-1 rounded hover:bg-white/10 text-slate-400"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                      <div className="flex-1 overflow-hidden">
-                        <EmojiPicker
-                          onSelect={(emoji) => {
-                            setNewEngine({...newEngine, icon: emoji});
-                            setShowEmojiPicker(false);
-                          }}
-                          onClose={() => setShowEmojiPicker(false)}
-                          selectedEmoji={newEngine.icon}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={addEngine}
-                className="w-full py-2.5 rounded-xl bg-emerald-500 text-[#0d0e10] font-medium hover:bg-emerald-400 transition-colors text-sm"
-              >
-                添加引擎
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
@@ -1125,7 +1017,7 @@ const LinkCard: React.FC<{
   );
 };
 
-const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings, onOpenImport, onEditLink, onDeleteLink, links = [], categories = [] }) => {
+const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings, onOpenImport, onOpenSearchConfig, onEditLink, onDeleteLink, links = [], categories = [] }) => {
   const [activeView, setActiveView] = useState('dashboard');
   
   // 等待数据加载完成
@@ -1419,7 +1311,7 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
               </div>
 
               {/* 搜索框 */}
-              <SearchWidget />
+              <SearchWidget onOpenConfig={onOpenSearchConfig} />
             </section>
 
             {/* 我的小组件 */}
@@ -1579,7 +1471,7 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
         ) : activeView === 'resources' ? (
           <ResourceCenterViewCN 
             onAddResource={onAddResource}
-            onImport={() => console.log('Import')}
+            onImport={onOpenImport}
             onEditLink={onEditLink}
             onDeleteLink={onDeleteLink}
             onPreviewLink={(url) => {
@@ -1606,6 +1498,17 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
           <WidgetConfigCenter />
         )}
       </main>
+
+      {previewUrl && (
+        <ContentPreview
+          url={previewUrl}
+          isOpen={isPreviewOpen}
+          onClose={() => {
+            setIsPreviewOpen(false);
+            setPreviewUrl(null);
+          }}
+        />
+      )}
       
       <NavEditModal
         isOpen={navEditModalOpen}
