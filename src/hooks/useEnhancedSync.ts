@@ -510,8 +510,8 @@ export function useEnhancedSync() {
           // 离线状态，加入队列
           const change: DataChange = {
             type: 'update',
-            dataType: e.key!.split('_').pop()!,
-            data: JSON.parse(e.newValue),
+            dataType: e.key?.split('_').pop() || 'unknown',
+            data: e.newValue ? JSON.parse(e.newValue) : null,
             timestamp: Date.now(),
             deviceId: deviceId.current,
             version: Date.now()
@@ -540,7 +540,7 @@ export function useEnhancedSync() {
   // 初始化时拉取数据
   useEffect(() => {
     pullFromCloud();
-  }, []);
+  }, [pullFromCloud]);
 
   // 触发数据变化事件 (用于同页同步)
   const triggerDataChange = useCallback(() => {
