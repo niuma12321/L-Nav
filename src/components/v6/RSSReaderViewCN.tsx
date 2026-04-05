@@ -176,7 +176,7 @@ const RSSReaderViewCN: React.FC = () => {
     return successCount;
   };
 
-  // 解析 OPML 文件
+  // 解析 OPML 文件 - 增强错误处理和兼容性
   const parseOPML = (xmlText: string): Array<{title: string; url: string}> => {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
@@ -184,40 +184,73 @@ const RSSReaderViewCN: React.FC = () => {
     // 检查解析错误
     const parseError = xmlDoc.querySelector('parsererror');
     if (parseError) {
-      throw new Error('OPML 文件解析失败');
+      console.error('[RSS] OPML 解析错误:', parseError.textContent);
+      throw new Error('OPML 文件格式无效，无法解析');
     }
 
     const feeds: Array<{title: string; url: string}> = [];
-    const outlines = xmlDoc.querySelectorAll('outline[type="rss"], outline[xmlUrl]');
+    
+    // 支持多种 OPML 格式
+    const outlines = xmlDoc.querySelectorAll('outline');
     
     outlines.forEach((outline) => {
+      const type = outline.getAttribute('type');
+      const xmlUrl = outline.getAttribute('xmlUrl');
+      const htmlUrl = outline.getAttribute('htmlUrl');
+      const url = outline.getAttribute('url');
       const title = outline.getAttribute('title') || 
                    outline.getAttribute('text') || 
+                   outline.getAttribute('description') || 
                    '未命名源';
-      const url = outline.getAttribute('xmlUrl') || 
-                 outline.getAttribute('url');
       
-      if (url) {
-        feeds.push({ title, url });
+      // 提取 RSS URL
+      let feedUrl = xmlUrl || url;
+      
+      // 如果没有 xmlUrl 但有 htmlUrl，尝试推断 RSS URL
+      if (!feedUrl && htmlUrl) {
+        try {
+          const urlObj = new URL(htmlUrl);
+          feedUrl = `${urlObj.origin}/feed`;
+        } catch {
+          feedUrl = htmlUrl;
+        }
+      }
+      
+      // 只处理 RSS 类型的源
+      if (feedUrl && (!type || type === 'rss' || type === 'atom')) {
+        feeds.push({ title, url: feedUrl });
       }
     });
 
+    if (feeds.length === 0) {
+      throw new Error('OPML 文件中未找到有效的 RSS 订阅源');
+    }
+
+    console.log(`[RSS] 成功解析 OPML，找到 ${feeds.length} 个源`);
     return feeds;
   };
 
-  // 处理 OPML 文件导入 - 一键立即导入，不逐个验证
+  // 处理 OPML 文件导入 - 增强错误处理和用户反馈
   const handleOPMLImport = async (file: File) => {
     setOpmlImporting(true);
     setAddError('');
     setOpmlStats(null);
 
     try {
+      console.log('[RSS] 开始导入 OPML 文件:', file.name, file.size);
       const text = await file.text();
+      
+      if (!text.trim()) {
+        throw new Error('OPML 文件为空');
+      }
+      
       const feeds = parseOPML(text);
 
       if (feeds.length === 0) {
         throw new Error('未找到有效的 RSS 订阅源，请检查 OPML 文件格式');
       }
+
+      console.log(`[RSS] OPML 解析成功，共 ${feeds.length} 个源`);
 
       let successCount = 0;
       let failedCount = 0;
@@ -225,29 +258,46 @@ const RSSReaderViewCN: React.FC = () => {
       const newSources: RSSSource[] = [];
 
       for (const feed of feeds) {
-        // 检查是否已存在
-        const exists = sources.some(s => s.url === feed.url);
-        if (exists) {
-          skippedCount++;
-          continue;
+        try {
+          // 检查是否已存在
+          const exists = sources.some(s => s.url === feed.url);
+          if (exists) {
+            console.log(`[RSS] 源已存在，跳过: ${feed.title}`);
+            skippedCount++;
+            continue;
+          }
+
+          // 验证 URL 格式
+          try {
+            new URL(feed.url);
+          } catch {
+            console.warn(`[RSS] 无效的 URL，跳过: ${feed.url}`);
+            failedCount++;
+            continue;
+          }
+
+          // 直接添加，不等待网络验证
+          const newSource: RSSSource = {
+            id: `source-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            title: feed.title,
+            url: feed.url,
+            addedAt: Date.now(),
+            lastFetched: Date.now()
+          };
+
+          newSources.push(newSource);
+          successCount++;
+          console.log(`[RSS] 成功添加源: ${feed.title}`);
+        } catch (error) {
+          console.error(`[RSS] 添加源失败: ${feed.title}`, error);
+          failedCount++;
         }
-
-        // 直接添加，不等待网络验证
-        const newSource: RSSSource = {
-          id: `source-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          title: feed.title,
-          url: feed.url,
-          addedAt: Date.now(),
-          lastFetched: Date.now()
-        };
-
-        newSources.push(newSource);
-        successCount++;
       }
 
       if (newSources.length > 0) {
         const allSources = [...newSources, ...sources];
         saveSources(allSources);
+        console.log(`[RSS] 已保存 ${newSources.length} 个新源到本地`);
       }
 
       setOpmlStats({ 
@@ -265,10 +315,12 @@ const RSSReaderViewCN: React.FC = () => {
           setOpmlStats(null);
           // 后台异步获取文章
           fetchAllSources();
-        }, 500);
+        }, 1500);
       }
     } catch (error) {
-      setAddError(error instanceof Error ? error.message : '导入失败');
+      const errorMsg = error instanceof Error ? error.message : '导入失败';
+      console.error('[RSS] OPML 导入失败:', error);
+      setAddError(errorMsg);
     } finally {
       setOpmlImporting(false);
     }
@@ -354,14 +406,25 @@ const RSSReaderViewCN: React.FC = () => {
     }
   };
 
-  // 删除 RSS 源
-  const deleteSource = (sourceId: string) => {
+  // 删除 RSS 源 - 彻底删除包括云端数据
+  const deleteSource = async (sourceId: string) => {
+    // 1. 删除本地源
     const newSources = sources.filter(s => s.id !== sourceId);
     saveSources(newSources);
     
-    // 同时删除相关条目
+    // 2. 删除相关条目
     const newItems = items.filter(i => i.sourceId !== sourceId);
     saveItems(newItems);
+    
+    // 3. 清理展开状态
+    const newExpanded = new Set(expandedSources);
+    newExpanded.delete(sourceId);
+    setExpandedSources(newExpanded);
+    
+    // 4. 强制同步到云端，确保删除生效
+    await forceSync();
+    
+    console.log(`[RSS] 已删除源 ${sourceId} 及其所有相关数据`);
   };
 
   // 切换源展开状态
@@ -507,16 +570,19 @@ const RSSReaderViewCN: React.FC = () => {
         </div>
       </div>
 
-      {/* 主内容区 */}
-      <div className="flex-1 flex flex-col lg:flex-row gap-6 overflow-hidden">
-        {/* 左侧：源列表 */}
-        <div className="w-full lg:w-72 flex-shrink-0 flex flex-col gap-3 overflow-y-auto">
-          <h3 className="text-sm font-medium text-slate-400 px-1">订阅源</h3>
+      {/* 主内容区 - 增强响应式布局 */}
+      <div className="flex-1 flex flex-col lg:flex-row gap-4 lg:gap-6 overflow-hidden">
+        {/* 左侧：源列表 - 移动端优化 */}
+        <div className="w-full lg:w-72 flex-shrink-0 flex flex-col gap-3 overflow-y-auto lg:overflow-y-auto max-h-[40vh] lg:max-h-none">
+          <div className="flex items-center justify-between px-1">
+            <h3 className="text-sm font-medium text-slate-400">订阅源</h3>
+            <span className="text-xs text-slate-500">{sources.length} 个</span>
+          </div>
           
           {sources.map(source => (
             <div
               key={source.id}
-              className={`p-3 rounded-xl border transition-all cursor-pointer group ${
+              className={`p-3 lg:p-3 rounded-xl border transition-all cursor-pointer group ${
                 expandedSources.has(source.id)
                   ? 'bg-orange-500/10 border-orange-500/30'
                   : 'bg-[#181a1c] border-white/5 hover:border-white/10'
@@ -526,13 +592,13 @@ const RSSReaderViewCN: React.FC = () => {
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <Globe className="w-4 h-4 text-slate-400" />
+                    <Globe className="w-4 h-4 text-slate-400 flex-shrink-0" />
                     <h4 className="text-sm font-medium text-white truncate">
                       {source.title}
                     </h4>
                   </div>
                   {source.description && (
-                    <p className="text-xs text-slate-500 mt-1 truncate">
+                    <p className="text-xs text-slate-500 mt-1 truncate hidden lg:block">
                       {source.description}
                     </p>
                   )}
@@ -541,20 +607,20 @@ const RSSReaderViewCN: React.FC = () => {
                       {itemsBySource[source.id]?.length || 0} 篇
                     </span>
                     {source.lastFetched && (
-                      <span className="text-xs text-slate-600">
-                        · {formatDate(new Date(source.lastFetched).toISOString())}更新
+                      <span className="text-xs text-slate-600 hidden sm:inline">
+                        · {formatDate(new Date(source.lastFetched).toISOString())}
                       </span>
                     )}
                   </div>
                   {source.error && (
                     <div className="flex items-center gap-1 mt-1">
                       <AlertCircle className="w-3 h-3 text-red-400" />
-                      <span className="text-xs text-red-400">{source.error}</span>
+                      <span className="text-xs text-red-400 truncate">{source.error}</span>
                     </div>
                   )}
                 </div>
                 
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 flex-shrink-0">
                   {loadingSourceId === source.id ? (
                     <Loader2 className="w-4 h-4 text-orange-400 animate-spin" />
                   ) : (
@@ -574,7 +640,7 @@ const RSSReaderViewCN: React.FC = () => {
                       e.stopPropagation();
                       deleteSource(source.id);
                     }}
-                    className="p-1.5 rounded hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                    className="p-1.5 rounded hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-colors lg:opacity-0 lg:group-hover:opacity-100"
                     title="删除"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -597,7 +663,7 @@ const RSSReaderViewCN: React.FC = () => {
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}
-                      className="block p-2 rounded-lg bg-[#0d0e10] hover:bg-[#1a1c1f] transition-colors group/item"
+                      className="block p-2 lg:p-2 rounded-lg bg-[#0d0e10] hover:bg-[#1a1c1f] transition-colors group/item"
                     >
                       <p className="text-xs text-slate-300 line-clamp-2 group-hover/item:text-orange-400">
                         {item.title}
@@ -626,19 +692,19 @@ const RSSReaderViewCN: React.FC = () => {
           )}
         </div>
 
-        {/* 右侧：文章列表 */}
-        <div className="flex-1 overflow-y-auto">
+        {/* 右侧：文章列表 - 响应式优化 */}
+        <div className="flex-1 overflow-y-auto -mx-2 px-2 lg:mx-0 lg:px-0">
           <div className="space-y-3">
             {filteredItems.length === 0 ? (
-              <div className="text-center py-16 text-slate-500">
+              <div className="text-center py-12 lg:py-16 text-slate-500">
                 {searchQuery ? (
                   <>
-                    <Search className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <Search className="w-10 h-10 lg:w-12 lg:h-12 mx-auto mb-3 opacity-50" />
                     <p className="text-sm">没有找到匹配的文章</p>
                   </>
                 ) : (
                   <>
-                    <Rss className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <Rss className="w-10 h-10 lg:w-12 lg:h-12 mx-auto mb-3 opacity-50" />
                     <p className="text-sm">暂无文章</p>
                     <p className="text-xs mt-1">点击刷新或添加订阅源</p>
                   </>
@@ -648,11 +714,11 @@ const RSSReaderViewCN: React.FC = () => {
               filteredItems.map(item => (
                 <article
                   key={item.id}
-                  className="p-4 rounded-xl bg-[#181a1c] border border-white/5 hover:border-orange-500/30 transition-all group"
+                  className="p-3 lg:p-4 rounded-xl bg-[#181a1c] border border-white/5 hover:border-orange-500/30 transition-all group"
                 >
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start justify-between gap-3 lg:gap-4">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
                         <span className="text-xs font-medium text-orange-400">
                           {item.sourceTitle}
                         </span>
@@ -663,8 +729,8 @@ const RSSReaderViewCN: React.FC = () => {
                         </span>
                         {item.author && (
                           <>
-                            <span className="text-xs text-slate-500">·</span>
-                            <span className="text-xs text-slate-500">{item.author}</span>
+                            <span className="text-xs text-slate-500 hidden sm:inline">·</span>
+                            <span className="text-xs text-slate-500 hidden sm:inline truncate max-w-[100px]">{item.author}</span>
                           </>
                         )}
                       </div>
@@ -675,13 +741,13 @@ const RSSReaderViewCN: React.FC = () => {
                         rel="noopener noreferrer"
                         className="block group/link"
                       >
-                        <h3 className="text-base font-medium text-white group-hover/link:text-orange-400 transition-colors line-clamp-2">
+                        <h3 className="text-sm lg:text-base font-medium text-white group-hover/link:text-orange-400 transition-colors line-clamp-2">
                           {item.title}
                         </h3>
                       </a>
                       
                       {item.description && (
-                        <p className="text-sm text-slate-400 mt-2 line-clamp-3">
+                        <p className="text-xs lg:text-sm text-slate-400 mt-2 line-clamp-2 lg:line-clamp-3">
                           {item.description.replace(/<[^>]*>/g, '')}
                         </p>
                       )}
