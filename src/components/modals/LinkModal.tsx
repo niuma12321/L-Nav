@@ -5,8 +5,22 @@ import { generateLinkDescription, suggestCategory } from '../../services/geminiS
 import { useDialog } from '../ui/DialogProvider';
 import { getIconToneStyle, normalizeHexColor } from '../../utils/iconTone';
 import EmojiPicker from '../ui/EmojiPicker';
+import { getUserStorageKey, getUserData, setUserData } from '../../utils/constants';
 
 const FAVICON_CACHE_KEY = 'ynav_favicon_cache';
+
+// 获取用户维度的favicon缓存键
+const getUserFaviconCacheKey = () => getUserStorageKey(FAVICON_CACHE_KEY);
+
+// 获取favicon缓存
+const getFaviconCache = (): Record<string, string> => {
+  return getUserData<Record<string, string>>(FAVICON_CACHE_KEY, {});
+};
+
+// 设置favicon缓存
+const setFaviconCache = (cache: Record<string, string>) => {
+  setUserData(FAVICON_CACHE_KEY, cache);
+};
 
 interface LinkModalProps {
   isOpen: boolean;
@@ -140,10 +154,9 @@ const LinkModal: React.FC<LinkModalProps> = ({
           // Invalid URL, use original
         }
       }
-      const stored = localStorage.getItem(FAVICON_CACHE_KEY);
-      const cache = stored ? JSON.parse(stored) : {};
+      const cache = getFaviconCache();
       cache[domain] = iconUrl;
-      localStorage.setItem(FAVICON_CACHE_KEY, JSON.stringify(cache));
+      setFaviconCache(cache);
     } catch (error) {
       // Failed to cache custom icon - silently ignore
     }
@@ -250,8 +263,7 @@ const LinkModal: React.FC<LinkModalProps> = ({
 
       // 先尝试从本地缓存获取图标
       try {
-        const stored = localStorage.getItem(FAVICON_CACHE_KEY);
-        const cache = stored ? JSON.parse(stored) : {};
+        const cache = getFaviconCache();
         if (cache[domain]) {
           setIcon(cache[domain]);
           setIsFetchingIcon(false);
@@ -266,10 +278,9 @@ const LinkModal: React.FC<LinkModalProps> = ({
       setIcon(iconUrl);
       // 将图标保存到本地缓存
       try {
-        const stored = localStorage.getItem(FAVICON_CACHE_KEY);
-        const cache = stored ? JSON.parse(stored) : {};
+        const cache = getFaviconCache();
         cache[domain] = iconUrl;
-        localStorage.setItem(FAVICON_CACHE_KEY, JSON.stringify(cache));
+        setFaviconCache(cache);
       } catch (error) {
         // Failed to cache icon - silently ignore
       }

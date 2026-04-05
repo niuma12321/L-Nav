@@ -37,6 +37,7 @@ import {
   MoreVertical
 } from 'lucide-react';
 import { useWidgetSystem } from '../../hooks/useWidgetSystem';
+import { getUserData, setUserData } from '../../utils/constants';
 
 interface NavItem {
   id: string;
@@ -239,7 +240,7 @@ const WeatherWidget: React.FC = () => {
         fetchForecast(cityName)
       ]);
       
-      localStorage.setItem('ynav_weather_city', cityName);
+      setUserData('weather_city', cityName);
     } catch (err) {
       setError('获取天气数据失败');
     } finally {
@@ -249,7 +250,7 @@ const WeatherWidget: React.FC = () => {
 
   // 初始化加载
   useEffect(() => {
-    const savedCity = localStorage.getItem('ynav_weather_city');
+    const savedCity = getUserData<string | null>('weather_city', null);
     if (savedCity && cities.includes(savedCity)) {
       setCity(savedCity);
       fetchWeatherData(savedCity);
@@ -766,7 +767,7 @@ const SearchWidget: React.FC = () => {
   ];
   
   const [engines, setEngines] = useState(() => {
-    const saved = localStorage.getItem('ynav_search_engines');
+    const saved = getUserData<string | null>('search_engines', null);
     return saved ? JSON.parse(saved) : defaultEngines;
   });
   const [activeEngine, setActiveEngine] = useState(engines[0].name);
@@ -775,8 +776,7 @@ const SearchWidget: React.FC = () => {
   const [newEngine, setNewEngine] = useState({ name: '', url: '', icon: '' });
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [searchHistory, setSearchHistory] = useState<string[]>(() => {
-    const saved = localStorage.getItem('ynav_search_history');
-    return saved ? JSON.parse(saved) : [];
+    return getUserData<string[]>('search_history', []);
   });
 
   // 保存搜索历史
@@ -784,13 +784,13 @@ const SearchWidget: React.FC = () => {
     if (!query.trim()) return;
     const newHistory = [query, ...searchHistory.filter(h => h !== query)].slice(0, 5);
     setSearchHistory(newHistory);
-    localStorage.setItem('ynav_search_history', JSON.stringify(newHistory));
+    setUserData('search_history', newHistory);
   };
 
   // 清除搜索历史
   const clearSearchHistory = () => {
     setSearchHistory([]);
-    localStorage.removeItem('ynav_search_history');
+    setUserData('search_history', []);
   };
 
   // 从历史记录搜索
@@ -816,7 +816,7 @@ const SearchWidget: React.FC = () => {
   // 保存引擎到 localStorage
   const saveEngines = (newEngines: typeof engines) => {
     setEngines(newEngines);
-    localStorage.setItem('ynav_search_engines', JSON.stringify(newEngines));
+    setUserData('search_engines', JSON.stringify(newEngines));
   };
 
   // 添加新引擎

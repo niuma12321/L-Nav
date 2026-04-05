@@ -1,6 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import Icon from './Icon';
-import { FAVICON_CACHE_KEY } from '../../utils/constants';
+import { FAVICON_CACHE_KEY, getUserStorageKey } from '../../utils/constants';
+
+// 获取用户维度的缓存键
+const getUserFaviconKey = () => getUserStorageKey(FAVICON_CACHE_KEY);
 
 interface FaviconProps {
   /** 目标域名/URL */
@@ -34,7 +37,7 @@ const INTERNAL_DOMAIN_KEYWORDS = [
 const faviconCache = {
   get: (host: string): string | null => {
     try {
-      const cache = JSON.parse(localStorage.getItem(FAVICON_CACHE_KEY) || '{}');
+      const cache = JSON.parse(localStorage.getItem(getUserFaviconKey()) || '{}');
       return cache[host] || null;
     } catch {
       return null;
@@ -42,9 +45,9 @@ const faviconCache = {
   },
   set: (host: string, faviconUrl: string) => {
     try {
-      const cache = JSON.parse(localStorage.getItem(FAVICON_CACHE_KEY) || '{}');
+      const cache = JSON.parse(localStorage.getItem(getUserFaviconKey()) || '{}');
       cache[host] = faviconUrl;
-      localStorage.setItem(FAVICON_CACHE_KEY, JSON.stringify(cache));
+      localStorage.setItem(getUserFaviconKey(), JSON.stringify(cache));
     } catch {}
   },
 };

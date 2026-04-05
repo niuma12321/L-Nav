@@ -120,7 +120,8 @@ export const useDataStore = () => {
     const loadLinkIcons = useCallback((linksToLoad: LinkItem[]) => {
         let cache: Record<string, string> = {};
         try {
-            const stored = localStorage.getItem(FAVICON_CACHE_KEY);
+            const userKey = getUserStorageKey(FAVICON_CACHE_KEY);
+            const stored = localStorage.getItem(userKey);
             cache = stored ? JSON.parse(stored) : {};
         } catch (e) {
             cache = {};
