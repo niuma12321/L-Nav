@@ -11,10 +11,7 @@ import CategoryManagerModal from './components/modals/CategoryManagerModal';
 import ImportModal from './components/modals/ImportModal';
 import SettingsModal from './components/modals/SettingsModal';
 import SearchConfigModal from './components/modals/SearchConfigModal';
-import SyncConflictModal from './components/modals/SyncConflictModal';
-import NotesView from './components/notes/NotesView';
 import DataBackupModal from './components/modals/DataBackupModal';
-import WebDAVModal from './components/modals/WebDAVModal';
 import LoginModal from './components/modals/LoginModal';
 
 // Mobile components
@@ -24,13 +21,6 @@ import MobileCategoryManager from './components/mobile/MobileCategoryManager';
 import MobileLinkBottomSheet from './components/mobile/MobileLinkBottomSheet';
 import MobileSettings from './components/mobile/MobileSettings';
 import MobileBulkEdit from './components/mobile/MobileBulkEdit';
-
-// Emerald Obsidian Navigation Components
-import SideNavBar from './components/navigation/SideNavBar';
-import BottomNavBar from './components/navigation/BottomNavBar';
-import TopBar from './components/navigation/TopBar';
-import Dashboard from './components/dashboard/Dashboard';
-import EmeraldNotesView from './components/notes/EmeraldNotesView';
 
 // V9 Components - Y-Nav Elite V9.0 Modular Edition
 import V9Dashboard from './components/v6/V9Dashboard';
@@ -65,18 +55,13 @@ import {
   PRIVACY_USE_SEPARATE_PASSWORD_KEY,
   VIEW_PASSWORD_KEY,
   WEBMASTER_UNLOCKED_KEY,
-  getCurrentUserId,
   getUserData,
-  setUserData,
-  CURRENT_USER_KEY
+  setUserData
 } from './utils/constants';
 import { decryptPrivateVault, encryptPrivateVault } from './utils/privateVault';
 
 function App() {
   // === Core Data ===
-  // ==========================================
-  // 本地数据优先 - 同步功能已移除
-  // ==========================================
   // 数据仅在本地存储，确保始终最新
   useEffect(() => {
     setPrivateVaultCipher(localStorage.getItem(PRIVATE_VAULT_KEY));
