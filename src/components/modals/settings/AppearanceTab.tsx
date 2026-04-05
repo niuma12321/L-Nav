@@ -81,38 +81,67 @@ const AppearanceTab: React.FC<AppearanceTabProps> = React.memo(({ settings, onCh
   
   // 必应壁纸状态
   const [bingLoading, setBingLoading] = useState(false);
-  const [bingData, setBingData] = useState<{cover_4k?: string; update_date?: string} | null>(null);
+  const [bingData, setBingData] = useState<{
+    cover_4k?: string; 
+    cover?: string;
+    title?: string;
+    update_date?: string;
+    copyright?: string;
+  } | null>(null);
   const isBingEnabled = useMemo(() => settings.backgroundSource === 'bing', [settings.backgroundSource]);
   const isAutoUpdateEnabled = useMemo(() => !!settings.bingAutoUpdate, [settings.bingAutoUpdate]);
 
   // 获取必应壁纸数据
   const fetchBingWallpaper = useCallback(async () => {
     setBingLoading(true);
+    console.log('[Bing Wallpaper] 开始获取壁纸...');
     try {
+      console.log('[Bing Wallpaper] 请求URL:', BING_API_URL);
       const response = await fetch(BING_API_URL);
-      if (!response.ok) throw new Error('获取失败');
+      console.log('[Bing Wallpaper] 响应状态:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
       const data = await response.json();
+      console.log('[Bing Wallpaper] API响应数据:', data);
       
       // 检查响应格式
       if (data.code === 200 && data.data) {
+        console.log('[Bing Wallpaper] 获取成功:', data.data);
         setBingData(data.data);
         // 自动设置背景图
         if (data.data.cover_4k) {
+          console.log('[Bing Wallpaper] 设置背景图:', data.data.cover_4k);
           onChange('backgroundImage', data.data.cover_4k);
+          onChange('bingLastUpdate', new Date().toISOString().split('T')[0]);
+        } else if (data.data.cover) {
+          console.log('[Bing Wallpaper] 使用备用背景图:', data.data.cover);
+          onChange('backgroundImage', data.data.cover);
+          onChange('bingLastUpdate', new Date().toISOString().split('T')[0]);
+        } else {
+          console.warn('[Bing Wallpaper] 没有找到图片URL');
         }
         return data.data;
       } else {
-        throw new Error(data.message || 'API响应格式错误');
+        console.error('[Bing Wallpaper] API响应错误:', data);
+        throw new Error(data.message || `API错误: code=${data.code}`);
       }
     } catch (err) {
-      console.error('获取必应壁纸失败:', err);
+      console.error('[Bing Wallpaper] 获取失败:', err);
       // 显示错误信息给用户
       setBingData(null);
+      // 可以考虑设置一个默认背景图
+      if (isBingEnabled && !settings.backgroundImage) {
+        console.log('[Bing Wallpaper] 使用默认背景图');
+        onChange('backgroundImage', 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&h=1080&fit=crop');
+      }
     } finally {
       setBingLoading(false);
     }
     return null;
-  }, [onChange]);
+  }, [onChange, isBingEnabled, settings.backgroundImage]);
 
   // 首次加载时获取必应壁纸
   useEffect(() => {
@@ -409,33 +438,72 @@ const AppearanceTab: React.FC<AppearanceTabProps> = React.memo(({ settings, onCh
         )}
 
         {/* 背景图预览 */}
-        {isBackgroundEnabled && settings.backgroundImage && (
+        {isBackgroundEnabled && (
           <div className="mt-2 p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/30">
             <div className="text-xs text-slate-500 mb-2 flex items-center justify-between">
               <span>预览</span>
-              {isBingEnabled && bingData?.title && (
-                <span className="text-slate-400 truncate max-w-[200px]">{bingData.title}</span>
+              {isBingEnabled && bingLoading && (
+                <span className="text-blue-500">正在加载...</span>
+              )}
+              {isBingEnabled && bingData && (
+                <span className="text-slate-400 truncate max-w-[200px]">
+                  {bingData.title || bingData.update_date || '必应壁纸'}
+                </span>
               )}
             </div>
-            <div 
-              className="w-full h-20 rounded-lg bg-cover bg-center" 
-              style={{ 
-                backgroundImage: settings.backgroundImage && settings.backgroundImage.startsWith('http') 
-                  ? `url(${settings.backgroundImage})` 
-                  : settings.backgroundImage && settings.backgroundImage.startsWith('data:')
-                  ? `url(${settings.backgroundImage})`
-                  : undefined,
-                backgroundColor: !settings.backgroundImage || (!settings.backgroundImage.startsWith('http') && !settings.backgroundImage.startsWith('data:')) ? '#f3f4f6' : undefined
-              }}
-            />
-            {settings.backgroundImage && !settings.backgroundImage.startsWith('http') && !settings.backgroundImage.startsWith('data:') && (
-              <div className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                ⚠️ 背景图片格式无效，请使用有效的 URL 或 Base64 数据
+            
+            {/* 背景图显示 */}
+            {settings.backgroundImage && settings.backgroundImage.startsWith('http') && (
+              <div 
+                className="w-full h-20 rounded-lg bg-cover bg-center relative" 
+                style={{ backgroundImage: `url(${settings.backgroundImage})` }}
+              >
+                {isBingEnabled && (
+                  <div className="absolute top-1 right-1 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                    必应
+                  </div>
+                )}
               </div>
             )}
-            {isBingEnabled && !bingData && !bingLoading && (
-              <div className="text-xs text-red-600 dark:text-red-400 mt-1">
-                ⚠️ 必应壁纸加载失败，请检查网络连接
+            
+            {settings.backgroundImage && settings.backgroundImage.startsWith('data:') && (
+              <div 
+                className="w-full h-20 rounded-lg bg-cover bg-center" 
+                style={{ backgroundImage: `url(${settings.backgroundImage})` }}
+              />
+            )}
+            
+            {/* 错误提示 */}
+            {settings.backgroundImage && !settings.backgroundImage.startsWith('http') && !settings.backgroundImage.startsWith('data:') && (
+              <div className="w-full h-20 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                <div className="text-xs text-amber-600 dark:text-amber-400 text-center">
+                  ⚠️ 背景图片格式无效
+                  <br />
+                  请使用有效的 URL
+                </div>
+              </div>
+            )}
+            
+            {!settings.backgroundImage && isBingEnabled && (
+              <div className="w-full h-20 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                <div className="text-xs text-slate-500 text-center">
+                  {bingLoading ? '正在获取必应壁纸...' : '暂无背景图'}
+                </div>
+              </div>
+            )}
+            
+            {/* 状态信息 */}
+            {isBingEnabled && !bingLoading && (
+              <div className="text-xs text-slate-400 mt-1">
+                {bingData ? '✅ 必应壁纸已加载' : '❌ 必应壁纸加载失败'}
+                {!bingData && (
+                  <button 
+                    onClick={fetchBingWallpaper}
+                    className="ml-2 text-blue-500 hover:text-blue-600 underline"
+                  >
+                    重试
+                  </button>
+                )}
               </div>
             )}
           </div>
