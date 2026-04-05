@@ -35,7 +35,8 @@ import {
   Newspaper,
   Rss,
   MoreVertical,
-  GripVertical
+  GripVertical,
+  ChevronDown
 } from 'lucide-react';
 import { useWidgetSystem } from '../../hooks/useWidgetSystem';
 import { getUserData, setUserData } from '../../utils/constants';
