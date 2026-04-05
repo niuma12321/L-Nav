@@ -92,6 +92,8 @@ const AppearanceTab: React.FC<AppearanceTabProps> = React.memo(({ settings, onCh
       const response = await fetch(BING_API_URL);
       if (!response.ok) throw new Error('获取失败');
       const data = await response.json();
+      
+      // 检查响应格式
       if (data.code === 200 && data.data) {
         setBingData(data.data);
         // 自动设置背景图
@@ -99,9 +101,13 @@ const AppearanceTab: React.FC<AppearanceTabProps> = React.memo(({ settings, onCh
           onChange('backgroundImage', data.data.cover_4k);
         }
         return data.data;
+      } else {
+        throw new Error(data.message || 'API响应格式错误');
       }
     } catch (err) {
       console.error('获取必应壁纸失败:', err);
+      // 显示错误信息给用户
+      setBingData(null);
     } finally {
       setBingLoading(false);
     }
@@ -425,6 +431,11 @@ const AppearanceTab: React.FC<AppearanceTabProps> = React.memo(({ settings, onCh
             {settings.backgroundImage && !settings.backgroundImage.startsWith('http') && !settings.backgroundImage.startsWith('data:') && (
               <div className="text-xs text-amber-600 dark:text-amber-400 mt-1">
                 ⚠️ 背景图片格式无效，请使用有效的 URL 或 Base64 数据
+              </div>
+            )}
+            {isBingEnabled && !bingData && !bingLoading && (
+              <div className="text-xs text-red-600 dark:text-red-400 mt-1">
+                ⚠️ 必应壁纸加载失败，请检查网络连接
               </div>
             )}
           </div>

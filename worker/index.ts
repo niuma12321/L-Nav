@@ -221,6 +221,18 @@ async function handleAPI(request: Request, env: Env, ctx: ExecutionContext): Pro
     return handleNotificationsAPI(request, env, ctx);
   }
 
+  // 登录启用 API - 返回登录状态
+  if (path === '/api/enable-login') {
+    return new Response(JSON.stringify({ 
+      error: false,
+      loginEnabled: true,
+      message: "Login is enabled"
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+
   // Unified Sync API - 处理单个数据类型的同步
   if (path === '/api/sync') {
     return sync.fetch(request, env, ctx);
