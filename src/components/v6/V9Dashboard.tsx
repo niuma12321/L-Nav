@@ -1607,12 +1607,6 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
         )}
       </main>
       
-      <ContentPreview
-        url={previewUrl || ''}
-        isOpen={isPreviewOpen}
-        onClose={() => setIsPreviewOpen(false)}
-      />
-      
       <NavEditModal
         isOpen={navEditModalOpen}
         onClose={() => setNavEditModalOpen(false)}
