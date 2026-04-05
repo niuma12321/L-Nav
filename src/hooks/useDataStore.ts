@@ -299,11 +299,11 @@ export const useDataStore = () => {
         const storageKey = getStorageKey();
         localStorage.setItem(storageKey, JSON.stringify({ links: newLinks, categories: newCategories }));
         
-        // 3. Sync to Cloud (debounced) - 只在初始化完成后同步
-        if (isInitializedRef.current) {
-            debouncedSync(newLinks, newCategories);
-        }
-    }, [debouncedSync, getStorageKey]);
+        // 3. 触发同步事件，让useUnifiedSync自动推送到云端
+        window.dispatchEvent(new CustomEvent('ynav-data-changed', {
+            detail: { type: 'links_data', timestamp: Date.now() }
+        }));
+    }, [getStorageKey]);
 
     const addLink = useCallback((data: Omit<LinkItem, 'id' | 'createdAt'>) => {
         let processedUrl = data.url;
