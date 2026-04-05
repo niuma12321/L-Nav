@@ -1,5 +1,6 @@
 // Export all hooks from a single entry point
 export { useDataStore } from './useDataStore';
+export { useSimpleDataStore } from './useSimpleDataStore';
 export { useTheme, type ThemeMode } from './useTheme';
 export { useSearch } from './useSearch';
 export { useModals } from './useModals';

@@ -31,6 +31,7 @@ import { useDialog } from './components/ui/DialogProvider';
 
 import {
   useDataStore,
+  useSimpleDataStore,
   useTheme,
   useSearch,
   useModals,
@@ -80,6 +81,7 @@ function App() {
     setPrivacyAutoUnlockEnabled(localStorage.getItem(PRIVACY_AUTO_UNLOCK_KEY) === '1');
   }, []);
 
+  // === Core Data - 使用简化的本地存储 ===
   const {
     links,
     categories,
@@ -94,7 +96,7 @@ function App() {
     deleteCategories: deleteCategoriesStore,
     importData,
     isLoaded
-  } = useDataStore();
+  } = useSimpleDataStore();
   const { notify, confirm } = useDialog();
 
   // === Notes ===

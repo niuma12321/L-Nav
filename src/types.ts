@@ -9,6 +9,7 @@ export interface LinkItem {
   description?: string;
   categoryId: string;
   createdAt: number;
+  updatedAt?: number;
   hidden?: boolean;
   pinned?: boolean;
   pinnedOrder?: number;
