@@ -447,8 +447,8 @@ const WidgetConfigCenter: React.FC = () => {
   };
 
   const handleSaveLayout = () => {
-    // Save current widget order and settings
-    localStorage.setItem('ynav-widgets-v9', JSON.stringify(widgets));
+    // 保存功能已由 useWidgetSystem 自动处理，这里仅显示成功提示
+    // Widgets are automatically saved via useWidgetSystem hook
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2000);
   };

@@ -35,7 +35,15 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { AIConfig, SiteSettings } from '../types';
-import { AI_CONFIG_KEY, SITE_SETTINGS_KEY } from '../utils/constants';
+import { 
+  AI_CONFIG_KEY, 
+  SITE_SETTINGS_KEY,
+  initDefaultUser,
+  getUserStorageKey,
+  getCurrentUserId,
+  getUserData,
+  setUserData
+} from '../utils/constants';
 
 // ============ 类型定义 ============
 
@@ -87,23 +95,14 @@ const DEFAULT_SITE_SETTINGS: SiteSettings = {
 
 // ============ 工具函数 ============
 
-    // 安全 localStorage 操作
+    // 安全 localStorage 操作 - 使用用户维度存储
 const safeStorage = {
     get: <T>(key: string, defaultValue: T): T => {
-        try {
-            const item = localStorage.getItem(key);
-            if (!item) return defaultValue;
-            return JSON.parse(item);
-        } catch (error) {
-            if (import.meta.env.DEV) {
-                console.warn(`[Config] Failed to parse ${key}:`, error);
-            }
-            return defaultValue;
-        }
+        return getUserData(key, defaultValue);
     },
-    set: (key: string, value: unknown): boolean => {
+    set: <T>(key: string, value: T): boolean => {
         try {
-            localStorage.setItem(key, JSON.stringify(value));
+            setUserData(key, value);
             return true;
         } catch (error) {
             if (import.meta.env.DEV) {
@@ -114,7 +113,8 @@ const safeStorage = {
     },
     remove: (key: string): void => {
         try {
-            localStorage.removeItem(key);
+            const userKey = getUserStorageKey(key);
+            localStorage.removeItem(userKey);
         } catch (error) {
             if (import.meta.env.DEV) {
                 console.warn(`[Config] Failed to remove ${key}:`, error);

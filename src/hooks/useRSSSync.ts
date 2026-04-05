@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { getUserData, setUserData } from '../utils/constants';
 
 const SYNC_API_BASE = '/api/v1';
-const RSS_SOURCES_KEY = 'ynav_rss_sources';
-const RSS_ITEMS_KEY = 'ynav_rss_items_cache';
+const RSS_SOURCES_KEY = 'rss_sources';
+const RSS_ITEMS_KEY = 'rss_items_cache';
 
 // RSS 源类型
 export interface RSSSource {
@@ -122,36 +123,22 @@ export const useRSSSync = () => {
     const init = async () => {
       console.log('[RSS] Initializing...');
       
-      // 1. 先加载本地数据（快速显示）
-      const storedSources = localStorage.getItem(RSS_SOURCES_KEY);
-      const storedItems = localStorage.getItem(RSS_ITEMS_KEY);
+      // 1. 先加载本地数据（快速显示）- 使用用户维度存储
+      const storedSources = getUserData<RSSSource[]>(RSS_SOURCES_KEY, []);
+      const storedItems = getUserData<RSSItem[]>(RSS_ITEMS_KEY, []);
       let localSources: RSSSource[] = [];
       let localItems: RSSItem[] = [];
       
-      if (storedSources) {
-        try {
-          const parsed = JSON.parse(storedSources);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            localSources = parsed;
-            setSources(localSources);
-            console.log('[RSS] Loaded from local:', localSources.length, 'sources');
-          }
-        } catch (e) {
-          console.error('[RSS] Failed to parse local sources:', e);
-        }
+      if (storedSources && storedSources.length > 0) {
+        localSources = storedSources;
+        setSources(localSources);
+        console.log('[RSS] Loaded from local:', localSources.length, 'sources');
       }
       
-      if (storedItems) {
-        try {
-          const parsed = JSON.parse(storedItems);
-          if (Array.isArray(parsed)) {
-            localItems = parsed;
-            setItems(localItems);
-            console.log('[RSS] Loaded from local:', localItems.length, 'items');
-          }
-        } catch (e) {
-          console.error('[RSS] Failed to parse local items:', e);
-        }
+      if (storedItems && storedItems.length > 0) {
+        localItems = storedItems;
+        setItems(localItems);
+        console.log('[RSS] Loaded from local:', localItems.length, 'items');
       }
       
       // 如果没有本地数据，使用默认值
@@ -170,8 +157,8 @@ export const useRSSSync = () => {
         // 云端有数据，完全以云端为准（覆盖本地）
         setSources(cloudData.sources);
         setItems(cloudData.items);
-        localStorage.setItem(RSS_SOURCES_KEY, JSON.stringify(cloudData.sources));
-        localStorage.setItem(RSS_ITEMS_KEY, JSON.stringify(cloudData.items));
+        setUserData(RSS_SOURCES_KEY, cloudData.sources);
+        setUserData(RSS_ITEMS_KEY, cloudData.items);
         console.log('[RSS] Overridden with cloud data');
       } else {
         // 云端无数据，上传本地数据
@@ -187,13 +174,13 @@ export const useRSSSync = () => {
     init();
   }, [pullFromCloud, pushToCloud]);
 
-  // 保存到 localStorage 并同步到云端
+  // 保存到 localStorage 并同步到云端 - 使用用户维度存储
   useEffect(() => {
     if (!isLoading && isInitializedRef.current) {
       try {
-        localStorage.setItem(RSS_SOURCES_KEY, JSON.stringify(sources));
-        localStorage.setItem(RSS_ITEMS_KEY, JSON.stringify(items));
-        console.log('[RSS] Saved to localStorage');
+        setUserData(RSS_SOURCES_KEY, sources);
+        setUserData(RSS_ITEMS_KEY, items);
+        console.log('[RSS] Saved to user storage');
         
         // 同步到云端
         debouncedSync(sources, items);

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { getCurrentUserId } from '../utils/constants';
 
 const API_BASE = '/api/v1/notifications';
 
@@ -90,7 +91,7 @@ export interface FullNotificationSettings {
 }
 
 export function useNotifications(userId?: string) {
-  const uid = userId || localStorage.getItem('user_id') || 'default';
+  const uid = userId || getCurrentUserId() || 'default';
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);

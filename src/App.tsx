@@ -64,7 +64,11 @@ import {
   PRIVACY_SESSION_UNLOCKED_KEY,
   PRIVACY_USE_SEPARATE_PASSWORD_KEY,
   VIEW_PASSWORD_KEY,
-  WEBMASTER_UNLOCKED_KEY
+  WEBMASTER_UNLOCKED_KEY,
+  getCurrentUserId,
+  getUserData,
+  setUserData,
+  CURRENT_USER_KEY
 } from './utils/constants';
 import { decryptPrivateVault, encryptPrivateVault } from './utils/privateVault';
 
@@ -118,20 +122,24 @@ function App() {
   const [editingPrivateLink, setEditingPrivateLink] = useState<LinkItem | null>(null);
   const [prefillPrivateLink, setPrefillPrivateLink] = useState<Partial<LinkItem> | null>(null);
 
-  // === Login State ===
+  // === Login State - 使用用户维度存储 ===
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    return localStorage.getItem('ynav_logged_in') === 'true';
+    return getUserData('logged_in', false);
+  });
+  const [currentUsername, setCurrentUsername] = useState(() => {
+    return getUserData('username', '');
   });
   const [showLoginModal, setShowLoginModal] = useState(() => {
     // 如果未登录，自动显示登录弹窗
-    return localStorage.getItem('ynav_logged_in') !== 'true';
+    return !getUserData('logged_in', false);
   });
 
   const handleLogin = useCallback((username: string, password: string): boolean => {
     if (username === 'ljq' && password === 'jk712732') {
       setIsLoggedIn(true);
-      localStorage.setItem('ynav_logged_in', 'true');
-      localStorage.setItem('ynav_username', username);
+      setCurrentUsername(username);
+      setUserData('logged_in', true);
+      setUserData('username', username);
       notify('登录成功', 'success');
       setShowLoginModal(false);
       return true;
@@ -142,8 +150,9 @@ function App() {
 
   const handleLogout = useCallback(() => {
     setIsLoggedIn(false);
-    localStorage.removeItem('ynav_logged_in');
-    localStorage.removeItem('ynav_username');
+    setCurrentUsername('');
+    setUserData('logged_in', false);
+    setUserData('username', '');
     notify('已退出登录', 'info');
   }, [notify]);
 
@@ -167,20 +176,15 @@ function App() {
   const [mobileBulkEditOpen, setMobileBulkEditOpen] = useState(false);
   const [editingLinkMobile, setEditingLinkMobile] = useState<LinkItem | null>(null);
 
-  // 搜索历史记录
+  // 搜索历史记录 - 使用用户维度存储
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
-    try {
-      const stored = localStorage.getItem('ynav:recentSearches');
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
+    return getUserData('recent_searches', []);
   });
   const trendingSearches = ['AI工具', 'React教程', '设计资源', '开发文档', '效率工具'];
 
-  // 保存搜索历史
+  // 保存搜索历史 - 使用用户维度存储
   useEffect(() => {
-    localStorage.setItem('ynav:recentSearches', JSON.stringify(recentSearches));
+    setUserData('recent_searches', recentSearches);
   }, [recentSearches]);
 
   // 检测移动端

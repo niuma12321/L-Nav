@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { SearchMode, ExternalSearchSource, SearchConfig } from '../types';
-import { SEARCH_CONFIG_KEY } from '../utils/constants';
+import { getUserData, setUserData } from '../utils/constants';
 
 // 默认搜索源
 const buildDefaultSearchSources = (): ExternalSearchSource[] => {
@@ -65,7 +65,7 @@ export function useSearch() {
         setExternalSearchSources(safeSources);
         setSearchMode(mode);
         setSelectedSearchSource(resolvedSelected);
-        localStorage.setItem(SEARCH_CONFIG_KEY, JSON.stringify(searchConfig));
+        setUserData('search_config', searchConfig);
     }, [selectedSearchSource]);
 
     // 切换搜索模式
@@ -132,18 +132,16 @@ export function useSearch() {
 
     // 初始化加载（全类型安全）
     useEffect(() => {
-        const savedSearchConfig = localStorage.getItem(SEARCH_CONFIG_KEY);
+        const savedSearchConfig = getUserData<SearchConfig>('search_config', null);
         if (savedSearchConfig) {
-            try {
-                const parsed = JSON.parse(savedSearchConfig) as SearchConfig;
-                if (parsed?.mode) {
-                    const sources = Array.isArray(parsed.externalSources) ? parsed.externalSources : [];
-                    const resolvedSelected = resolveSelectedSource(sources, parsed.selectedSourceId, parsed.selectedSource ?? null);
-                    setSearchMode(parsed.mode);
-                    setExternalSearchSources(sources);
-                    setSelectedSearchSource(resolvedSelected);
-                }
-            } catch (e) {}
+            const parsed = savedSearchConfig;
+            if (parsed?.mode) {
+                const sources = Array.isArray(parsed.externalSources) ? parsed.externalSources : [];
+                const resolvedSelected = resolveSelectedSource(sources, parsed.selectedSourceId, parsed.selectedSource ?? null);
+                setSearchMode(parsed.mode);
+                setExternalSearchSources(sources);
+                setSelectedSearchSource(resolvedSelected);
+            }
         } else {
             const defaultSources = buildDefaultSearchSources();
             setSearchMode('external');

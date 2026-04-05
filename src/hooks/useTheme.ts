@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { THEME_KEY } from '../utils/constants';
+import { getUserData, setUserData } from '../utils/constants';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 
@@ -21,7 +21,7 @@ export function useTheme() {
 
     const setThemeAndApply = useCallback((mode: ThemeMode) => {
         setThemeMode(mode);
-        localStorage.setItem(THEME_KEY, mode);
+        setUserData('theme', mode);
         applyThemeMode(mode);
     }, [applyThemeMode]);
 
@@ -36,7 +36,7 @@ export function useTheme() {
 
     // Initialize theme on mount
     useEffect(() => {
-        const storedTheme = localStorage.getItem(THEME_KEY);
+        const storedTheme = getUserData<ThemeMode>('theme', 'system');
         const initialMode: ThemeMode = storedTheme === 'dark' || storedTheme === 'light' || storedTheme === 'system'
             ? storedTheme
             : 'system';
