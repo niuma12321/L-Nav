@@ -198,6 +198,25 @@
     animation: cursor-blink 1s step-end infinite;
   }
 
+  /* 慢速缩放背景 */
+  @keyframes slow-zoom {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+  }
+  .animate-slow-zoom {
+    animation: slow-zoom 20s ease-in-out infinite;
+  }
+
+  /* 高光闪烁效果 */
+  @keyframes shimmer {
+    0% { transform: translateX(-100%) rotate(12deg); }
+    100% { transform: translateX(200%) rotate(12deg); }
+  }
+  .animate-shimmer {
+    animation: shimmer 8s ease-in-out infinite;
+  }
+
   /* 微光流动 */
   @keyframes shimmer-slow {
     0% { transform: translateX(-150%) skewX(-15deg); }

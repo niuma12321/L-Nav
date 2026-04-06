@@ -1042,22 +1042,29 @@ function App() {
     <div 
       className={`flex min-h-screen ${toneClasses.text} relative`}
     >
-      {/* 背景图层 - 确保在最底层 */}
+      {/* 背景图层 - 优化性能：移除fixed attachment，使用transform替代 */}
       {useCustomBackground && backgroundImage && (
         <div 
-          className="fixed inset-0 z-0"
+          className={`fixed inset-0 z-0 ${backgroundMotion ? 'animate-slow-zoom' : ''}`}
           style={{
             backgroundImage: `url(${backgroundImage})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
-            backgroundAttachment: 'fixed'
+            willChange: 'transform'
           }}
         />
       )}
       
+      {/* 动态高光效果层 */}
+      {useCustomBackground && backgroundImage && backgroundMotion && (
+        <div className="fixed inset-0 z-5 pointer-events-none overflow-hidden">
+          <div className="absolute -inset-full animate-shimmer bg-gradient-to-r from-transparent via-white/10 to-transparent rotate-12" />
+        </div>
+      )}
+      
       {/* 背景遮罩层 - 提高文字可读性 */}
       {useCustomBackground && backgroundImage && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-10 pointer-events-none" />
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-[1px] z-10 pointer-events-none" />
       )}
       
       {/* 主内容区域 */}

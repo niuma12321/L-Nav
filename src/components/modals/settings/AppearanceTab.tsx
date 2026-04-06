@@ -116,10 +116,12 @@ const AppearanceTab: React.FC<AppearanceTabProps> = React.memo(({ settings, onCh
           console.log('[Bing Wallpaper] 设置背景图:', data.data.cover_4k);
           onChange('backgroundImage', data.data.cover_4k);
           onChange('bingLastUpdate', new Date().toISOString().split('T')[0]);
+          onChange('backgroundSource', 'bing');
         } else if (data.data.cover) {
           console.log('[Bing Wallpaper] 使用备用背景图:', data.data.cover);
           onChange('backgroundImage', data.data.cover);
           onChange('bingLastUpdate', new Date().toISOString().split('T')[0]);
+          onChange('backgroundSource', 'bing');
         } else {
           console.warn('[Bing Wallpaper] 没有找到图片URL');
         }
@@ -150,30 +152,32 @@ const AppearanceTab: React.FC<AppearanceTabProps> = React.memo(({ settings, onCh
     }
   }, [isBingEnabled, settings.backgroundImage, fetchBingWallpaper]);
 
-  // 自动更新检查
+  // 自动更新检查 - 每小时检查一次
   useEffect(() => {
     if (!isBingEnabled || !isAutoUpdateEnabled) return;
     
     const checkAndUpdate = async () => {
       const lastUpdate = settings.bingLastUpdate;
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      const today = new Date().toISOString().split('T')[0];
+      
+      console.log('[Bing Wallpaper] 检查更新:', { lastUpdate, today });
       
       // 如果今天还没更新过，则获取新壁纸
-      if (!lastUpdate || !lastUpdate.startsWith(today)) {
-        const data = await fetchBingWallpaper();
-        if (data?.update_date) {
-          onChange('bingLastUpdate', data.update_date);
-        }
+      if (!lastUpdate || lastUpdate !== today) {
+        console.log('[Bing Wallpaper] 需要更新壁纸');
+        await fetchBingWallpaper();
+      } else {
+        console.log('[Bing Wallpaper] 今天已更新，跳过');
       }
     };
     
     // 立即检查一次
     checkAndUpdate();
     
-    // 每小时检查一次（页面打开时）
+    // 每小时检查一次
     const intervalId = setInterval(checkAndUpdate, 60 * 60 * 1000);
     return () => clearInterval(intervalId);
-  }, [isBingEnabled, isAutoUpdateEnabled, settings.bingLastUpdate, fetchBingWallpaper, onChange]);
+  }, [isBingEnabled, isAutoUpdateEnabled, settings.bingLastUpdate, fetchBingWallpaper]);
 
   // ==============================================
   // 回调函数（useCallback 缓存，防止子组件重渲染）
