@@ -53,7 +53,6 @@ import RSSReaderViewCN from './RSSReaderViewCN';
 import WidgetConfigCenter from './WidgetConfigCenter';
 import { EmbeddedNewsWidget } from './EmbeddedNewsWidget';
 import { SmartHomeView } from '../smartHome/SmartHomeView';
-import { NotificationsViewCN } from './NotificationsViewCN';
 import LabView from './LabView';
 import ContentPreview from './ContentPreview';
 import AutomationCenterView from './AutomationViewCN';
