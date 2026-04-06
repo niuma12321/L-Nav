@@ -33,6 +33,7 @@ import {
   MapPin,
   Navigation,
   Newspaper,
+  Rss,
   MoreVertical,
   GripVertical,
   ChevronDown,
@@ -54,6 +55,7 @@ import { SmartHomeView } from '../smartHome/SmartHomeView';
 import LabView from './LabView';
 import ContentPreview from './ContentPreview';
 import AutomationCenterView from './AutomationViewCN';
+import { RSSReaderViewCN } from './RSSReaderViewCN';
 
 interface NavItem {
   id: string;
@@ -1081,9 +1083,9 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
   const [navItems, setNavItems] = useState([
     { id: 'dashboard', label: '控制台', icon: LayoutDashboard },
     { id: 'resource', label: '资源中心', icon: Database },
+    { id: 'rss', label: 'RSS阅读', icon: Rss },
     { id: 'lab', label: '实验室', icon: FlaskConical },
     { id: 'smart-home', label: '智能家居', icon: House },
-    { id: 'labs', label: '实验室', icon: FlaskConical },
   ]);
   const [isNavEditMode, setIsNavEditMode] = useState(false);
   const [navEditModalOpen, setNavEditModalOpen] = useState(false);
@@ -1397,6 +1399,8 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
             links={links}
             categories={categories}
           />
+        ) : activeView === 'rss' ? (
+          <RSSReaderViewCN onBack={() => setActiveView('dashboard')} />
         ) : activeView === 'automation' ? (
           <AutomationCenterView onBack={() => setActiveView('dashboard')} />
         ) : activeView === 'smart-home' ? (
