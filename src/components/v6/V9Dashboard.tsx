@@ -1089,9 +1089,6 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
   const [navEditModalOpen, setNavEditModalOpen] = useState(false);
   const [editingNavItem, setEditingNavItem] = useState<{id: string, label: string, originalId: string} | null>(null);
 
-  // 加载状态
-  const [isLoaded, setIsLoaded] = useState(false);
-
   if (!isLoaded || !dataLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center relative">
