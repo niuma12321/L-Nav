@@ -56,8 +56,6 @@ import { SmartHomeView } from '../smartHome/SmartHomeView';
 import { NotificationsViewCN } from './NotificationsViewCN';
 import LabView from './LabView';
 import ContentPreview from './ContentPreview';
-import { useNotifications } from '../../hooks/useNotifications';
-import { NotificationDropdown } from './NotificationDropdown';
 import AutomationCenterView from './AutomationViewCN';
 
 interface NavItem {
