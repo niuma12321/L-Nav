@@ -1084,7 +1084,8 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
     { id: 'dashboard', label: '控制台', icon: LayoutDashboard },
     { id: 'resource', label: '资源中心', icon: Database },
     { id: 'rss', label: 'RSS阅读', icon: Rss },
-    { id: 'lab', label: '实验室', icon: FlaskConical },
+    { id: 'automation', label: '自动化', icon: Clock },
+    { id: 'lab', label: '便签', icon: StickyNote },
     { id: 'smart-home', label: '智能家居', icon: House },
   ]);
   const [isNavEditMode, setIsNavEditMode] = useState(false);
