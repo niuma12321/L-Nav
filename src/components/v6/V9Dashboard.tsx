@@ -33,7 +33,6 @@ import {
   MapPin,
   Navigation,
   Newspaper,
-  Rss,
   MoreVertical,
   GripVertical,
   ChevronDown,
@@ -49,7 +48,6 @@ import NavEditModal from '../modals/NavEditModal';
 
 // Static imports - fixed dynamic import issues
 import ResourceCenterViewCN from './ResourceCenterViewCN';
-import RSSReaderViewCN from './RSSReaderViewCN';
 import WidgetConfigCenter from './WidgetConfigCenter';
 import { EmbeddedNewsWidget } from './EmbeddedNewsWidget';
 import { SmartHomeView } from '../smartHome/SmartHomeView';
@@ -1082,9 +1080,8 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
 
   const [navItems, setNavItems] = useState([
     { id: 'dashboard', label: '控制台', icon: LayoutDashboard },
-    { id: 'resources', label: '资源中心', icon: FolderOpen },
-    { id: 'rss', label: 'RSS阅读', icon: Rss },
-    { id: 'automation', label: '自动化调度', icon: RefreshCw },
+    { id: 'resource', label: '资源中心', icon: Database },
+    { id: 'lab', label: '实验室', icon: FlaskConical },
     { id: 'smart-home', label: '智能家居', icon: House },
     { id: 'labs', label: '实验室', icon: FlaskConical },
   ]);
@@ -1092,19 +1089,8 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
   const [navEditModalOpen, setNavEditModalOpen] = useState(false);
   const [editingNavItem, setEditingNavItem] = useState<{id: string, label: string, originalId: string} | null>(null);
 
-  // 设置下拉菜单状态
-  const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
-
-  // 通知中心
-  const {
-    unreadCount,
-    notifications,
-    fetchNotifications,
-    markAsRead,
-    markAllAsRead,
-    deleteNotification
-  } = useNotifications();
-  const [showNotificationPanel, setShowNotificationPanel] = useState(false);
+  // 加载状态
+  const [isLoaded, setIsLoaded] = useState(false);
 
   if (!isLoaded || !dataLoaded) {
     return (
@@ -1167,83 +1153,12 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
               {/* 设置下拉菜单 */}
               <div className="relative">
                 <button 
-                  onClick={() => setShowSettingsDropdown(!showSettingsDropdown)}
-                  className="flex items-center gap-1 p-2 rounded-xl text-slate-400 hover:text-emerald-400 hover:bg-white/5 transition-all"
+                  onClick={() => setActiveView('widgets')}
+                  className="relative p-2 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
+                  title="管理组件"
                 >
-                  <Settings className="w-5 h-5" />
-                  <ChevronDown className={`w-3 h-3 transition-transform ${showSettingsDropdown ? 'rotate-180' : ''}`} />
+                  <LayoutGrid className="w-5 h-5" />
                 </button>
-                
-                {showSettingsDropdown && (
-                  <div className="absolute top-full right-0 mt-2 w-48 rounded-xl bg-[#181a1c] border border-white/10 shadow-xl z-50 py-1">
-                    <button
-                      onClick={() => {
-                        onOpenSettings?.();
-                        setShowSettingsDropdown(false);
-                      }}
-                      className="w-full px-4 py-2 text-left text-sm text-slate-300 hover:text-white hover:bg-white/10 flex items-center gap-2"
-                    >
-                      <Settings className="w-4 h-4" />
-                      网站设置
-                    </button>
-                    <button
-                      onClick={() => {
-                        setNavEditModalOpen(true);
-                        setShowSettingsDropdown(false);
-                      }}
-                      className="w-full px-4 py-2 text-left text-sm text-slate-300 hover:text-white hover:bg-white/10 flex items-center gap-2"
-                    >
-                      <Menu className="w-4 h-4" />
-                      菜单配置
-                    </button>
-                    <button
-                      onClick={() => {
-                        setActiveView('widgets');
-                        setShowSettingsDropdown(false);
-                      }}
-                      className="w-full px-4 py-2 text-left text-sm text-slate-300 hover:text-white hover:bg-white/10 flex items-center gap-2"
-                    >
-                      <Grid3X3 className="w-4 h-4" />
-                      组件配置
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* 通知 */}
-              <div className="relative">
-                <button 
-                  onClick={() => {
-                    setShowNotificationPanel(!showNotificationPanel);
-                    if (!showNotificationPanel) {
-                      fetchNotifications({ limit: 10 });
-                    }
-                  }}
-                  className="relative p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all"
-                >
-                  <Bell className={`w-5 h-5 ${unreadCount > 0 ? 'animate-pulse' : ''}`} />
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                      {unreadCount > 99 ? '99+' : unreadCount}
-                    </span>
-                  )}
-                </button>
-                
-                {/* 通知下拉面板 */}
-                {showNotificationPanel && (
-                  <NotificationDropdown
-                    notifications={notifications}
-                    unreadCount={unreadCount}
-                    onClose={() => setShowNotificationPanel(false)}
-                    onMarkAsRead={markAsRead}
-                    onMarkAllAsRead={markAllAsRead}
-                    onDelete={deleteNotification}
-                    onViewAll={() => {
-                      setShowNotificationPanel(false);
-                      setActiveView('notifications');
-                    }}
-                  />
-                )}
               </div>
 
               {/* 用户头像 */}
@@ -1312,7 +1227,7 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
               </div>
 
               {/* 搜索框 */}
-              <SearchWidget onOpenConfig={onOpenSearchConfig} />
+              <SearchWidget onOpenConfig={() => {}} />
             </section>
 
             {/* 我的小组件 */}
@@ -1432,7 +1347,6 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
                           )}
                           {widget.type === 'weather' && <WeatherWidget />}
                           {widget.type === 'custom-links' && <TodoWidget />}
-                          {widget.type === 'embedded-news' && <EmbeddedNewsWidget />}
                           {widget.type === 'custom-url' && widget.settings?.url && (
                             <iframe 
                               src={widget.settings.url} 
@@ -1469,7 +1383,7 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
               </div>
             </footer>
           </div>
-        ) : activeView === 'resources' ? (
+        ) : activeView === 'resource' ? (
           <ResourceCenterViewCN 
             onAddResource={onAddResource}
             onImport={onOpenImport}
@@ -1485,14 +1399,10 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
             links={links}
             categories={categories}
           />
-        ) : activeView === 'rss' ? (
-          <RSSReaderViewCN />
         ) : activeView === 'automation' ? (
           <AutomationCenterView onBack={() => setActiveView('dashboard')} />
         ) : activeView === 'smart-home' ? (
           <SmartHomeView onBack={() => setActiveView('dashboard')} />
-        ) : activeView === 'notifications' ? (
-          <NotificationsViewCN onBack={() => setActiveView('dashboard')} />
         ) : activeView === 'labs' ? (
           <LabView />
         ) : (
