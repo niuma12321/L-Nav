@@ -371,6 +371,11 @@ export const deleteUserData = (key: string): void => {
   deleteData(key);
 };
 
+/** @deprecated 使用 deleteData */
+export const clearUserData = (key: string): void => {
+  deleteData(key);
+};
+
 /** @deprecated 使用 getStorageKey */
 export const getUserStorageKey = (baseKey: string): string => {
   return getStorageKey(baseKey);
