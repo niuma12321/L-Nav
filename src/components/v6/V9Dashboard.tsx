@@ -1343,6 +1343,7 @@ const V9Dashboard: React.FC<V9DashboardProps> = ({ onAddResource, onOpenSettings
                             <APIDataWidget config={widget.settings.api} />
                           )}
                           {widget.type === 'weather' && <WeatherWidget />}
+                          {widget.type === 'news' && <EmbeddedNewsWidget />}
                           {widget.type === 'custom-links' && <TodoWidget />}
                           {widget.type === 'custom-url' && widget.settings?.url && (
                             <iframe 
