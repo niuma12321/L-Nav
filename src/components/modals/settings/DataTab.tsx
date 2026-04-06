@@ -15,7 +15,7 @@ import {
   CheckCircle,
 } from '@/utils/icons';
 import { SiteSettings } from '../../../types';
-import { getUserData, setUserData } from '../../../utils/constants';
+import { getData, setData } from '../../../utils/constants';
 
 // ==============================================
 // 类型定义
@@ -70,19 +70,19 @@ const DataTab: React.FC<DataTabProps> = ({
 
   // === 初始化加载 ===
   useEffect(() => {
-    const saved = getUserData('view_password', '');
+    const saved = getData('view_password', '');
     if (saved) setViewPassword(saved);
   }, []);
 
   // === 查看密码管理 ===
   const handleSaveViewPassword = () => {
     if (!viewPassword.trim()) {
-      setUserData('view_password', '');
+      setData('view_password', '');
       onViewPasswordChange('');
       alert('查看密码已清除');
       return;
     }
-    setUserData('view_password', viewPassword);
+    setData('view_password', viewPassword);
     onViewPasswordChange(viewPassword);
     alert('查看密码已保存');
   };

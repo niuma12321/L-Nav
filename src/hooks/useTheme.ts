@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
     getCanonicalUserStorageKey,
-    getUserData,
-    setUserData,
+    getData,
+    setData,
     YNAV_DATA_SYNCED_EVENT,
     YNAV_USER_STORAGE_UPDATED_EVENT
 } from '../utils/constants';
@@ -27,7 +27,7 @@ export function useTheme() {
 
     const setThemeAndApply = useCallback((mode: ThemeMode) => {
         setThemeMode(mode);
-        setUserData('theme', mode);
+        setData('theme', mode);
         applyThemeMode(mode);
     }, [applyThemeMode]);
 
@@ -42,7 +42,7 @@ export function useTheme() {
 
     // Initialize theme on mount
     useEffect(() => {
-        const storedTheme = getUserData<ThemeMode>('theme', 'system');
+        const storedTheme = getData<ThemeMode>('theme', 'system');
         const initialMode: ThemeMode = storedTheme === 'dark' || storedTheme === 'light' || storedTheme === 'system'
             ? storedTheme
             : 'system';
@@ -81,9 +81,9 @@ export function useTheme() {
         const reloadTheme = (changedKeys: string[] = []) => {
             if (!changedKeys.some((changedKey) => syncableKeys.has(changedKey))) return;
 
-            const storedTheme = getUserData<ThemeMode>('theme', 'system');
-            const nextMode: ThemeMode = storedTheme === 'dark' || storedTheme === 'light' || storedTheme === 'system'
-                ? storedTheme
+            const newMode = getData<ThemeMode>('theme', 'system');
+            const nextMode: ThemeMode = newMode === 'dark' || newMode === 'light' || newMode === 'system'
+                ? newMode
                 : 'system';
 
             setThemeMode(nextMode);

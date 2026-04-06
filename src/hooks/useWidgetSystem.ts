@@ -4,8 +4,8 @@ import {
   initDefaultUser,
   getCurrentUserId,
   getCanonicalUserStorageKey,
-  getUserData,
-  setUserData,
+  getData,
+  setData,
   YNAV_DATA_SYNCED_EVENT,
   YNAV_USER_STORAGE_UPDATED_EVENT
 } from '../utils/constants';
@@ -64,7 +64,7 @@ export function useWidgetSystem() {
     const userId = getCurrentUserId() || initDefaultUser();
     setCurrentUserId(userId);
 
-    const storedWidgets = getUserData<WidgetConfig[]>(WIDGETS_STORAGE_KEY, []);
+    const storedWidgets = getData<WidgetConfig[]>(WIDGETS_STORAGE_KEY, []);
     const nextWidgets = normalizeWidgets(storedWidgets.length > 0 ? storedWidgets : DEFAULT_WIDGETS);
     setWidgets(nextWidgets);
     setIsLoaded(true);
@@ -73,7 +73,7 @@ export function useWidgetSystem() {
   const persistWidgets = useCallback((nextWidgets: WidgetConfig[]) => {
     const normalizedWidgets = normalizeWidgets(nextWidgets);
     setWidgets(normalizedWidgets);
-    setUserData(WIDGETS_STORAGE_KEY, normalizedWidgets);
+    setData(WIDGETS_STORAGE_KEY, normalizedWidgets);
 
     // 触发同步事件
     window.dispatchEvent(new CustomEvent('ynav-data-changed', {

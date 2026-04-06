@@ -5,7 +5,7 @@ import { generateLinkDescription, suggestCategory } from '../../services/geminiS
 import { useDialog } from '../ui/DialogProvider';
 import { getIconToneStyle, normalizeHexColor } from '../../utils/iconTone';
 import EmojiPicker from '../ui/EmojiPicker';
-import { getUserStorageKey, getUserData, setUserData } from '../../utils/constants';
+import { getUserStorageKey, getData, setData } from '../../utils/constants';
 
 const FAVICON_CACHE_KEY = 'ynav_favicon_cache';
 
@@ -14,12 +14,12 @@ const getUserFaviconCacheKey = () => getUserStorageKey(FAVICON_CACHE_KEY);
 
 // 获取favicon缓存
 const getFaviconCache = (): Record<string, string> => {
-  return getUserData<Record<string, string>>(FAVICON_CACHE_KEY, {});
+  return getData<Record<string, string>>(FAVICON_CACHE_KEY, {});
 };
 
 // 设置favicon缓存
 const setFaviconCache = (cache: Record<string, string>) => {
-  setUserData(FAVICON_CACHE_KEY, cache);
+  setData(FAVICON_CACHE_KEY, cache);
 };
 
 interface LinkModalProps {

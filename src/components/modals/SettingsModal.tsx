@@ -5,7 +5,8 @@ import SiteTab from './settings/SiteTab';
 import AITab from './settings/AITab';
 import AppearanceTab from './settings/AppearanceTab';
 import DataTab from './settings/DataTab';
-import { getUserData, setUserData } from '../../utils/constants';
+import DataManagementSection from '../settings/DataManagementSection';
+import { getData, setData } from '../../utils/constants';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -51,12 +52,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   closeOnBackdrop = true
 }) => {
   const [activeTab, setActiveTab] = useState<'site' | 'ai' | 'appearance' | 'data'>(() => {
-    return getUserData('settings_active_tab', 'site');
+    return getData('settings_active_tab', 'site');
   });
 
   // 持久化 activeTab 到用户维度存储
   useEffect(() => {
-    setUserData('settings_active_tab', activeTab);
+    setData('settings_active_tab', activeTab);
   }, [activeTab]);
 
   const [localConfig, setLocalConfig] = useState<AIConfig>(config);
@@ -209,21 +210,26 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           )}
 
           {activeTab === 'data' && (
-            <DataTab
-              onOpenImport={onOpenImport}
-              onClose={onClose}
-              onViewPasswordChange={onViewPasswordChange}
-              useSeparatePrivacyPassword={useSeparatePrivacyPassword}
-              onMigratePrivacyMode={onMigratePrivacyMode}
-              privacyGroupEnabled={privacyGroupEnabled}
-              onTogglePrivacyGroup={onTogglePrivacyGroup}
-              privacyAutoUnlockEnabled={privacyAutoUnlockEnabled}
-              onTogglePrivacyAutoUnlock={onTogglePrivacyAutoUnlock}
-              siteSettings={localSiteSettings}
-              onSiteSettingChange={handleSiteChange}
-              webmasterUnlocked={webmasterUnlocked}
-              onWebmasterUnlockedChange={onWebmasterUnlockedChange}
-            />
+            <>
+              <DataTab
+                onOpenImport={onOpenImport}
+                onClose={onClose}
+                onViewPasswordChange={onViewPasswordChange}
+                useSeparatePrivacyPassword={useSeparatePrivacyPassword}
+                onMigratePrivacyMode={onMigratePrivacyMode}
+                privacyGroupEnabled={privacyGroupEnabled}
+                onTogglePrivacyGroup={onTogglePrivacyGroup}
+                privacyAutoUnlockEnabled={privacyAutoUnlockEnabled}
+                onTogglePrivacyAutoUnlock={onTogglePrivacyAutoUnlock}
+                siteSettings={localSiteSettings}
+                onSiteSettingChange={handleSiteChange}
+                webmasterUnlocked={webmasterUnlocked}
+                onWebmasterUnlockedChange={onWebmasterUnlockedChange}
+              />
+              <div className="mt-6">
+                <DataManagementSection />
+              </div>
+            </>
           )}
         </div>
 

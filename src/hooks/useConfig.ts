@@ -40,8 +40,8 @@ import {
   SITE_SETTINGS_KEY,
   clearUserData,
   getCanonicalUserStorageKey,
-  getUserData,
-  setUserData,
+  getData,
+  setData,
   YNAV_DATA_SYNCED_EVENT,
   YNAV_USER_STORAGE_UPDATED_EVENT
 } from '../utils/constants';
@@ -102,26 +102,23 @@ const DEFAULT_SITE_SETTINGS: SiteSettings = {
     // 安全 localStorage 操作 - 使用用户维度存储
 const safeStorage = {
     get: <T>(key: string, defaultValue: T): T => {
-        return getUserData(key, defaultValue);
+        return getData(key, defaultValue);
     },
     set: <T>(key: string, value: T): boolean => {
         try {
-            setUserData(key, value);
+            setData(key, value);
             return true;
-        } catch (error) {
-            if (import.meta.env.DEV) {
-                console.error(`[Config] Failed to save ${key}:`, error);
-            }
+        } catch {
             return false;
         }
     },
-    remove: (key: string): void => {
+    remove: (key: string): boolean => {
         try {
             clearUserData(key);
+            return true;
         } catch (error) {
-            if (import.meta.env.DEV) {
-                console.warn(`[Config] Failed to remove ${key}:`, error);
-            }
+            console.warn(`[Config] Failed to remove ${key}:`, error);
+            return false;
         }
     }
 };
@@ -389,7 +386,7 @@ export function useConfig() {
     const resetAIConfig = useCallback(() => {
         const defaultConfig = { ...DEFAULT_AI_CONFIG, _schemaVersion: CONFIG_SCHEMA_VERSION };
         setAiConfig(defaultConfig);
-        safeStorage.set(AI_CONFIG_KEY, defaultConfig);
+        safeStorage.set(AI_CONFIG_KEY, DEFAULT_AI_CONFIG);
         lastUpdateRef.current = Date.now();
         return true;
     }, []);
@@ -455,7 +452,7 @@ export function useConfig() {
     const resetSiteSettings = useCallback(() => {
         const defaultSettings = { ...DEFAULT_SITE_SETTINGS, _schemaVersion: CONFIG_SCHEMA_VERSION };
         setSiteSettings(defaultSettings);
-        safeStorage.set(SITE_SETTINGS_KEY, defaultSettings);
+        safeStorage.set(SITE_SETTINGS_KEY, DEFAULT_SITE_SETTINGS);
         lastUpdateRef.current = Date.now();
         return true;
     }, []);

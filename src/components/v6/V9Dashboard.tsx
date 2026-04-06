@@ -42,7 +42,7 @@ import {
 } from '@/utils/icons';
 import { useWidgetSystem } from '../../hooks/useWidgetSystem';
 import { useSearch } from '../../hooks/useSearch';
-import { getUserData, setUserData } from '../../utils/constants';
+import { getData, setData } from '../../utils/constants';
 
 import { APIDataWidget } from './APIDataWidget';
 import NavEditModal from '../modals/NavEditModal';
@@ -245,7 +245,7 @@ const WeatherWidget: React.FC = () => {
         fetchForecast(cityName)
       ]);
       
-      setUserData('weather_city', cityName);
+      setData('weather_city', cityName);
     } catch (err) {
       setError('获取天气数据失败');
     } finally {
@@ -255,7 +255,7 @@ const WeatherWidget: React.FC = () => {
 
   // 初始化加载
   useEffect(() => {
-    const savedCity = getUserData<string | null>('weather_city', null);
+    const savedCity = getData<string | null>('weather_city', null);
     if (savedCity && cities.includes(savedCity)) {
       setCity(savedCity);
       fetchWeatherData(savedCity);
@@ -776,7 +776,7 @@ const SearchWidget: React.FC<SearchWidgetProps> = ({ onOpenConfig }) => {
     handleSearchSourceSelect,
     handleExternalSearch
   } = useSearch();
-  const [searchHistory, setSearchHistory] = useState<string[]>(() => getUserData<string[]>('search_history', []));
+  const [searchHistory, setSearchHistory] = useState<string[]>(() => getData<string[]>('search_history', []));
 
   const enabledSources = useMemo(() => {
     const safeSources = Array.isArray(externalSearchSources) ? externalSearchSources.filter(source => source.enabled) : [];
@@ -799,14 +799,14 @@ const SearchWidget: React.FC<SearchWidgetProps> = ({ onOpenConfig }) => {
     if (!normalizedQuery) return;
     setSearchHistory(prev => {
       const nextHistory = [normalizedQuery, ...prev.filter(item => item !== normalizedQuery)].slice(0, 6);
-      setUserData('search_history', nextHistory);
+      setData('search_history', nextHistory);
       return nextHistory;
     });
   }, []);
 
   const clearSearchHistory = useCallback(() => {
     setSearchHistory([]);
-    setUserData('search_history', []);
+    setData('search_history', []);
   }, []);
 
   const runSearch = useCallback((queryOverride?: string) => {

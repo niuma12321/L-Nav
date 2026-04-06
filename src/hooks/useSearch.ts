@@ -3,8 +3,8 @@ import { SearchMode, ExternalSearchSource, SearchConfig } from '../types';
 import {
     SEARCH_CONFIG_KEY,
     getCanonicalUserStorageKey,
-    getUserData,
-    setUserData,
+    getData,
+    setData,
     YNAV_DATA_SYNCED_EVENT,
     YNAV_USER_STORAGE_UPDATED_EVENT
 } from '../utils/constants';
@@ -72,7 +72,8 @@ export function useSearch() {
         setExternalSearchSources(safeSources);
         setSearchMode(mode);
         setSelectedSearchSource(resolvedSelected);
-        setUserData(SEARCH_CONFIG_KEY, searchConfig);
+        const config = getData(SEARCH_CONFIG_KEY, null as SearchConfig | null);
+        setData(SEARCH_CONFIG_KEY, searchConfig);
     }, [selectedSearchSource]);
 
     // 切换搜索模式
@@ -140,7 +141,7 @@ export function useSearch() {
 
     // 初始化加载（全类型安全）
     useEffect(() => {
-        const savedSearchConfig = getUserData<SearchConfig>(SEARCH_CONFIG_KEY, null);
+        const savedSearchConfig = getData<SearchConfig>(SEARCH_CONFIG_KEY, null);
         if (savedSearchConfig) {
             const parsed = savedSearchConfig;
             if (parsed?.mode) {
@@ -168,7 +169,7 @@ export function useSearch() {
         const reloadSearchConfig = (changedKeys: string[] = []) => {
             if (!changedKeys.some((changedKey) => syncableKeys.has(changedKey))) return;
 
-            const savedSearchConfig = getUserData<SearchConfig>(SEARCH_CONFIG_KEY, null);
+            const savedSearchConfig = getData<SearchConfig>(SEARCH_CONFIG_KEY, null);
             if (!savedSearchConfig) {
                 const defaultSources = buildDefaultSearchSources();
                 setSearchMode('external');

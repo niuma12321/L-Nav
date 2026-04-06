@@ -1,8 +1,9 @@
 import React, { useMemo, useEffect, useState, useCallback, useRef } from 'react';
 import { LinkItem, Category } from './types';
 
-// 统一同步引擎
-import { useUnifiedSync } from './hooks/useUnifiedSync';
+// 个人专属系统
+import { OWNER_CONFIG, verifyAccessPassword, autoBackup } from './utils/constants';
+import LoginPage from './components/LoginPage/LoginPage';
 
 // 同步导入所有组件，避免懒加载Promise问题
 import LinkModal from './components/modals/LinkModal';
@@ -26,7 +27,6 @@ import V9Dashboard from './components/v6/V9Dashboard';
 
 // Eagerly load frequently used components
 import ContextMenu from './components/layout/ContextMenu';
-import SyncStatusIndicator from './components/ui/SyncStatusIndicator';
 import { useDialog } from './components/ui/DialogProvider';
 
 import {
@@ -55,22 +55,25 @@ import {
   PRIVACY_USE_SEPARATE_PASSWORD_KEY,
   VIEW_PASSWORD_KEY,
   WEBMASTER_UNLOCKED_KEY,
-  getUserData,
-  setUserData
+  getData,
+  setData
 } from './utils/constants';
 import { decryptPrivateVault, encryptPrivateVault } from './utils/privateVault';
 import { AlertTriangle } from '@/utils/icons';
 
 function App() {
-  // === Unified Sync Engine ===
-  const { 
-    isSyncing, 
-    syncStatus, 
-    lastSyncAt, 
-    conflict, 
-    forceSync, 
-    resolveConflict 
-  } = useUnifiedSync();
+  // === 检查访问权限 ===
+  const [isAccessGranted, setIsAccessGranted] = useState(() => {
+    return localStorage.getItem('ynav_access_granted') === 'true';
+  });
+
+  // === 应用启动时执行自动备份和设置标题 ===
+  useEffect(() => {
+    if (isAccessGranted) {
+      autoBackup();
+      document.title = OWNER_CONFIG.siteName;
+    }
+  }, [isAccessGranted]);
 
   // === Core Data ===
   // 数据仅在本地存储，确保始终最新
@@ -121,22 +124,22 @@ function App() {
 
   // === Login State - 使用用户维度存储 ===
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    return getUserData('logged_in', false);
+    return getData('logged_in', false);
   });
   const [currentUsername, setCurrentUsername] = useState(() => {
-    return getUserData('username', '');
+    return getData('username', '');
   });
   const [showLoginModal, setShowLoginModal] = useState(() => {
     // 如果未登录，自动显示登录弹窗
-    return !getUserData('logged_in', false);
+    return !getData('logged_in', false);
   });
 
   const handleLogin = useCallback((username: string, password: string): boolean => {
     if (username === 'ljq' && password === 'jk712732') {
       setIsLoggedIn(true);
       setCurrentUsername(username);
-      setUserData('logged_in', true);
-      setUserData('username', username);
+      setData('logged_in', true);
+      setData('username', username);
       notify('登录成功', 'success');
       setShowLoginModal(false);
       return true;
@@ -148,8 +151,8 @@ function App() {
   const handleLogout = useCallback(() => {
     setIsLoggedIn(false);
     setCurrentUsername('');
-    setUserData('logged_in', false);
-    setUserData('username', '');
+    setData('logged_in', false);
+    setData('username', '');
     notify('已退出登录', 'info');
   }, [notify]);
 
@@ -175,13 +178,13 @@ function App() {
 
   // 搜索历史记录 - 使用用户维度存储
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
-    return getUserData('recent_searches', []);
+    return getData('recent_searches', []);
   });
   const trendingSearches = ['AI工具', 'React教程', '设计资源', '开发文档', '效率工具'];
 
   // 保存搜索历史 - 使用用户维度存储
   useEffect(() => {
-    setUserData('recent_searches', recentSearches);
+    setData('recent_searches', recentSearches);
   }, [recentSearches]);
 
   // 检测移动端：matchMedia 仅在跨越断点时触发，比 resize 更省
@@ -1038,6 +1041,12 @@ function App() {
   }, [privacyGroupEnabled, privacyAutoUnlockEnabled]);
 
   // === Render ===
+  
+  // 如果未登录，显示登录页面
+  if (!isAccessGranted) {
+    return <LoginPage />;
+  }
+  
   return (
     <div 
       className={`flex min-h-screen ${toneClasses.text} relative`}
@@ -1123,7 +1132,6 @@ function App() {
           onTogglePrivacyGroup={handleTogglePrivacyGroup}
           privacyAutoUnlockEnabled={privacyAutoUnlockEnabled}
           onTogglePrivacyAutoUnlock={handleTogglePrivacyAutoUnlock}
-          syncStatus={syncStatus}
           webmasterUnlocked={webmasterUnlocked}
           onWebmasterUnlockedChange={setWebmasterUnlockedPersist}
           readOnly={isReadOnly}
@@ -1137,46 +1145,6 @@ function App() {
           onSave={(sources) => saveSearchConfig(sources, searchMode)}
           closeOnBackdrop={closeOnBackdrop}
         />
-
-      {/* Sync Status Indicator - Fixed bottom right */}
-      <div className="fixed bottom-4 right-4 z-30">
-        <SyncStatusIndicator
-          status={syncStatus}
-          onManualSync={forceSync}
-          onManualPull={forceSync}
-        />
-      </div>
-
-      {/* 冲突解决弹窗 */}
-      {conflict && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl bg-[#181a1c] text-white shadow-2xl p-6 border border-white/10">
-            <div className="flex items-center gap-2 mb-4">
-              <AlertTriangle className="w-6 h-6 text-yellow-400" />
-              <h2 className="text-xl font-bold">数据冲突</h2>
-            </div>
-            
-            <p className="text-slate-400 mb-6">
-              检测到多端数据冲突，请选择保留哪一端的数据：
-            </p>
-            
-            <div className="flex gap-3">
-              <button 
-                onClick={() => resolveConflict('local')}
-                className="flex-1 bg-emerald-500 text-white px-4 py-2.5 rounded-xl hover:bg-emerald-400 transition-colors font-medium"
-              >
-                保留本地数据
-              </button>
-              <button 
-                onClick={() => resolveConflict('remote')}
-                className="flex-1 bg-blue-500 text-white px-4 py-2.5 rounded-xl hover:bg-blue-400 transition-colors font-medium"
-              >
-                保留云端数据
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Link Modal and Data Backup */}
       <LinkModal

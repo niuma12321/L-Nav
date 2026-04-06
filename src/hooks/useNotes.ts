@@ -3,8 +3,8 @@ import { StickyNote } from '../types';
 import {
   NOTES_STORAGE_KEY,
   getCanonicalUserStorageKey,
-  getUserData,
-  setUserData,
+  getData,
+  setData,
   YNAV_DATA_SYNCED_EVENT,
   YNAV_USER_STORAGE_UPDATED_EVENT
 } from '../utils/constants';
@@ -19,7 +19,7 @@ export interface UseNotesReturn {
 }
 
 const loadNotesFromStorage = () => {
-  const storedNotes = getUserData<StickyNote[]>(NOTES_STORAGE_KEY, []);
+  const storedNotes = getData<StickyNote[]>(NOTES_STORAGE_KEY, []);
   return Array.isArray(storedNotes) ? storedNotes : [];
 };
 
@@ -31,7 +31,7 @@ export function useNotes(): UseNotesReturn {
   const [notes, setNotes] = useState<StickyNote[]>(() => loadNotesFromStorage());
 
   useEffect(() => {
-    setUserData(NOTES_STORAGE_KEY, notes);
+    setData(NOTES_STORAGE_KEY, notes);
   }, [notes]);
 
   useEffect(() => {

@@ -7,8 +7,8 @@ import {
   initDefaultUser,
   getUserStorageKey,
   getCurrentUserId,
-  getUserData,
-  setUserData,
+  getData,
+  setData,
   CURRENT_USER_KEY
 } from '../utils/constants';
 import { useDialog } from '../components/ui/DialogProvider';
