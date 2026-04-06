@@ -30,6 +30,7 @@ import ContextMenu from './components/layout/ContextMenu';
 import { useDialog } from './components/ui/DialogProvider';
 
 import {
+  useDataStore,
   useSimpleDataStore,
   useTheme,
   useSearch,
