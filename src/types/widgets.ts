@@ -256,8 +256,8 @@ export const WIDGET_DISPLAY_CONFIG: Record<WidgetType, {
   }
 };
 
-export const WIDGET_STORAGE_KEY = 'ynav:widgets:v1';
-export const TODO_STORAGE_KEY = 'ynav:todo:v1';
-export const RSS_CACHE_KEY = 'ynav:rss:cache:v1';
-export const HOTSEARCH_CACHE_KEY = 'ynav:hotsearch:cache:v1';
-export const WEATHER_CACHE_KEY = 'ynav:weather:cache:v1';
+export const WIDGET_STORAGE_KEY = 'widgets';
+export const TODO_STORAGE_KEY = 'todo';
+export const RSS_CACHE_KEY = 'rss_cache';
+export const HOTSEARCH_CACHE_KEY = 'hotsearch_cache';
+export const WEATHER_CACHE_KEY = 'weather_cache';

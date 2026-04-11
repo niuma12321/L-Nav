@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Rss, RefreshCw, ExternalLink, Clock, ArrowLeft, Plus, Trash2, AlertCircle } from '@/utils/icons';
+import { getData, setData } from '../../utils/constants';
 
 interface RSSItem {
   title: string;
@@ -24,7 +25,7 @@ interface RSSReaderViewCNProps {
   onBack?: () => void;
 }
 
-const STORAGE_KEY = 'ynav_rss_feeds_v9';
+const RSS_FEEDS_KEY = 'rss_feeds';
 
 const DEFAULT_FEEDS: RSSFeedConfig[] = [
   { name: 'V2EX', url: 'https://www.v2ex.com/index.xml' },
@@ -43,25 +44,20 @@ export const RSSReaderViewCN: React.FC<RSSReaderViewCNProps> = ({ onBack }) => {
   const [newFeedName, setNewFeedName] = useState('');
   const [newFeedUrl, setNewFeedUrl] = useState('');
 
-  // 从 localStorage 加载订阅源配置
+  // 从 storage 加载订阅源配置
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setFeedConfigs(parsed);
-      } catch {
-        setFeedConfigs(DEFAULT_FEEDS);
-      }
+    const saved = getData<RSSFeedConfig[]>(RSS_FEEDS_KEY, []);
+    if (saved && saved.length > 0) {
+      setFeedConfigs(saved);
     } else {
       setFeedConfigs(DEFAULT_FEEDS);
     }
   }, []);
 
-  // 保存订阅源配置到 localStorage
+  // 保存订阅源配置到 storage
   useEffect(() => {
     if (feedConfigs.length > 0) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(feedConfigs));
+      setData(RSS_FEEDS_KEY, feedConfigs);
     }
   }, [feedConfigs]);
 

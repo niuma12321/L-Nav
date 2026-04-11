@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, X, Pin, StickyNote } from '@/utils/icons';
+import { getData, setData } from '../../utils/constants';
 
 interface Note {
   id: string;
@@ -19,6 +20,8 @@ const COLORS = [
   { name: 'orange', bg: 'bg-orange-500/20', border: 'border-orange-500/30', text: 'text-orange-200' },
 ];
 
+const LAB_NOTES_KEY = 'lab_notes';
+
 const LabView: React.FC = () => {
   const [notes, setNotes] = useState<Note[]>([]);
   const [newNoteTitle, setNewNoteTitle] = useState('');
@@ -26,21 +29,21 @@ const LabView: React.FC = () => {
   const [selectedColor, setSelectedColor] = useState(COLORS[0]);
   const [showAddForm, setShowAddForm] = useState(false);
 
-  // Load notes from localStorage
+  // Load notes from storage
   useEffect(() => {
-    const saved = localStorage.getItem('lab-notes');
+    const saved = getData<Note[]>(LAB_NOTES_KEY, []);
     if (saved) {
       try {
-        setNotes(JSON.parse(saved));
+        setNotes(saved);
       } catch (e) {
         console.error('Failed to load notes:', e);
       }
     }
   }, []);
 
-  // Save notes to localStorage
+  // Save notes to storage
   useEffect(() => {
-    localStorage.setItem('lab-notes', JSON.stringify(notes));
+    setData(LAB_NOTES_KEY, notes);
   }, [notes]);
 
   const addNote = () => {
