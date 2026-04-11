@@ -37,20 +37,13 @@ const callOpenAICompatible = async (config: AIConfig, systemPrompt: string, user
         });
 
         if (!response.ok) {
-            const err = await response.text();
-            if (import.meta.env.DEV) {
-                console.error("OpenAI API Error:", err);
-            }
             return "";
         }
 
         const data = await response.json();
         const content = data.choices?.[0]?.message?.content;
         return (content && typeof content === 'string') ? content.trim() : "";
-    } catch (e) {
-        if (import.meta.env.DEV) {
-            console.error("OpenAI Call Failed", e);
-        }
+    } catch {
         return "";
     }
 };
@@ -90,10 +83,7 @@ export const generateLinkDescription = async (title: string, url: string, config
             );
             return result || "生成描述失败";
         }
-    } catch (error) {
-        if (import.meta.env.DEV) {
-            console.error("AI generation error:", error);
-        }
+    } catch {
         return "生成描述失败";
     }
 };
@@ -143,10 +133,7 @@ export const suggestCategory = async (title: string, url: string, categories: { 
             );
             return normalizeCategoryId(result);
         }
-    } catch (e) {
-        if (import.meta.env.DEV) {
-            console.error(e);
-        }
+    } catch {
         return null;
     }
 }
@@ -176,10 +163,7 @@ export const testAIConnection = async (config: AIConfig): Promise<boolean> => {
             );
             return result.length > 0;
         }
-    } catch (e) {
-        if (import.meta.env.DEV) {
-            console.error("Connection Test Failed", e);
-        }
+    } catch {
         return false;
     }
 };
@@ -232,10 +216,7 @@ export const fetchAvailableModels = async (config: AIConfig): Promise<string[]> 
             }
             return [];
         }
-    } catch (e) {
-        if (import.meta.env.DEV) {
-            console.error("Fetch Models Failed", e);
-        }
+    } catch {
         return [];
     }
 };

@@ -57,8 +57,8 @@ export function useContextMenu({
 
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(contextMenu.link.url)
-                .catch(err => {
-                    console.error('复制链接失败:', err);
+                .catch(() => {
+                    // 复制失败
                 });
         } else {
             // 降级方案：使用传统的 execCommand
@@ -68,8 +68,8 @@ export function useContextMenu({
             textArea.select();
             try {
                 document.execCommand('copy');
-            } catch (err) {
-                console.error('复制链接失败:', err);
+            } catch {
+                // 复制失败
             }
             document.body.removeChild(textArea);
         }

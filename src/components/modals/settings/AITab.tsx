@@ -93,8 +93,7 @@ const AITab: React.FC<AITabProps> = ({ config, onChange, links, onUpdateLinks })
                 currentLinks = currentLinks.map(l => l.id === link.id ? { ...l, description: desc } : l);
                 onUpdateLinks(currentLinks);
                 setProgress({ current: i + 1, total: missingLinks.length });
-            } catch (e) {
-                console.error(`Failed to generate for ${link.title}`, e);
+            } catch {
             }
         }
 

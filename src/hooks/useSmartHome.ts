@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useDataStore } from './useDataStore';
 
 const API_BASE = '/api/v1/smart-home';
 
@@ -39,7 +38,7 @@ export function useSmartHome() {
         setDevices(data);
       }
     } catch (e) {
-      console.error('获取设备失败', e);
+      // 获取设备失败
     } finally {
       setLoading(false);
     }
@@ -53,7 +52,7 @@ export function useSmartHome() {
         setScenes(data);
       }
     } catch (e) {
-      console.error('获取场景失败', e);
+      // 获取场景失败
     }
   }, [userId]);
 

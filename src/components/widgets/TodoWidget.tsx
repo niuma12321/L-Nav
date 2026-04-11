@@ -22,8 +22,8 @@ const TodoWidget: React.FC<TodoWidgetProps> = ({ settings }) => {
           setTodos(parsed);
         }
       }
-    } catch (error) {
-      console.error('加载待办事项失败:', error);
+    } catch {
+      // 加载待办事项失败
     } finally {
       setIsLoading(false);
     }
@@ -34,8 +34,8 @@ const TodoWidget: React.FC<TodoWidgetProps> = ({ settings }) => {
     if (!isLoading) {
       try {
         localStorage.setItem(TODO_STORAGE_KEY, JSON.stringify(todos));
-      } catch (error) {
-        console.error('保存待办事项失败:', error);
+      } catch {
+        // 保存待办事项失败
       }
     }
   }, [todos, isLoading]);

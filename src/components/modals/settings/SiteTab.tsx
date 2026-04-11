@@ -41,8 +41,7 @@ const generateSvgIcon = (text: string, color1: string, color2: string) => {
     try {
         const encoded = window.btoa(unescape(encodeURIComponent(svg)));
         return `data:image/svg+xml;base64,${encoded}`;
-    } catch (e) {
-        console.error("SVG Icon Generation Failed", e);
+    } catch {
         return '';
     }
 };

@@ -22,11 +22,11 @@ export const SmartHomeQuickWidget: React.FC<SmartHomeQuickWidgetProps> = ({ onCl
     : defaultScenes;
 
   const handleAllLightsOn = () => {
-    console.log('开启所有灯光');
+    // 开启所有灯光功能待实现
   };
 
   const handleAllLightsOff = () => {
-    console.log('关闭所有灯光');
+    // 关闭所有灯光功能待实现
   };
 
   return (

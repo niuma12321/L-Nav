@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useDataStore } from './useDataStore';
 
 const API_BASE = '/api/v1/automation';
 
@@ -46,7 +45,7 @@ export function useAutomation() {
         setTasks(data);
       }
     } catch (e) {
-      console.error('获取任务失败', e);
+      // 获取任务失败
     } finally {
       setLoading(false);
     }
@@ -61,7 +60,7 @@ export function useAutomation() {
         setLogs(data);
       }
     } catch (e) {
-      console.error('获取日志失败', e);
+      // 获取日志失败
     }
   }, [userId]);
 

@@ -265,8 +265,8 @@ export function secureStore(key: string, value: string): void {
     // 简单加密存储 (生产环境应使用更强的加密)
     const encrypted = Buffer.from(value).toString('base64');
     localStorage.setItem(`secure_${key}`, encrypted);
-  } catch (error) {
-    console.error('安全存储失败:', error);
+  } catch {
+    // 安全存储失败
   }
 }
 
@@ -282,8 +282,7 @@ export function secureRetrieve(key: string): string | null {
     
     // 解密
     return Buffer.from(encrypted, 'base64').toString();
-  } catch (error) {
-    console.error('安全读取失败:', error);
+  } catch {
     return null;
   }
 }
@@ -299,6 +298,5 @@ export function secureClear(key: string): void {
 
 // 初始化默认管理员密码哈希 (仅用于开发环境)
 if (process.env.NODE_ENV === 'development' && !DEFAULT_CONFIG.adminPasswordHash) {
-  console.warn('⚠️ 开发环境：使用默认管理员密码，请设置 ADMIN_PASSWORD_HASH 环境变量');
   DEFAULT_CONFIG.adminPasswordHash = hashPassword('admin123');
 }

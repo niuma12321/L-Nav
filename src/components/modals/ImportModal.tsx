@@ -256,9 +256,6 @@ const ImportModal: React.FC<ImportModalProps> = ({
                 ? "解析文件失败，请确保是标准的 Chrome HTML 书签文件。"
                 : "解析文件失败，请确保是有效的 Y-Nav 备份文件。";
             notify(errorMessage, 'error');
-            if (import.meta.env.DEV) {
-                console.error(error);
-            }
         } finally {
             setAnalyzing(false);
         }

@@ -215,8 +215,7 @@ export const AutomationCenterView: React.FC<AutomationCenterViewProps> = ({ onBa
   const logsPerPage = 10;
 
   const handleExecuteTask = useCallback((taskId: string) => {
-    console.log('执行任务:', taskId);
-    // TODO: 调用API执行任务
+    // 执行任务逻辑待实现
   }, []);
 
   const handleToggleTask = useCallback((taskId: string) => {

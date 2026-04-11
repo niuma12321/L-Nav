@@ -48,8 +48,8 @@ const RSSWidget: React.FC<RSSWidgetProps> = ({ settings, onUpdateSettings }) => 
       }));
       
       setItems(mockItems.slice(0, maxItems));
-    } catch (error) {
-      console.error('获取RSS失败:', error);
+    } catch {
+      // 获取RSS失败
     } finally {
       setLoading(false);
     }

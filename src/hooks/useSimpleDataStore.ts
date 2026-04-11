@@ -99,8 +99,7 @@ export function useSimpleDataStore() {
       }
 
       setIsLoaded(true);
-    } catch (error) {
-      console.error('[SimpleDataStore] Failed to load data:', error);
+    } catch {
       const fallbackLinks = normalizeLinks(INITIAL_LINKS);
       const fallbackCategories = normalizeCategories(DEFAULT_CATEGORIES);
       linksRef.current = fallbackLinks;
@@ -120,8 +119,7 @@ export function useSimpleDataStore() {
       setLinks(payload.links);
       setCategories(payload.categories);
       writeSyncableUserData(LINKS_DATA_TYPE, payload);
-    } catch (error) {
-      console.error('[SimpleDataStore] Failed to save data:', error);
+    } catch {
       notify('数据保存失败', 'error');
     }
   }, [notify]);

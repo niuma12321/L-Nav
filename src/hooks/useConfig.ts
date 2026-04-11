@@ -116,8 +116,7 @@ const safeStorage = {
         try {
             clearUserData(key);
             return true;
-        } catch (error) {
-            console.warn(`[Config] Failed to remove ${key}:`, error);
+        } catch {
             return false;
         }
     }
@@ -309,9 +308,6 @@ export function useConfig() {
         // 验证配置
         const validation = validateAIConfig(config);
         if (!validation.valid) {
-    if (validation.errors.length > 0 && import.meta.env.DEV) {
-            console.error('[Config] AI Config validation failed:', validation.errors);
-    }
         return false;
         }
 
@@ -343,7 +339,6 @@ export function useConfig() {
             };
             const settingsValidation = validateSiteSettings(mergedSettings);
             if (!settingsValidation.valid) {
-                console.error('[Config] Site Settings validation failed:', settingsValidation.errors);
                 return false;
             }
 
@@ -368,9 +363,6 @@ export function useConfig() {
             const newConfig = { ...prev, ...updates };
             const validation = validateAIConfig(newConfig);
             
-    if (validation.warnings.length > 0 && import.meta.env.DEV) {
-            console.warn('[Config] AI Config validation warnings:', validation.warnings);
-    }
 
             const configWithVersion = { ...newConfig, _schemaVersion: CONFIG_SCHEMA_VERSION };
             safeStorage.set(AI_CONFIG_KEY, configWithVersion);
@@ -399,7 +391,6 @@ export function useConfig() {
         const validation = validateAIConfig(migrated);
         
         if (!validation.valid) {
-            console.error('[Config] Invalid AI config for restore:', validation.errors);
             return false;
         }
 
@@ -437,7 +428,6 @@ export function useConfig() {
         if (siteSettings.bingLastUpdate === undefined) missingFields.push('bingLastUpdate');
         
         if (missingFields.length > 0) {
-            console.warn('[Config] 检测到缺失的必应壁纸字段，正在修复:', missingFields);
             const fixes: Partial<SiteSettings> = {};
             if (siteSettings.backgroundSource === undefined) fixes.backgroundSource = 'custom';
             if (siteSettings.bingAutoUpdate === undefined) fixes.bingAutoUpdate = false;
@@ -465,7 +455,6 @@ export function useConfig() {
         const validation = validateSiteSettings(migrated);
         
         if (!validation.valid) {
-            console.error('[Config] Invalid site settings for restore:', validation.errors);
             return false;
         }
 
@@ -506,12 +495,6 @@ export function useConfig() {
         const settingsValidation = validateSiteSettings(data.siteSettings);
 
         if (!aiValidation.valid || !settingsValidation.valid) {
-        if (aiValidation.errors.length > 0 && import.meta.env.DEV) {
-            console.error('[Config] Import validation failed:', { aiErrors: aiValidation.errors });
-        }
-        if (settingsValidation.errors.length > 0 && import.meta.env.DEV) {
-            console.error('[Config] Import validation failed:', { settingsErrors: settingsValidation.errors });
-        }
         return false;
         }
 
@@ -562,11 +545,7 @@ export function useConfig() {
                 favicon.rel = 'icon';
                 favicon.href = siteSettings.favicon;
                 document.head.appendChild(favicon);
-            } catch (error) {
-            // 仅在开发环境显示错误
-            if (import.meta.env.DEV) {
-              console.error('[Config] Failed to update favicon:', error);
-            }
+            } catch {
             }
         }
     }, [siteSettings.title, siteSettings.favicon]);

@@ -94,26 +94,19 @@ const AppearanceTab: React.FC<AppearanceTabProps> = React.memo(({ settings, onCh
   // 获取必应壁纸数据
   const fetchBingWallpaper = useCallback(async () => {
     setBingLoading(true);
-    console.log('[Bing Wallpaper] 开始获取壁纸...');
     try {
-      console.log('[Bing Wallpaper] 请求URL:', BING_API_URL);
-      const response = await fetch(BING_API_URL);
-      console.log('[Bing Wallpaper] 响应状态:', response.status, response.statusText);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       
       const data = await response.json();
-      console.log('[Bing Wallpaper] API响应数据:', data);
       
       // 检查响应格式
       if (data.code === 200 && data.data) {
-        console.log('[Bing Wallpaper] 获取成功:', data.data);
         setBingData(data.data);
         // 自动设置背景图
         if (data.data.cover_4k) {
-          console.log('[Bing Wallpaper] 设置背景图:', data.data.cover_4k);
           onChange('backgroundImage', data.data.cover_4k);
           onChange('bingLastUpdate', new Date().toISOString().split('T')[0]);
           onChange('backgroundSource', 'bing');
