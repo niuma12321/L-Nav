@@ -49,7 +49,6 @@ export const getData = <T>(key: string, defaultValue: T): T => {
         if (oldValue !== null) {
           localStorage.setItem(fullKey, oldValue);
           localStorage.removeItem(oldKey);
-          console.log(`✅ 数据迁移成功: ${key}`);
           return JSON.parse(oldValue) as T;
         }
       }
@@ -59,7 +58,6 @@ export const getData = <T>(key: string, defaultValue: T): T => {
     
     return JSON.parse(value) as T;
   } catch (error) {
-    console.error(`❌ 读取数据失败 [${key}]:`, error);
     return defaultValue;
   }
 };
@@ -77,7 +75,6 @@ export const setData = <T>(key: string, value: T): void => {
     // 写入后自动触发备份检查
     autoBackup();
   } catch (error) {
-    console.error(`❌ 写入数据失败 [${key}]:`, error);
   }
 };
 
@@ -90,7 +87,6 @@ export const deleteData = (key: string): void => {
     const fullKey = getStorageKey(key);
     localStorage.removeItem(fullKey);
   } catch (error) {
-    console.error(`❌ 删除数据失败 [${key}]:`, error);
   }
 };
 
@@ -240,9 +236,7 @@ export const autoBackup = (): void => {
     const fullKey = getStorageKey(BACKUP_KEY);
     localStorage.setItem(fullKey, JSON.stringify(updatedBackups));
     
-    console.log(`✅ 自动备份完成，共保留 ${updatedBackups.length} 个备份`);
   } catch (error) {
-    console.error('❌ 自动备份失败:', error);
   }
 };
 
@@ -275,7 +269,6 @@ export const restoreFromBackup = (backupIndex: number): boolean => {
     
     return true;
   } catch (error) {
-    console.error('❌ 恢复备份失败:', error);
     return false;
   }
 };
@@ -292,7 +285,6 @@ export const deleteBackup = (backupIndex: number): void => {
     const fullKey = getStorageKey(BACKUP_KEY);
     localStorage.setItem(fullKey, JSON.stringify(backups));
   } catch (error) {
-    console.error('❌ 删除备份失败:', error);
   }
 };
 
@@ -330,7 +322,6 @@ export const importAllData = (jsonString: string): boolean => {
     
     return true;
   } catch (error) {
-    console.error('❌ 导入数据失败:', error);
     return false;
   }
 };

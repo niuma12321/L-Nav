@@ -4,13 +4,17 @@ import { getData, setData } from '../utils/constants';
 
 const WIDGETS_STORAGE_KEY = 'ynav-widgets-v9';
 
-const normalizeWidgets = (storedWidgets: WidgetConfig[]) => {
+interface WidgetWithOrder extends WidgetConfig {
+  order?: number;
+}
+
+const normalizeWidgets = (storedWidgets: WidgetWithOrder[]): WidgetWithOrder[] => {
   const safeWidgets = Array.isArray(storedWidgets) ? storedWidgets : [];
   const mergedWidgets = safeWidgets.map((widget, index) => ({
     ...widget,
     order: widget.order ?? index,
     position: {
-      desktop: widget.position?.desktop || widget.position || { x: 0, y: 0, w: 4, h: 2 },
+      desktop: widget.position?.desktop || { x: 0, y: 0, w: 4, h: 2 },
       mobile: widget.position?.mobile || { order: index }
     }
   }));
