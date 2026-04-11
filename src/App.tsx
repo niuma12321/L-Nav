@@ -12,7 +12,6 @@ import ImportModal from './components/modals/ImportModal';
 import SettingsModal from './components/modals/SettingsModal';
 import SearchConfigModal from './components/modals/SearchConfigModal';
 import DataBackupModal from './components/modals/DataBackupModal';
-import LoginModal from './components/modals/LoginModal';
 
 // Mobile components
 import MobileContentViewer from './components/mobile/MobileContentViewer';
@@ -63,7 +62,7 @@ import { AlertTriangle } from '@/utils/icons';
 function App() {
   // === 检查访问权限 ===
   const [isAccessGranted, setIsAccessGranted] = useState(() => {
-    return localStorage.getItem('ynav_access_granted') === 'true';
+    return getData('access_granted', false);
   });
 
   // === 应用启动时执行自动备份和设置标题 ===
@@ -120,40 +119,6 @@ function App() {
   const [isPrivateModalOpen, setIsPrivateModalOpen] = useState(false);
   const [editingPrivateLink, setEditingPrivateLink] = useState<LinkItem | null>(null);
   const [prefillPrivateLink, setPrefillPrivateLink] = useState<Partial<LinkItem> | null>(null);
-
-  // === Login State - 使用用户维度存储 ===
-  const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    return getData('logged_in', false);
-  });
-  const [currentUsername, setCurrentUsername] = useState(() => {
-    return getData('username', '');
-  });
-  const [showLoginModal, setShowLoginModal] = useState(() => {
-    // 如果未登录，自动显示登录弹窗
-    return !getData('logged_in', false);
-  });
-
-  const handleLogin = useCallback((username: string, password: string): boolean => {
-    if (username === 'ljq' && password === 'jk712732') {
-      setIsLoggedIn(true);
-      setCurrentUsername(username);
-      setData('logged_in', true);
-      setData('username', username);
-      notify('登录成功', 'success');
-      setShowLoginModal(false);
-      return true;
-    }
-    notify('账号或密码错误', 'error');
-    return false;
-  }, [notify]);
-
-  const handleLogout = useCallback(() => {
-    setIsLoggedIn(false);
-    setCurrentUsername('');
-    setData('logged_in', false);
-    setData('username', '');
-    notify('已退出登录', 'info');
-  }, [notify]);
 
   // === Mobile UI State ===
   const [mobileActiveTab, setMobileActiveTab] = useState<'home' | 'search' | 'favorites' | 'more'>('home');
@@ -1318,13 +1283,6 @@ function App() {
         onToggleHidden={toggleHiddenFromContextMenu}
       />
 
-      {/* Login Modal - 强制登录，不能关闭 */}
-      <LoginModal
-        isOpen={showLoginModal}
-        onLogin={handleLogin}
-        onClose={() => {}}
-        forceLogin={true}
-      />
     </div>
   );
 }

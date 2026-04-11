@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { OWNER_CONFIG, verifyAccessPassword } from '../../utils/constants';
+import { OWNER_CONFIG, verifyAccessPassword, getData, setData } from '../../utils/constants';
 import './LoginPage.css';
 
 export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isAccessGranted, setIsAccessGranted] = useState(() => {
+    return getData('access_granted', false);
+  });
   const [loading, setLoading] = useState(false);
 
   // 页面加载时设置标题
@@ -27,7 +30,7 @@ export default function LoginPage() {
     await new Promise(resolve => setTimeout(resolve, 500));
     
     if (verifyAccessPassword(password)) {
-      localStorage.setItem('ynav_access_granted', 'true');
+      setData('access_granted', true);
       window.location.reload();
     } else {
       setError('密码错误，请重试');
