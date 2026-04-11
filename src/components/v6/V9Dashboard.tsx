@@ -39,6 +39,7 @@ import {
   ChevronDown,
   Database,
   Globe,
+  StickyNote,
 } from '@/utils/icons';
 import { useWidgetSystem } from '../../hooks/useWidgetSystem';
 import { useSearch } from '../../hooks/useSearch';
