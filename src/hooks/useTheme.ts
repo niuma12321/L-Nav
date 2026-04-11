@@ -1,11 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import {
-    getCanonicalUserStorageKey,
-    getData,
-    setData,
-    YNAV_DATA_SYNCED_EVENT,
-    YNAV_USER_STORAGE_UPDATED_EVENT
-} from '../utils/constants';
+import { getData, setData } from '../utils/constants';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 
@@ -76,40 +70,19 @@ export function useTheme() {
     }, [themeMode, applyThemeMode]);
 
     useEffect(() => {
-        const syncableKeys = new Set(['theme', getCanonicalUserStorageKey('theme')]);
-
-        const reloadTheme = (changedKeys: string[] = []) => {
-            if (!changedKeys.some((changedKey) => syncableKeys.has(changedKey))) return;
-
-            const newMode = getData<ThemeMode>('theme', 'system');
-            const nextMode: ThemeMode = newMode === 'dark' || newMode === 'light' || newMode === 'system'
-                ? newMode
-                : 'system';
-
-            setThemeMode(nextMode);
-            applyThemeMode(nextMode);
-        };
-
         const handleStorageChange = (event: StorageEvent) => {
-            if (event.key && syncableKeys.has(event.key)) {
-                reloadTheme([event.key]);
+            if (event.key?.includes('theme')) {
+                const newMode = getData<ThemeMode>('theme', 'system');
+                const nextMode: ThemeMode = newMode === 'dark' || newMode === 'light' || newMode === 'system'
+                    ? newMode
+                    : 'system';
+                setThemeMode(nextMode);
+                applyThemeMode(nextMode);
             }
         };
 
-        const handleCustomEvent = (event: Event) => {
-            const changedKeys = (event as CustomEvent<{ changedKeys?: string[] }>).detail?.changedKeys || [];
-            reloadTheme(changedKeys);
-        };
-
         window.addEventListener('storage', handleStorageChange);
-        window.addEventListener(YNAV_DATA_SYNCED_EVENT, handleCustomEvent as EventListener);
-        window.addEventListener(YNAV_USER_STORAGE_UPDATED_EVENT, handleCustomEvent as EventListener);
-
-        return () => {
-            window.removeEventListener('storage', handleStorageChange);
-            window.removeEventListener(YNAV_DATA_SYNCED_EVENT, handleCustomEvent as EventListener);
-            window.removeEventListener(YNAV_USER_STORAGE_UPDATED_EVENT, handleCustomEvent as EventListener);
-        };
+        return () => window.removeEventListener('storage', handleStorageChange);
     }, [applyThemeMode]);
 
     return {

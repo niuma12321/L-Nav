@@ -352,158 +352,11 @@ export const clearAllData = (): void => {
 
 /**
  * ========================================
- * 旧版兼容函数（使用新 getData/setData）
- * ========================================
- */
-
-/** @deprecated 使用 getData */
-export const getUserData = <T>(key: string, defaultValue: T): T => {
-  return getData(key, defaultValue);
-};
-
-/** @deprecated 使用 setData */
-export const setUserData = <T>(key: string, value: T): void => {
-  setData(key, value);
-};
-
-/** @deprecated 使用 deleteData */
-export const deleteUserData = (key: string): void => {
-  deleteData(key);
-};
-
-/** @deprecated 使用 deleteData */
-export const clearUserData = (key: string): void => {
-  deleteData(key);
-};
-
-/** @deprecated 使用 getStorageKey */
-export const getUserStorageKey = (baseKey: string): string => {
-  return getStorageKey(baseKey);
-};
-
-/**
- * ========================================
- * 设备信息工具
+ * 存储工具函数
  * ========================================
  */
 
 const isBrowser = typeof window !== 'undefined' && typeof localStorage !== 'undefined';
-
-let cachedBrowser: string | null = null;
-let cachedOS: string | null = null;
-
-export const getBrowserInfo = (): string => {
-  if (cachedBrowser) return cachedBrowser;
-  if (!isBrowser) return 'Server';
-  
-  const ua = navigator.userAgent;
-  if (ua.includes('Firefox')) cachedBrowser = 'Firefox';
-  else if (ua.includes('SamsungBrowser')) cachedBrowser = 'Samsung Internet';
-  else if (ua.includes('Opera') || ua.includes('OPR')) cachedBrowser = 'Opera';
-  else if (ua.includes('Trident')) cachedBrowser = 'Internet Explorer';
-  else if (ua.includes('Edge') || ua.includes('Edg')) cachedBrowser = 'Edge';
-  else if (ua.includes('Chrome')) cachedBrowser = 'Chrome';
-  else if (ua.includes('Safari')) cachedBrowser = 'Safari';
-  else cachedBrowser = 'Unknown';
-  
-  return cachedBrowser;
-};
-
-export const getOSInfo = (): string => {
-  if (cachedOS) return cachedOS;
-  if (!isBrowser) return 'Server';
-  
-  const ua = navigator.userAgent;
-  const platform = navigator.platform;
-  
-  if (/Win/i.test(platform)) cachedOS = 'Windows';
-  else if (/Mac/i.test(platform)) cachedOS = 'macOS';
-  else if (/Linux/i.test(platform)) cachedOS = 'Linux';
-  else if (/Android/i.test(ua)) cachedOS = 'Android';
-  else if (/iPhone|iPad|iPod/i.test(ua)) cachedOS = 'iOS';
-  else cachedOS = 'Unknown';
-  
-  return cachedOS;
-};
-
-let deviceIdCache: string | null = null;
-
-export const getDeviceId = (): string => {
-  if (deviceIdCache) return deviceIdCache;
-  if (!isBrowser) return 'server_device';
-  
-  let deviceId = localStorage.getItem(DEVICE_ID_KEY);
-  if (!deviceId) {
-    deviceId = `device_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-    localStorage.setItem(DEVICE_ID_KEY, deviceId);
-  }
-  
-  deviceIdCache = deviceId;
-  return deviceId;
-};
-
-export const getDeviceInfo = () => {
-  if (!isBrowser) {
-    return { id: 'server_device', browser: 'Server', os: 'Unknown', createdAt: Date.now() };
-  }
-  
-  const infoStr = localStorage.getItem(DEVICE_INFO_KEY);
-  if (infoStr) {
-    try {
-      return JSON.parse(infoStr);
-    } catch {}
-  }
-  
-  const deviceInfo = {
-    id: getDeviceId(),
-    browser: getBrowserInfo(),
-    os: getOSInfo(),
-    createdAt: Date.now()
-  };
-  
-  localStorage.setItem(DEVICE_INFO_KEY, JSON.stringify(deviceInfo));
-  return deviceInfo;
-};
-
-/**
- * ========================================
- * 用户系统（简化版，仅保留兼容）
- * ========================================
- */
-
-export const getCurrentUserId = (): string | null => {
-  if (!isBrowser) return null;
-  return 'ljq';
-};
-
-export const setCurrentUser = (userId: string, userName?: string): void => {
-  if (!isBrowser) return;
-  localStorage.setItem(CURRENT_USER_KEY, 'ljq');
-};
-
-export const initDefaultUser = (): string => {
-  if (!isBrowser) return 'ljq';
-  localStorage.setItem(CURRENT_USER_KEY, 'ljq');
-  return 'ljq';
-};
-
-export const switchUser = (userId: string): void => {
-  window.location.reload();
-};
-
-export const getUserProfiles = () => {
-  return [{ id: 'ljq', name: 'ljq', createdAt: Date.now(), lastActiveAt: Date.now() }];
-};
-
-export const getUserStoragePrefix = (): string => {
-  return STORAGE_PREFIX;
-};
-
-/**
- * ========================================
- * 存储工具函数
- * ========================================
- */
 
 export const clearStorage = (...keys: string[]): void => {
   if (!isBrowser) return;
@@ -517,28 +370,6 @@ export const clearAllAppStorage = (): void => {
 
 export const isStorageExpired = (timestamp: number, ttl: number): boolean => {
   return Date.now() - timestamp > ttl;
-};
-
-export const getFormattedDeviceName = (deviceId?: string): string => {
-  if (!deviceId) return '未知设备';
-  const info = getDeviceInfo();
-  return `${info.browser} (${info.os})`;
-};
-
-export const getCanonicalUserStorageKey = (typeOrKey: string): string => {
-  return getStorageKey(typeOrKey);
-};
-
-export const readSyncableUserData = <T>(typeOrKey: string, defaultValue: T): T => {
-  return getData(typeOrKey, defaultValue);
-};
-
-export const writeSyncableUserData = <T>(typeOrKey: string, value: T): void => {
-  setData(typeOrKey, value);
-};
-
-export const clearSyncableUserData = (typeOrKey: string): void => {
-  deleteData(typeOrKey);
 };
 
 /**
@@ -555,12 +386,3 @@ export const SAFE_LINK_ATTRIBUTES = {
   rel: 'noopener,noreferrer'
 };
 
-// 事件名称（保留兼容）
-export const YNAV_DATA_SYNCED_EVENT = 'ynav-data-synced';
-export const YNAV_USER_STORAGE_UPDATED_EVENT = 'ynav-user-storage-updated';
-
-// 同步配置（保留兼容，实际不使用）
-export const SYNC_DEBOUNCE_MS = 3000;
-export const SYNC_API_ENDPOINT = '/api/v1/sync';
-export const SYNC_API_VERSION = 'v1';
-export const SYNC_DATA_SCHEMA_VERSION = 1;

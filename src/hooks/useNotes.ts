@@ -1,13 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { StickyNote } from '../types';
-import {
-  NOTES_STORAGE_KEY,
-  getCanonicalUserStorageKey,
-  getData,
-  setData,
-  YNAV_DATA_SYNCED_EVENT,
-  YNAV_USER_STORAGE_UPDATED_EVENT
-} from '../utils/constants';
+import { NOTES_STORAGE_KEY, getData, setData } from '../utils/constants';
 
 export interface UseNotesReturn {
   notes: StickyNote[];
@@ -35,38 +28,14 @@ export function useNotes(): UseNotesReturn {
   }, [notes]);
 
   useEffect(() => {
-    const syncableKeys = new Set([
-      NOTES_STORAGE_KEY,
-      'ynav-notes',
-      getCanonicalUserStorageKey('ynav-notes')
-    ]);
-
-    const reloadNotes = (changedKeys: string[] = []) => {
-      if (changedKeys.some((changedKey) => syncableKeys.has(changedKey))) {
-        setNotes(loadNotesFromStorage());
-      }
-    };
-
     const handleStorageChange = (event: StorageEvent) => {
-      if (event.key && syncableKeys.has(event.key)) {
+      if (event.key?.includes(NOTES_STORAGE_KEY)) {
         setNotes(loadNotesFromStorage());
       }
-    };
-
-    const handleCustomEvent = (event: Event) => {
-      const changedKeys = (event as CustomEvent<{ changedKeys?: string[] }>).detail?.changedKeys || [];
-      reloadNotes(changedKeys);
     };
 
     window.addEventListener('storage', handleStorageChange);
-    window.addEventListener(YNAV_DATA_SYNCED_EVENT, handleCustomEvent as EventListener);
-    window.addEventListener(YNAV_USER_STORAGE_UPDATED_EVENT, handleCustomEvent as EventListener);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener(YNAV_DATA_SYNCED_EVENT, handleCustomEvent as EventListener);
-      window.removeEventListener(YNAV_USER_STORAGE_UPDATED_EVENT, handleCustomEvent as EventListener);
-    };
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   const addNote = useCallback((content?: string): StickyNote => {

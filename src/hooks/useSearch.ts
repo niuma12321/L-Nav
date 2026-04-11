@@ -1,13 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { SearchMode, ExternalSearchSource, SearchConfig } from '../types';
-import {
-    SEARCH_CONFIG_KEY,
-    getCanonicalUserStorageKey,
-    getData,
-    setData,
-    YNAV_DATA_SYNCED_EVENT,
-    YNAV_USER_STORAGE_UPDATED_EVENT
-} from '../utils/constants';
+import { SEARCH_CONFIG_KEY, getData, setData } from '../utils/constants';
 
 // 默认搜索源
 const buildDefaultSearchSources = (): ExternalSearchSource[] => {
@@ -160,56 +153,32 @@ export function useSearch() {
     }, []);
 
     useEffect(() => {
-        const syncableKeys = new Set([
-            SEARCH_CONFIG_KEY,
-            'search_config',
-            getCanonicalUserStorageKey('search_config')
-        ]);
-
-        const reloadSearchConfig = (changedKeys: string[] = []) => {
-            if (!changedKeys.some((changedKey) => syncableKeys.has(changedKey))) return;
-
-            const savedSearchConfig = getData<SearchConfig>(SEARCH_CONFIG_KEY, null);
-            if (!savedSearchConfig) {
-                const defaultSources = buildDefaultSearchSources();
-                setSearchMode('external');
-                setExternalSearchSources(defaultSources);
-                setSelectedSearchSource(defaultSources[0] || null);
-                return;
-            }
-
-            const sources = Array.isArray(savedSearchConfig.externalSources) ? savedSearchConfig.externalSources : [];
-            const resolvedSelected = resolveSelectedSource(
-                sources,
-                savedSearchConfig.selectedSourceId,
-                savedSearchConfig.selectedSource ?? null
-            );
-
-            setSearchMode(savedSearchConfig.mode || 'external');
-            setExternalSearchSources(sources);
-            setSelectedSearchSource(resolvedSelected);
-        };
-
         const handleStorageChange = (event: StorageEvent) => {
-            if (event.key && syncableKeys.has(event.key)) {
-                reloadSearchConfig([event.key]);
-            }
-        };
+            if (event.key?.includes(SEARCH_CONFIG_KEY)) {
+                const savedSearchConfig = getData<SearchConfig>(SEARCH_CONFIG_KEY, null);
+                if (!savedSearchConfig) {
+                    const defaultSources = buildDefaultSearchSources();
+                    setSearchMode('external');
+                    setExternalSearchSources(defaultSources);
+                    setSelectedSearchSource(defaultSources[0] || null);
+                    return;
+                }
 
-        const handleCustomEvent = (event: Event) => {
-            const changedKeys = (event as CustomEvent<{ changedKeys?: string[] }>).detail?.changedKeys || [];
-            reloadSearchConfig(changedKeys);
+                const sources = Array.isArray(savedSearchConfig.externalSources) ? savedSearchConfig.externalSources : [];
+                const resolvedSelected = resolveSelectedSource(
+                    sources,
+                    savedSearchConfig.selectedSourceId,
+                    savedSearchConfig.selectedSource ?? null
+                );
+
+                setSearchMode(savedSearchConfig.mode || 'external');
+                setExternalSearchSources(sources);
+                setSelectedSearchSource(resolvedSelected);
+            }
         };
 
         window.addEventListener('storage', handleStorageChange);
-        window.addEventListener(YNAV_DATA_SYNCED_EVENT, handleCustomEvent as EventListener);
-        window.addEventListener(YNAV_USER_STORAGE_UPDATED_EVENT, handleCustomEvent as EventListener);
-
-        return () => {
-            window.removeEventListener('storage', handleStorageChange);
-            window.removeEventListener(YNAV_DATA_SYNCED_EVENT, handleCustomEvent as EventListener);
-            window.removeEventListener(YNAV_USER_STORAGE_UPDATED_EVENT, handleCustomEvent as EventListener);
-        };
+        return () => window.removeEventListener('storage', handleStorageChange);
     }, []);
 
     // 弹窗延迟隐藏

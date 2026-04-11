@@ -1,17 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { WidgetConfig, DEFAULT_WIDGETS } from '../components/v6/widgetTypes';
-import {
-  initDefaultUser,
-  getCurrentUserId,
-  getCanonicalUserStorageKey,
-  getData,
-  setData,
-  YNAV_DATA_SYNCED_EVENT,
-  YNAV_USER_STORAGE_UPDATED_EVENT
-} from '../utils/constants';
+import { getData, setData } from '../utils/constants';
 
 const WIDGETS_STORAGE_KEY = 'ynav-widgets-v9';
-const WIDGETS_SYNC_CHANNEL = 'ynav-widgets-sync';
 
 const normalizeWidgets = (storedWidgets: WidgetConfig[]) => {
   const safeWidgets = Array.isArray(storedWidgets) ? storedWidgets : [];
@@ -50,20 +41,12 @@ const normalizeWidgets = (storedWidgets: WidgetConfig[]) => {
 };
 
 export function useWidgetSystem() {
-  const [currentUserId, setCurrentUserId] = useState<string>(() => {
-    if (typeof window === 'undefined') return '';
-    return initDefaultUser();
-  });
-
+  const [currentUserId] = useState<string>('ljq');
   const [widgets, setWidgets] = useState<WidgetConfig[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [editMode, setEditMode] = useState(false);
-  const bcRef = useRef<BroadcastChannel | null>(null);
 
   const loadWidgets = useCallback(() => {
-    const userId = getCurrentUserId() || initDefaultUser();
-    setCurrentUserId(userId);
-
     const storedWidgets = getData<WidgetConfig[]>(WIDGETS_STORAGE_KEY, []);
     const nextWidgets = normalizeWidgets(storedWidgets.length > 0 ? storedWidgets : DEFAULT_WIDGETS);
     setWidgets(nextWidgets);
@@ -74,84 +57,28 @@ export function useWidgetSystem() {
     const normalizedWidgets = normalizeWidgets(nextWidgets);
     setWidgets(normalizedWidgets);
     setData(WIDGETS_STORAGE_KEY, normalizedWidgets);
-
-    // 触发同步事件
-    window.dispatchEvent(new CustomEvent('ynav-data-changed', {
-      detail: { type: 'widgets', timestamp: Date.now() }
-    }));
-
-    if (bcRef.current) {
-      bcRef.current.postMessage({ type: 'WIDGETS_UPDATED', widgets: normalizedWidgets });
-    }
   }, []);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const checkUserChange = () => {
-      const nextUserId = getCurrentUserId();
-      if (nextUserId && nextUserId !== currentUserId) {
-        setCurrentUserId(nextUserId);
-        setIsLoaded(false);
-        loadWidgets();
-      }
-    };
-
-    const interval = setInterval(checkUserChange, 1000);
-    return () => clearInterval(interval);
-  }, [currentUserId, loadWidgets]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-      bcRef.current = new BroadcastChannel(WIDGETS_SYNC_CHANNEL);
-      bcRef.current.onmessage = (event) => {
-        if (event.data.type === 'WIDGETS_UPDATED') {
-          setWidgets(normalizeWidgets(event.data.widgets || []));
-        }
-      };
+      loadWidgets();
     }
-
-    return () => {
-      bcRef.current?.close();
-    };
-  }, []);
+  }, [loadWidgets]);
 
   useEffect(() => {
     loadWidgets();
   }, [loadWidgets]);
 
   useEffect(() => {
-    const syncableKeys = new Set([
-      WIDGETS_STORAGE_KEY,
-      getCanonicalUserStorageKey(WIDGETS_STORAGE_KEY)
-    ]);
-
-    const reloadWidgets = (changedKeys: string[] = []) => {
-      if (changedKeys.some((changedKey) => syncableKeys.has(changedKey))) {
-        loadWidgets();
-      }
-    };
-
     const handleStorageChange = (event: StorageEvent) => {
-      if (event.key && syncableKeys.has(event.key)) {
+      if (event.key?.includes(WIDGETS_STORAGE_KEY)) {
         loadWidgets();
       }
-    };
-
-    const handleCustomEvent = (event: Event) => {
-      const changedKeys = (event as CustomEvent<{ changedKeys?: string[] }>).detail?.changedKeys || [];
-      reloadWidgets(changedKeys);
     };
 
     window.addEventListener('storage', handleStorageChange);
-    window.addEventListener(YNAV_DATA_SYNCED_EVENT, handleCustomEvent as EventListener);
-    window.addEventListener(YNAV_USER_STORAGE_UPDATED_EVENT, handleCustomEvent as EventListener);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener(YNAV_DATA_SYNCED_EVENT, handleCustomEvent as EventListener);
-      window.removeEventListener(YNAV_USER_STORAGE_UPDATED_EVENT, handleCustomEvent as EventListener);
-    };
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, [loadWidgets]);
 
   const toggleWidget = useCallback((id: string) => {

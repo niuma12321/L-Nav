@@ -1,16 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { LinkItem, Category, DEFAULT_CATEGORIES, INITIAL_LINKS } from '../types';
 import { arrayMove } from '@dnd-kit/sortable';
-import {
-  LOCAL_STORAGE_KEY,
-  initDefaultUser,
-  getCurrentUserId,
-  getCanonicalUserStorageKey,
-  readSyncableUserData,
-  writeSyncableUserData,
-  YNAV_DATA_SYNCED_EVENT,
-  YNAV_USER_STORAGE_UPDATED_EVENT
-} from '../utils/constants';
+import { LOCAL_STORAGE_KEY, getData, setData } from '../utils/constants';
 import { useDialog } from '../components/ui/DialogProvider';
 
 interface StoredLinksData {
@@ -21,7 +12,6 @@ interface StoredLinksData {
   userId: string;
 }
 
-const LINKS_DATA_TYPE = 'links_data';
 const STORAGE_VERSION = '2.0.0';
 
 const sortLinksByOrder = (items: LinkItem[]) => {
@@ -75,10 +65,10 @@ export function useSimpleDataStore() {
 
   const loadData = useCallback(() => {
     try {
-      const userId = getCurrentUserId() || initDefaultUser();
+      const userId = 'ljq';
       setCurrentUserId(userId);
 
-      const stored = readSyncableUserData<StoredLinksData | null>(LINKS_DATA_TYPE, null);
+      const stored = getData<StoredLinksData | null>('links_data', null);
 
       if (stored?.links || stored?.categories) {
         const nextLinks = normalizeLinks(stored.links || []);
@@ -95,7 +85,7 @@ export function useSimpleDataStore() {
         categoriesRef.current = initialData.categories;
         setLinks(initialData.links);
         setCategories(initialData.categories);
-        writeSyncableUserData(LINKS_DATA_TYPE, initialData);
+        setData('links_data', initialData);
       }
 
       setIsLoaded(true);
@@ -112,13 +102,13 @@ export function useSimpleDataStore() {
 
   const saveData = useCallback((nextLinks: LinkItem[], nextCategories: Category[]) => {
     try {
-      const userId = getCurrentUserId() || initDefaultUser();
+      const userId = 'ljq';
       const payload = buildStoredData(nextLinks, nextCategories, userId);
       linksRef.current = payload.links;
       categoriesRef.current = payload.categories;
       setLinks(payload.links);
       setCategories(payload.categories);
-      writeSyncableUserData(LINKS_DATA_TYPE, payload);
+      setData('links_data', payload);
     } catch {
       notify('数据保存失败', 'error');
     }
@@ -285,38 +275,14 @@ export function useSimpleDataStore() {
   }, [loadData]);
 
   useEffect(() => {
-    const syncableKeys = new Set([
-      LINKS_DATA_TYPE,
-      LOCAL_STORAGE_KEY,
-      getCanonicalUserStorageKey(LINKS_DATA_TYPE)
-    ]);
-
-    const shouldReload = (changedKeys: string[] = []) => {
-      return changedKeys.some((changedKey) => syncableKeys.has(changedKey));
-    };
-
     const handleStorageChange = (event: StorageEvent) => {
-      if (event.key && syncableKeys.has(event.key)) {
-        loadData();
-      }
-    };
-
-    const handleUserDataChange = (event: Event) => {
-      const changedKeys = (event as CustomEvent<{ changedKeys?: string[] }>).detail?.changedKeys || [];
-      if (shouldReload(changedKeys)) {
+      if (event.key === LOCAL_STORAGE_KEY) {
         loadData();
       }
     };
 
     window.addEventListener('storage', handleStorageChange);
-    window.addEventListener(YNAV_DATA_SYNCED_EVENT, handleUserDataChange as EventListener);
-    window.addEventListener(YNAV_USER_STORAGE_UPDATED_EVENT, handleUserDataChange as EventListener);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener(YNAV_DATA_SYNCED_EVENT, handleUserDataChange as EventListener);
-      window.removeEventListener(YNAV_USER_STORAGE_UPDATED_EVENT, handleUserDataChange as EventListener);
-    };
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, [loadData]);
 
   return {

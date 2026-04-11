@@ -35,16 +35,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { AIConfig, SiteSettings } from '../types';
-import { 
-  AI_CONFIG_KEY, 
-  SITE_SETTINGS_KEY,
-  clearUserData,
-  getCanonicalUserStorageKey,
-  getData,
-  setData,
-  YNAV_DATA_SYNCED_EVENT,
-  YNAV_USER_STORAGE_UPDATED_EVENT
-} from '../utils/constants';
+import { AI_CONFIG_KEY, SITE_SETTINGS_KEY, getData, setData } from '../utils/constants';
 
 // ============ 类型定义 ============
 
@@ -114,7 +105,7 @@ const safeStorage = {
     },
     remove: (key: string): boolean => {
         try {
-            clearUserData(key);
+            localStorage.removeItem(key);
             return true;
         } catch {
             return false;
@@ -551,50 +542,19 @@ export function useConfig() {
     }, [siteSettings.title, siteSettings.favicon]);
 
     useEffect(() => {
-        const syncableKeys = new Set([
-            AI_CONFIG_KEY,
-            SITE_SETTINGS_KEY,
-            'ai_config',
-            'site_settings',
-            getCanonicalUserStorageKey('ai_config'),
-            getCanonicalUserStorageKey('site_settings')
-        ]);
-
-        const reloadConfig = (changedKeys: string[] = []) => {
-            if (!changedKeys.some((changedKey) => syncableKeys.has(changedKey))) return;
-
-            const savedAIConfig = safeStorage.get(AI_CONFIG_KEY, null);
-            const savedSiteSettings = safeStorage.get(SITE_SETTINGS_KEY, null);
-
-            if (savedAIConfig) {
-                setAiConfig(migrateAIConfig(savedAIConfig));
-            }
-
-            if (savedSiteSettings) {
-                setSiteSettings(migrateSiteSettings(savedSiteSettings));
-            }
-        };
-
         const handleStorageChange = (event: StorageEvent) => {
-            if (event.key && syncableKeys.has(event.key)) {
-                reloadConfig([event.key]);
+            if (event.key?.includes(AI_CONFIG_KEY)) {
+                const savedAIConfig = getData<AIConfig>(AI_CONFIG_KEY, null);
+                if (savedAIConfig) setAiConfig(savedAIConfig);
             }
-        };
-
-        const handleCustomEvent = (event: Event) => {
-            const changedKeys = (event as CustomEvent<{ changedKeys?: string[] }>).detail?.changedKeys || [];
-            reloadConfig(changedKeys);
+            if (event.key?.includes(SITE_SETTINGS_KEY)) {
+                const savedSiteSettings = getData<SiteSettings>(SITE_SETTINGS_KEY, null);
+                if (savedSiteSettings) setSiteSettings(savedSiteSettings);
+            }
         };
 
         window.addEventListener('storage', handleStorageChange);
-        window.addEventListener(YNAV_DATA_SYNCED_EVENT, handleCustomEvent as EventListener);
-        window.addEventListener(YNAV_USER_STORAGE_UPDATED_EVENT, handleCustomEvent as EventListener);
-
-        return () => {
-            window.removeEventListener('storage', handleStorageChange);
-            window.removeEventListener(YNAV_DATA_SYNCED_EVENT, handleCustomEvent as EventListener);
-            window.removeEventListener(YNAV_USER_STORAGE_UPDATED_EVENT, handleCustomEvent as EventListener);
-        };
+        return () => window.removeEventListener('storage', handleStorageChange);
     }, []);
 
     /**
