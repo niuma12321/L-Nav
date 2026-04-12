@@ -39,7 +39,8 @@ import {
   useConfig,
   useSidebar,
   useNotes,
-  useRouter
+  useRouter,
+  useCloudSync
 } from './hooks';
 
 import {
@@ -102,6 +103,9 @@ function App() {
 
   // === Notes ===
   const { notes, addNote, updateNote, deleteNote, importNotes } = useNotes();
+
+  // === Cloud Sync ===
+  const { status: syncStatus, isOnline, lastSync, lastError, syncNow } = useCloudSync();
 
   const autoUnlockAttemptedRef = useRef(false);
 

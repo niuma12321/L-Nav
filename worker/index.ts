@@ -1,7 +1,7 @@
 import { getAssetFromKV, serveSinglePageApp } from '@cloudflare/kv-asset-handler';
 import automation, { automationScheduled } from './routes/automation';
 import smartHome from './routes/smart-home';
-import { sync } from './routes/sync';
+import handleSync from './routes/sync';
 
 export interface Env {
   YNAV_WORKER_KV: KVNamespace;
@@ -233,10 +233,6 @@ async function handleAPI(request: Request, env: Env, ctx: ExecutionContext): Pro
     });
   }
 
-  // Unified Sync API - 处理单个数据类型的同步
-  if (path === '/api/sync') {
-    return sync.fetch(request, env, ctx);
-  }
 
   return new Response(JSON.stringify({ error: 'Not found' }), {
     status: 404,

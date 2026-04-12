@@ -11,4 +11,5 @@ export { useSidebar } from './useSidebar';
 export { useWidgetSystem } from './useWidgetSystem';
 export { useNotes } from './useNotes';
 export { useRouter } from './useRouter';
+export { useCloudSync, type SyncStatus, type CloudSyncState } from './useCloudSync';
 export { useDialog } from '../components/ui/DialogProvider';
