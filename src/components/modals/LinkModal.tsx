@@ -5,12 +5,12 @@ import { generateLinkDescription, suggestCategory } from '../../services/geminiS
 import { useDialog } from '../ui/DialogProvider';
 import { getIconToneStyle, normalizeHexColor } from '../../utils/iconTone';
 import EmojiPicker from '../ui/EmojiPicker';
-import { getUserStorageKey, getData, setData } from '../../utils/constants';
+import { getStorageKey, getData, setData } from '../../utils/constants';
 
 const FAVICON_CACHE_KEY = 'ynav_favicon_cache';
 
-// 获取用户维度的favicon缓存键
-const getUserFaviconCacheKey = () => getUserStorageKey(FAVICON_CACHE_KEY);
+// 获取favicon缓存键
+const getFaviconCacheKey = () => getStorageKey(FAVICON_CACHE_KEY);
 
 // 获取favicon缓存
 const getFaviconCache = (): Record<string, string> => {
