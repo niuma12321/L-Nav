@@ -1,11 +1,34 @@
--- Cloudflare D1 数据库初始化脚本
--- 用于云端同步功能
--- ==========================================
+-- D1 数据库迁移脚本 - 删除旧表重新创建
+-- 注意：这会清空现有数据
+
+-- 删除旧表（如果存在）
+DROP TABLE IF EXISTS links;
+DROP TABLE IF EXISTS categories;
+DROP TABLE IF EXISTS backups;
+DROP TABLE IF EXISTS user_settings;
+DROP TABLE IF EXISTS notification_settings;
+DROP TABLE IF EXISTS notifications;
+DROP TABLE IF EXISTS sync_history;
+DROP TABLE IF EXISTS user_sync_data;
+
+-- 删除旧索引
+DROP INDEX IF EXISTS idx_user_sync_modified;
+DROP INDEX IF EXISTS idx_links_user_id;
+DROP INDEX IF EXISTS idx_links_category;
+DROP INDEX IF EXISTS idx_links_order;
+DROP INDEX IF EXISTS idx_categories_user_id;
+DROP INDEX IF EXISTS idx_categories_order;
+DROP INDEX IF EXISTS idx_backups_user_id;
+DROP INDEX IF EXISTS idx_backups_created;
+DROP INDEX IF EXISTS idx_notifications_user_id;
+DROP INDEX IF EXISTS idx_notifications_created;
+DROP INDEX IF EXISTS idx_sync_history_user;
+DROP INDEX IF EXISTS idx_sync_history_time;
 
 -- 1. 用户同步数据主表（核心同步表）
 CREATE TABLE IF NOT EXISTS user_sync_data (
   user_id TEXT PRIMARY KEY,
-  data TEXT NOT NULL,  -- JSON 格式的完整同步数据
+  data TEXT NOT NULL,
   last_modified INTEGER NOT NULL,
   device_id TEXT,
   device_name TEXT,
@@ -14,7 +37,7 @@ CREATE TABLE IF NOT EXISTS user_sync_data (
 
 CREATE INDEX IF NOT EXISTS idx_user_sync_modified ON user_sync_data(last_modified);
 
--- 2. 链接表（结构化存储，支持单独查询）
+-- 2. 链接表
 CREATE TABLE IF NOT EXISTS links (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
@@ -65,14 +88,14 @@ CREATE INDEX IF NOT EXISTS idx_backups_created ON backups(created_at);
 -- 5. 用户设置表
 CREATE TABLE IF NOT EXISTS user_settings (
   user_id TEXT PRIMARY KEY,
-  settings TEXT NOT NULL,  -- JSON 格式
+  settings TEXT NOT NULL,
   updated_at INTEGER DEFAULT (unixepoch() * 1000)
 );
 
 -- 6. 通知设置表
 CREATE TABLE IF NOT EXISTS notification_settings (
   user_id TEXT PRIMARY KEY,
-  channels TEXT,  -- JSON 格式 ["telegram", "email", ...]
+  channels TEXT,
   telegram_bot_token TEXT,
   telegram_chat_id TEXT,
   email_smtp_host TEXT,
@@ -102,16 +125,16 @@ CREATE TABLE IF NOT EXISTS notifications (
 CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(created_at);
 
--- 8. 同步历史表（审计用）
+-- 8. 同步历史表
 CREATE TABLE IF NOT EXISTS sync_history (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id TEXT NOT NULL,
   device_id TEXT,
   device_name TEXT,
-  action TEXT NOT NULL,  -- 'push', 'pull', 'merge'
-  status TEXT NOT NULL,  -- 'success', 'error', 'conflict'
+  action TEXT NOT NULL,
+  status TEXT NOT NULL,
   timestamp INTEGER DEFAULT (unixepoch() * 1000),
-  details TEXT  -- JSON 格式
+  details TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_sync_history_user ON sync_history(user_id);
