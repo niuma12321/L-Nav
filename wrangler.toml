@@ -17,7 +17,7 @@ compatibility_date = "2024-01-01"
 # 自定义域名路由
 # ==========================================
 routes = [
-  { pattern = "678870.xyz/*", custom_domain = true }
+  { pattern = "678870.xyz", custom_domain = true }
 ]
 
 # ==========================================
