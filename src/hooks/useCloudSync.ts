@@ -6,10 +6,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getData, setData } from '../utils/constants';
 
-// 同步配置 - 请修改为你的 Worker URL
-// 格式: https://<你的worker域名>.workers.dev/api/sync
+// 同步配置
 const SYNC_CONFIG = {
-  API_ENDPOINT: 'https://ynav-ljq.workers.dev/api/sync',
+  API_ENDPOINT: 'https://678870.xyz/api/sync',
   AUTH_TOKEN: 'ynav_ljq_token_2024',
   SYNC_INTERVAL: 30000, // 30秒自动同步
   DEBOUNCE_DELAY: 2000, // 防抖延迟
