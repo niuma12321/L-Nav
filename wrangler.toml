@@ -16,11 +16,10 @@ compatibility_date = "2024-01-01"
 # ==========================================
 # 自定义域名路由
 # ==========================================
-[[route]]
-pattern = "678870.xyz/*"
-custom_domain = true
-[[route]]
-pattern = "*.678870.xyz/*"
+routes = [
+  { pattern = "678870.xyz/*", custom_domain = true },
+  { pattern = "*.678870.xyz/*" }
+]
 
 # ==========================================
 # 数据存储绑定
@@ -72,5 +71,5 @@ HA_BASE_URL = "https://your-homeassistant-domain/api"
 HA_TOKEN = "your-long-lived-access-token"
 
 # Cron定时触发器（每分钟执行一次自动化任务）
-[[triggers]]
+[triggers]
 crons = ["* * * * *"]
