@@ -240,113 +240,11 @@ async function handleAPI(request: Request, env: Env, ctx: ExecutionContext): Pro
   });
 }
 
-  // 同步 API - D1 优先，KV 回退
+// 同步 API - 使用新的 sync.ts 路由
 async function handleSyncAPI(request: Request, env: Env): Promise<Response> {
-  if (request.method === 'GET') {
-    try {
-      // 尝试从 D1 获取
-      const links = await env.YNAV_D1.prepare(
-        'SELECT * FROM links WHERE user_id = ? ORDER BY order_index'
-      ).bind('default').all();
-
-      const categories = await env.YNAV_D1.prepare(
-        'SELECT * FROM categories WHERE user_id = ? ORDER BY order_index'
-      ).bind('default').all();
-
-      const settings = await env.YNAV_D1.prepare(
-        'SELECT * FROM user_settings WHERE user_id = ?'
-      ).bind('default').first();
-
-      // 检查 D1 是否有有效数据
-      const hasD1Data = (links.results && links.results.length > 0) || 
-                        (categories.results && categories.results.length > 0);
-
-      if (hasD1Data) {
-        // 从 KV 获取 widgets、RSS、notes 数据（结构复杂，适合存 KV）
-        const kvData = await env.YNAV_WORKER_KV.get('ynav:data:v1', 'text');
-        let widgets = [];
-        let rssSources = [];
-        let rssItems = [];
-        let notes = [];
-        if (kvData) {
-          const parsed = JSON.parse(kvData);
-          widgets = parsed.widgets || parsed.data?.widgets || [];
-          rssSources = parsed.rssSources || parsed.data?.rssSources || [];
-          rssItems = parsed.rssItems || parsed.data?.rssItems || [];
-          notes = parsed.notes || parsed.data?.notes || [];
-        }
-
-        const syncData = {
-          links: links.results || [],
-          categories: categories.results || [],
-          widgets: widgets,
-          rssSources: rssSources,
-          rssItems: rssItems,
-          notes: notes,
-          settings: settings || {},
-          meta: { version: 1, updatedAt: Date.now(), deviceId: 'cloud' }
-        };
-        return new Response(JSON.stringify({ success: true, data: syncData }), {
-          headers: { 'Content-Type': 'application/json', ...corsHeaders }
-        });
-      }
-      // D1 没有数据，继续执行 KV 回退逻辑
-    } catch (e) {
-      // D1 查询失败，继续执行 KV 回退逻辑
-      console.error('D1 query failed, falling back to KV:', e);
-    }
-    
-    // 回退到 KV (ynav:data:v1)
-    const kvData = await env.YNAV_WORKER_KV.get('ynav:data:v1', 'text');
-    if (!kvData) {
-      return new Response(JSON.stringify({ success: false, error: 'No data found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
-    }
-    const parsed = JSON.parse(kvData);
-    // KV 存储格式可能是: { links, categories, rssSources, rssItems, notes, ... } 或 { data: { ... }, expectedVersion: ... }
-    // 提取实际的同步数据
-    let responseData;
-    if (parsed.data && (parsed.data.links || parsed.data.categories || parsed.data.rssSources || parsed.data.notes)) {
-      // 格式: { data: { links, categories, rssSources, notes, ... }, expectedVersion: ... }
-      responseData = parsed.data;
-    } else if (parsed.links || parsed.categories || parsed.rssSources || parsed.notes) {
-      // 格式: { links, categories, rssSources, notes, ... }
-      responseData = parsed;
-    } else {
-      responseData = parsed;
-    }
-    return new Response(JSON.stringify({ success: true, data: responseData }), {
-      headers: { 'Content-Type': 'application/json', ...corsHeaders }
-    });
-  }
-
-  if (request.method === 'POST') {
-    const body = await request.text();
-    const data = JSON.parse(body);
-
-    // 保存到 KV（始终使用 ynav:data:v1 保持一致性）
-    await env.YNAV_WORKER_KV.put('ynav:data:v1', body);
-
-    // 尝试保存到 D1
-    try {
-      await saveToD1(env.YNAV_D1, data);
-      return new Response(JSON.stringify({ success: true, storage: 'd1+kv' }), {
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
-    } catch (e) {
-      return new Response(JSON.stringify({ success: true, storage: 'kv' }), {
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
-    }
-  }
-
-  return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-    status: 405,
-    headers: { 'Content-Type': 'application/json', ...corsHeaders }
-  });
+  return handleSync(request, env);
 }
+
 
 // 保存到 D1
 async function saveToD1(db: D1Database, data: any): Promise<void> {
